@@ -41,7 +41,7 @@ test("confirms legacy currency units and prepares exact budgets without executin
   await expect(page.getByText("Confirm your monthly budget", { exact: true })).toBeVisible();
   const budget = page.getByLabel("Maximum monthly ad spend (KWD)");
   await expect(budget).toHaveValue("");
-  await expect(page.getByText(/Automatic spend and tracking-loss monitoring is not available/)).toBeVisible();
+  await expect(page.getByText(/This switch alone enables no monitors. Conversion-tracking loss is not monitored./)).toBeVisible();
   await budget.fill("100.123");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Save and cancel approvals", exact: true }).click();
@@ -75,7 +75,7 @@ test("confirms legacy currency units and prepares exact budgets without executin
   expect(legacy).toMatchObject({ dailyBudgetMinor: 1234, budgetEnvelopeMinor: 17276 });
   expect(legacy?.budgetUnitVersion).toBeUndefined();
   await expect(page.getByText("Pause conditions to review:", { exact: true })).toBeVisible();
-  await expect(page.getByText(/does not automatically monitor spend or tracking loss/)).toBeVisible();
+  await expect(page.getByText(/Other conditions, including tracking loss, need manual review/)).toBeVisible();
   await expectAccessible(page, "currency review states");
   await expectNoHorizontalScroll(page);
   await page.screenshot({ path: testInfo.outputPath("currency-budget-review.png"), fullPage: true });

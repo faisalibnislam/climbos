@@ -67,7 +67,7 @@ test("Channels show the plan before the library and open a creator intake withou
 
 test("Search suggests an observed page review and only prepares an editable request @mobile", async ({ page }) => {
   const slug = await openDemo(page);
-  const input = page.getByLabel("Describe a problem or a goal", { exact: true });
+  const input = page.getByLabel("Your request", { exact: true });
   await input.fill("Keep this existing request.");
   const history = await page.getByRole("region", { name: "Your requests", exact: true }).innerText();
   await page.goto(`/app/${slug}/visibility`);

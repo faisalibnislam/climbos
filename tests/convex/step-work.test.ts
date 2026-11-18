@@ -20,6 +20,7 @@ it("carries the exact saved plan's research into preparation without treating su
 it("starts one quoted job for the exact step, reuses work and keeps completion/approval unchanged", async () => {
   const { t, owner, slug, strategyId, stepKey, orgId } = await stepWorkFixture();
   const quote = await owner.client.query(api.stepWork.quote, { slug });
+  expect(quote.canPrepare).toBe(true);
   expect(quote.maxCostMicros).toBeGreaterThan(0);
   const args = { slug, strategyId, stepKey, requestKey: "one-preparation-request" };
   const first = await owner.client.mutation(api.stepWork.start, args);
@@ -56,6 +57,17 @@ it("starts one quoted job for the exact step, reuses work and keeps completion/a
   const retry = await owner.client.mutation(api.stepWork.start, { ...args, requestKey: "retry-after-source-failure" });
   expect((await t.run(ctx => ctx.db.get(retry.workId)))?.previousWork).toContain("An owner-edited private draft.");
   await expect(owner.client.query(api.stepWork.view, { slug, strategyId, stepKey: "another-step", workId: first.workId })).rejects.toThrow(/another plan step/);
+});
+it("does not offer or start paid preparation in a demo workspace", async () => {
+  const { t, owner, slug, strategyId, stepKey, orgId } = await stepWorkFixture();
+  await t.run(ctx => ctx.db.patch(orgId, { kind: "demo" }));
+  const quote = await owner.client.query(api.stepWork.quote, { slug });
+  expect(quote).toMatchObject({ canPrepare: false, maxCostMicros: 0 });
+  expect(quote.reason).toContain("own business");
+  await expect(owner.client.mutation(api.stepWork.start, { slug, strategyId, stepKey, requestKey: "demo-cannot-prepare" })).rejects.toThrow(/own business/);
+  expect(await t.run(ctx => ctx.db.query("workflowRuns").collect())).toEqual([]);
+  expect(await t.run(ctx => ctx.db.query("planStepWork").collect())).toEqual([]);
+  expect(await t.run(ctx => ctx.db.query("planTaskProgress").collect())).toEqual([]);
 });
 it("resumes one private question and preserves useful drafts and owner edits", async () => {
   const { t, owner, slug, strategyId, stepKey } = await stepWorkFixture();

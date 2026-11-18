@@ -1,0 +1,1071 @@
+{
+  "date": "2026-11-18",
+  "method": "Current test inventory reconciled to the latest observed result per project/file/leaf-title across the initial full run and targeted rechecks. No skipped or failed attempt is counted as a pass. Earlier failures remain in the run summaries; the latest result determines acceptance. Renamed tests use their new observed result.",
+  "environment": {
+    "app": "http://127.0.0.1:3420",
+    "backend": "isolated loopback Convex fixture",
+    "desktop": "Chromium 1366x900",
+    "mobile": "Chromium Pixel 7 emulation",
+    "externalCredentials": "disabled by local demo launcher",
+    "paidModelCalls": 0,
+    "customerActions": 0,
+    "a11yLimit": "axe WCAG tags check serious/critical issues on exercised surfaces, not full conformance or representative-owner research"
+  },
+  "counts": {
+    "desktop": {
+      "passed": 78
+    },
+    "mobile": {
+      "passed": 62
+    }
+  },
+  "sources": [
+    {
+      "file": "climbos-offline-audit-playwright.log",
+      "sha256": "acc353dd6435cbb05a5b55b38ec51c593a667f7ff355f516034145ef4f100044",
+      "scope": "Interrupted initial full browser run; passed rows retained, all failed/skipped rows rechecked separately."
+    },
+    {
+      "file": "climbos-offline-audit-desktop-recheck-20261118.json",
+      "sha256": "d6d3e061282c1fc8d05ef3f1a550763aa6304730b8436f0c3dd9277e77ab2f4a",
+      "stats": {
+        "startTime": "2026-11-18T08:40:35.091Z",
+        "duration": 151594.894,
+        "expected": 9,
+        "skipped": 6,
+        "unexpected": 3,
+        "flaky": 0
+      }
+    },
+    {
+      "file": "climbos-offline-audit-desktop-final-20261118.json",
+      "sha256": "6f9fe2e94649028a0fa01ae60cb8e040049eeda48988177263a1ddc50984481d",
+      "stats": {
+        "startTime": "2026-11-18T08:48:49.250Z",
+        "duration": 81422.312,
+        "expected": 14,
+        "skipped": 0,
+        "unexpected": 1,
+        "flaky": 0
+      }
+    },
+    {
+      "file": "climbos-offline-audit-desktop-remaining-20261118.json",
+      "sha256": "66483f423a80e76446e4740ddd3e0f2a134392737b447fdc8c669bc9c013599c",
+      "stats": {
+        "startTime": "2026-11-18T08:51:09.942Z",
+        "duration": 87078.048,
+        "expected": 19,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      }
+    },
+    {
+      "file": "climbos-offline-audit-mobile-final-20261118.json",
+      "sha256": "b08a21baed209ec857f28cda7f4c96e0511b07d4b652f350add5825670c75006",
+      "stats": {
+        "startTime": "2026-11-18T08:54:19.295Z",
+        "duration": 746704.12,
+        "expected": 62,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      }
+    },
+    {
+      "file": "climbos-offline-audit-final-fixes-20261118.json",
+      "sha256": "ec969359ebc42d4285dc695131cc8a04488ff216d0ecc0b043c50d42251ad756",
+      "stats": {
+        "startTime": "2026-11-18T09:07:11.010Z",
+        "duration": 23094.576,
+        "expected": 5,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      }
+    }
+  ],
+  "tests": [
+    {
+      "file": "e2e/ad-budget-currency.spec.ts",
+      "title": "confirms legacy currency units and prepares exact budgets without executing @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-recheck-20261118.json"
+    },
+    {
+      "file": "e2e/ad-budget-currency.spec.ts",
+      "title": "confirms legacy currency units and prepares exact budgets without executing @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/attribution-evidence.spec.ts",
+      "title": "Results distinguishes payment events and unavailable attribution @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/attribution-evidence.spec.ts",
+      "title": "Results distinguishes payment events and unavailable attribution @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/booking-outcome.spec.ts",
+      "title": "Booking outcomes stay separate from editable follow-up drafts @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/booking-outcome.spec.ts",
+      "title": "Booking outcomes stay separate from editable follow-up drafts @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/brand-consistency.spec.ts",
+      "title": "brand map reviews exact sources, retains exceptions and requires fresh review after brand changes @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/brand-consistency.spec.ts",
+      "title": "brand map reviews exact sources, retains exceptions and requires fresh review after brand changes @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/business-fact-evidence.spec.ts",
+      "title": "business facts expose new evidence after retired history and require invalid dates to be reconfirmed @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/business-fact-evidence.spec.ts",
+      "title": "business facts expose new evidence after retired history and require invalid dates to be reconfirmed @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/business-model-context.spec.ts",
+      "title": "business model view keeps the latest decision for every alternative after a long history @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/business-model-context.spec.ts",
+      "title": "business model check explains changed evidence without rerunning or executing @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/business-model-context.spec.ts",
+      "title": "business model view keeps the latest decision for every alternative after a long history @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/business-model-context.spec.ts",
+      "title": "business model check explains changed evidence without rerunning or executing @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/calendar-pagination.spec.ts",
+      "title": "calendar loads every item and resets daily, weekly and monthly ranges @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/calendar-pagination.spec.ts",
+      "title": "calendar loads every item and resets daily, weekly and monthly ranges @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/calendar-trend-evidence.spec.ts",
+      "title": "calendar ideas show dated source evidence without starting work @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/calendar-trend-evidence.spec.ts",
+      "title": "calendar ideas show dated source evidence without starting work @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/campaign-authorization.spec.ts",
+      "title": "campaign approval, cancellation and interrupted-write states @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/campaign-authorization.spec.ts",
+      "title": "campaign approval, cancellation and interrupted-write states @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/campaign-report-evidence.spec.ts",
+      "title": "shows validated report context and requires legacy evidence refresh @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/campaign-report-evidence.spec.ts",
+      "title": "shows validated report context and requires legacy evidence refresh @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/campaign-spend-monitor.spec.ts",
+      "title": "requires reviewed spend-monitor approval and preserves demo isolation @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/campaign-spend-monitor.spec.ts",
+      "title": "requires reviewed spend-monitor approval and preserves demo isolation @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/contact-frequency-policy.spec.ts",
+      "title": "owner policy and broadcast preview explain review contact pressure without sending @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/contact-frequency-policy.spec.ts",
+      "title": "owner policy and broadcast preview explain review contact pressure without sending @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/crm-payment-evidence.spec.ts",
+      "title": "Results separates recorded sales from payment evidence @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/crm-payment-evidence.spec.ts",
+      "title": "Results separates recorded sales from payment evidence @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/customer-language-evidence.spec.ts",
+      "title": "research shows source-matched and unchecked language without publishing @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/customer-language-evidence.spec.ts",
+      "title": "research shows source-matched and unchecked language without publishing @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/customer-progress.spec.ts",
+      "title": "Owner records and corrects scoped customer progress without sending @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-recheck-20261118.json"
+    },
+    {
+      "file": "e2e/customer-progress.spec.ts",
+      "title": "Owner records and corrects scoped customer progress without sending @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/customer-voice-learning.spec.ts",
+      "title": "owner can inspect, correct, dismiss and restore customer themes without executing actions @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/customer-voice-learning.spec.ts",
+      "title": "owner can inspect, correct, dismiss and restore customer themes without executing actions @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/deal-qualification.spec.ts",
+      "title": "Buying context saves dated reports and prepares review without contacting anyone @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-recheck-20261118.json"
+    },
+    {
+      "file": "e2e/deal-qualification.spec.ts",
+      "title": "Buying context saves dated reports and prepares review without contacting anyone @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/deal-stage-history.spec.ts",
+      "title": "Stage history pages recorded changes and flags changed snapshots without sending @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/deal-stage-history.spec.ts",
+      "title": "Stage history pages recorded changes and flags changed snapshots without sending @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/demo-flow.spec.ts",
+      "title": "today: goal, next actions, chat becomes action cards, cards run",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/demo-flow.spec.ts",
+      "title": "content: approve an Instagram draft, publish it (simulated receipt) and never duplicate",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/demo-flow.spec.ts",
+      "title": "plan: approved plan with channels, experiments and insights",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/demo-flow.spec.ts",
+      "title": "results: observed vs attributed vs projected, reconciliation and forecast detail",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/demo-flow.spec.ts",
+      "title": "connections: capability states instead of a single connected flag",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/demo-flow.spec.ts",
+      "title": "settings: billing usage meters and policies",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/demo-flow.spec.ts",
+      "title": "outbound: find customers, approve them, and a prospect books a call",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/demo-flow.spec.ts",
+      "title": "pause all activity, then resume",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/demo-flow.spec.ts",
+      "title": "mobile layout: no horizontal scroll and pause is reachable @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/demo-flow.spec.ts",
+      "title": "keyboard: skip link and primary navigation are reachable",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/demo-flow.spec.ts",
+      "title": "mobile layout: no horizontal scroll and pause is reachable @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/demo-update-plan.spec.ts",
+      "title": "demo update prepares the current plan without provider or publishing actions @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/demo-update-plan.spec.ts",
+      "title": "demo update prepares the current plan without provider or publishing actions @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/design-learning.spec.ts",
+      "title": "design outcomes retain their exact version and qualified learning through owner edits @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/design-learning.spec.ts",
+      "title": "reported comparisons keep allocation unknown until the owner supplies it @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/design-learning.spec.ts",
+      "title": "design outcomes retain their exact version and qualified learning through owner edits @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/design-learning.spec.ts",
+      "title": "reported comparisons keep allocation unknown until the owner supplies it @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/design-opportunities.spec.ts",
+      "title": "design queue reaches older audits, groups repeats and saves exact-finding corrections @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/design-opportunities.spec.ts",
+      "title": "design queue reaches older audits, groups repeats and saves exact-finding corrections @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/email-sender-check.spec.ts",
+      "title": "sender setup check is explicit, read-only and available on mobile @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-recheck-20261118.json"
+    },
+    {
+      "file": "e2e/email-sender-check.spec.ts",
+      "title": "sender setup check is explicit, read-only and available on mobile @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/explanation-preferences.spec.ts",
+      "title": "Owner explanation preference persists without starting work @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/explanation-preferences.spec.ts",
+      "title": "Owner explanation preference persists without starting work @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/first-payer-evidence.spec.ts",
+      "title": "Results does not call a refunded customer's renewal a new payer @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/first-payer-evidence.spec.ts",
+      "title": "Results does not call a refunded customer's renewal a new payer @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/focused-experience.spec.ts",
+      "title": "Focused timeline keeps task progress separate from business outcomes @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-final-fixes-20261118.json"
+    },
+    {
+      "file": "e2e/focused-experience.spec.ts",
+      "title": "Work opens saved drafts and keeps activity and decisions discoverable @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-final-fixes-20261118.json"
+    },
+    {
+      "file": "e2e/focused-experience.spec.ts",
+      "title": "AI questions use choices, support unknown and reveal text only for Other @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-final-fixes-20261118.json"
+    },
+    {
+      "file": "e2e/focused-experience.spec.ts",
+      "title": "Demo explains preparation limits without offering a paid action @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-final-fixes-20261118.json"
+    },
+    {
+      "file": "e2e/focused-experience.spec.ts",
+      "title": "Focused timeline keeps task progress separate from business outcomes @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/focused-experience.spec.ts",
+      "title": "Work opens saved drafts and keeps activity and decisions discoverable @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/focused-experience.spec.ts",
+      "title": "AI questions use choices, support unknown and reveal text only for Other @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/focused-experience.spec.ts",
+      "title": "Demo explains preparation limits without offering a paid action @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/focused-strategy-options.spec.ts",
+      "title": "focused plan exposes all three options and selecting bold grants no action authority @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/focused-strategy-options.spec.ts",
+      "title": "focused plan exposes all three options and selecting bold grants no action authority @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/forecast-evidence.spec.ts",
+      "title": "forecast creation and historical outcome checks retain comparable evidence @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/forecast-evidence.spec.ts",
+      "title": "forecast creation and historical outcome checks retain comparable evidence @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/lifecycle-email-audience.spec.ts",
+      "title": "owner previews dated progress eligibility and sees a completed milestone leave the audience @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/lifecycle-email-audience.spec.ts",
+      "title": "owner previews dated progress eligibility and sees a completed milestone leave the audience @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/marketing.spec.ts",
+      "title": "design system reference renders every component accessibly",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/marketing.spec.ts",
+      "title": "landing page explains the product honestly and validates the preview form",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/marketing.spec.ts",
+      "title": "pricing lists every plan from the entitlement registry",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/marketing.spec.ts",
+      "title": "sign-in is accessible",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/marketing.spec.ts",
+      "title": "security, privacy and terms pages render @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/marketing.spec.ts",
+      "title": "protected routes redirect signed-out visitors to sign-in",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/marketing.spec.ts",
+      "title": "security, privacy and terms pages render @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/money-display.spec.ts",
+      "title": "Results preserves yen, three-decimal currency and cents in larger totals @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/money-display.spec.ts",
+      "title": "Results preserves yen, three-decimal currency and cents in larger totals @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/multiple-loss-reasons.spec.ts",
+      "title": "Multiple reported loss reasons remain optional and do not execute actions @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/multiple-loss-reasons.spec.ts",
+      "title": "Multiple reported loss reasons remain optional and do not execute actions @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/owner-margin.spec.ts",
+      "title": "owners can save zero and negative margins through both plan forms @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/owner-margin.spec.ts",
+      "title": "owners can save zero and negative margins through both plan forms @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/pipeline-dates.spec.ts",
+      "title": "Next-step calendar date survives save and reopen across browser and workspace timezones @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/pipeline-dates.spec.ts",
+      "title": "Next-step calendar date survives save and reopen across browser and workspace timezones @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/pipeline-money.spec.ts",
+      "title": "Customer progress preserves currency precision and unknown values @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/pipeline-money.spec.ts",
+      "title": "Customer progress preserves currency precision and unknown values @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/pipeline-review.spec.ts",
+      "title": "Selected deal review prepares a question without submitting or changing the deal @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/pipeline-review.spec.ts",
+      "title": "Selected deal review prepares a question without submitting or changing the deal @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/plan-check-feedback.spec.ts",
+      "title": "old provisional source errors explain the current approval block @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/plan-check-feedback.spec.ts",
+      "title": "plan checks explain the block and discussion stays an editable request @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/plan-check-feedback.spec.ts",
+      "title": "old provisional source errors explain the current approval block @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/plan-check-feedback.spec.ts",
+      "title": "plan checks explain the block and discussion stays an editable request @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/play-result-money.spec.ts",
+      "title": "weekly reports require explicit values and preserve currency across settings changes @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/play-result-money.spec.ts",
+      "title": "weekly reports require explicit values and preserve currency across settings changes @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/post-results.spec.ts",
+      "title": "post observations preserve zero, unknowns and corrections without actions @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/post-results.spec.ts",
+      "title": "post observations preserve zero, unknowns and corrections without actions @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/prepared-work-home.spec.ts",
+      "title": "Home opens exact saved work and keeps it stable when a newer attempt arrives @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-final-fixes-20261118.json"
+    },
+    {
+      "file": "e2e/prepared-work-home.spec.ts",
+      "title": "Home opens exact saved work and keeps it stable when a newer attempt arrives @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/publish-recovery.spec.ts",
+      "title": "owner recovery records one attempt as posted and distinguishes the report from platform acceptance @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/publish-recovery.spec.ts",
+      "title": "owner recovery records one attempt as not_posted and distinguishes the report from platform acceptance @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/publish-recovery.spec.ts",
+      "title": "owner recovery records one attempt as posted and distinguishes the report from platform acceptance @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/publish-recovery.spec.ts",
+      "title": "owner recovery records one attempt as not_posted and distinguishes the report from platform acceptance @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/recommendation-first.spec.ts",
+      "title": "Home opens saved work and keeps requests editable @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/recommendation-first.spec.ts",
+      "title": "Plan presents the choice before optional research and controls @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/recommendation-first.spec.ts",
+      "title": "Channels show the plan before the library and open a creator intake without starting work @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/recommendation-first.spec.ts",
+      "title": "Search suggests an observed page review and only prepares an editable request @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/recommendation-first.spec.ts",
+      "title": "Owners can define a test and preserve its setup after reporting it not run @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/recommendation-first.spec.ts",
+      "title": "A chosen platform has a saved preparation with no launch side effect @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/recommendation-first.spec.ts",
+      "title": "Home opens saved work and keeps requests editable @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/recommendation-first.spec.ts",
+      "title": "Plan presents the choice before optional research and controls @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/recommendation-first.spec.ts",
+      "title": "Channels show the plan before the library and open a creator intake without starting work @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/recommendation-first.spec.ts",
+      "title": "Search suggests an observed page review and only prepares an editable request @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/recommendation-first.spec.ts",
+      "title": "Owners can define a test and preserve its setup after reporting it not run @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/recommendation-first.spec.ts",
+      "title": "A chosen platform has a saved preparation with no launch side effect @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/render-checks.spec.ts",
+      "title": "rendered checks report actual desktop and mobile layout evidence",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/render-checks.spec.ts",
+      "title": "a saved local draft keeps captures and layout observations against its version",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/report-evidence.spec.ts",
+      "title": "weekly and shared reports keep unknown reach and evidence notes @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/report-evidence.spec.ts",
+      "title": "weekly and shared reports keep unknown reach and evidence notes @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/results-coverage.spec.ts",
+      "title": "Results and Home preserve coverage and withhold incompatible totals @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/results-coverage.spec.ts",
+      "title": "Results and Home preserve coverage and withhold incompatible totals @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/review-send-boundaries.spec.ts",
+      "title": "Review receipt checks and owner observations never resend @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/review-send-boundaries.spec.ts",
+      "title": "Review receipt checks and owner observations never resend @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/segment-economics.spec.ts",
+      "title": "focused plans preserve unknown segment costs and explicit currency precision @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/segment-economics.spec.ts",
+      "title": "focused plans preserve unknown segment costs and explicit currency precision @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/simple-app.spec.ts",
+      "title": "plain-language Home, suggestions, tools, and review links @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/simple-app.spec.ts",
+      "title": "shared composer protects drafts and treats IME input as composition @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-desktop-remaining-20261118.json"
+    },
+    {
+      "file": "e2e/simple-app.spec.ts",
+      "title": "plain-language Home, suggestions, tools, and review links @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/simple-app.spec.ts",
+      "title": "shared composer protects drafts and treats IME input as composition @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/strategic-landscape.spec.ts",
+      "title": "owner reviews actionable competitive pressures without executing changes @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/strategic-landscape.spec.ts",
+      "title": "owner reviews actionable competitive pressures without executing changes @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    },
+    {
+      "file": "e2e/webhook-boundaries.spec.ts",
+      "title": "Webhook review explains uncertainty and deduplication without dispatch @mobile",
+      "project": "desktop",
+      "status": "passed",
+      "source": "climbos-offline-audit-playwright.log"
+    },
+    {
+      "file": "e2e/webhook-boundaries.spec.ts",
+      "title": "Webhook review explains uncertainty and deduplication without dispatch @mobile",
+      "project": "mobile",
+      "status": "passed",
+      "source": "climbos-offline-audit-mobile-final-20261118.json"
+    }
+  ]
+}

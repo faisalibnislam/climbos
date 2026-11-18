@@ -62,9 +62,10 @@ async function snapshot(ctx: QueryCtx, orgId: Id<"organizations">, userId: Id<"u
 }
 
 export const quote = query({ args: { slug: v.string() }, handler: async (ctx, { slug }) => {
-  await requireOrgAccess(ctx, { slug }, "edit");
+  const { org } = await requireOrgAccess(ctx, { slug }, "edit");
+  if (org.kind === "demo") return { canPrepare: false, reason: "Open your own business to prepare new work. You can still explore saved demo drafts.", maxCostMicros: 0 };
   const route = await defaultModelRoute(ctx);
-  return { maxCostMicros: estimateRun(STEP_WORK_STEPS.map(step => ({ ...step, modelKey: step.modelKey && isModelKey(step.modelKey) ? routeModelKey(route, step.modelKey) : step.modelKey })), currentRateVersion().id, { repair: false }).costMicros };
+  return { canPrepare: true, reason: null, maxCostMicros: estimateRun(STEP_WORK_STEPS.map(step => ({ ...step, modelKey: step.modelKey && isModelKey(step.modelKey) ? routeModelKey(route, step.modelKey) : step.modelKey })), currentRateVersion().id, { repair: false }).costMicros };
 } });
 
 export const view = query({ args: { slug: v.string(), strategyId: v.id("strategies"), stepKey: v.string(), workId: v.optional(v.id("planStepWork")) }, handler: async (ctx, args) => {

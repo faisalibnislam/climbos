@@ -28,7 +28,7 @@ test("sender setup check is explicit, read-only and available on mobile @mobile"
   await expect(button).toBeEnabled();
   await expect(page.getByText("Reads your domain status. No email is sent and no DNS settings are changed.", { exact: true })).toBeVisible();
   await button.click();
-  await expect(page.getByText("Connect your own Resend account to check the sender.", { exact: false })).toBeVisible();
+  await expect(page.getByText("Connect your own Resend account to check the sender.", { exact: true })).toBeVisible();
   await expect(page.getByText("Domain setup reported verified", { exact: true })).toHaveCount(0);
   await expectNoHorizontalScroll(page);
   await expectAccessible(page, "Email sender setup");

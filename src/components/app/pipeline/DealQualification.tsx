@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Button, Field, Input, Select, Textarea, toast } from "@/components/ui";
+import { Button, DatePicker, Field, Input, Select, Textarea, toast } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import { QUALIFICATION_LABELS, QUALIFICATION_QUESTIONS, QUALIFICATION_TOPICS, type QualificationTopic } from "@shared/growth/dealQualification";
 
@@ -47,7 +47,7 @@ function QualificationForm({ slug, id, topic, revision, report, changed, onClose
     <Field label="Evidence state"><Select value={state} options={[...STATES]} onValueChange={value => setState(value as Report["state"])} disabled={saving} /></Field>
     <Field label="What is known or needs checking?"><Textarea value={statement} maxLength={240} rows={2} onChange={e => setStatement(e.target.value)} disabled={saving} /></Field>
     <Field label="Where did this come from?" hint="Describe the conversation, document or reason for uncertainty. A source description is not independent verification."><Input value={sourceLabel} maxLength={160} onChange={e => setSourceLabel(e.target.value)} disabled={saving} /></Field>
-    <Field label="Observation date" hint="When this was observed, not a proposed closing date. No future dates (UTC)."><Input type="date" value={observedOn} onChange={e => setObservedOn(e.target.value)} disabled={saving} /></Field>
+    <Field label="Observation date" hint="When this was observed, not a proposed closing date. No future dates (UTC)."><DatePicker value={observedOn} onChange={setObservedOn} max={new Date().toISOString().slice(0, 10)} disabled={saving} /></Field>
     {changed ? <p role="alert" className="text-sm text-ink-2">Buying context changed while you were editing. Your draft is kept here. Cancel and review the latest reports before editing again.</p> : null}
     <div className="flex flex-wrap gap-2"><Button size="sm" disabled={saving || changed || statement.trim().length < 3 || sourceLabel.trim().length < 3 || !observedOn} onClick={async () => {
       setSaving(true);

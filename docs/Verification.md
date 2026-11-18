@@ -1,8 +1,14 @@
-## 18 November — retain only bound evidence in later repairs
+## 18 November 2026 — full offline checks, owner workflows and requirements audit
+
+**4,257 unit/backend tests passed across 476 files**, followed by **68 focused checks** after the final demo/date-control fixes (overlapping tests, including one new regression). **140 browser cases passed across the reconciled inventory: 78 desktop and 62 mobile**, including the complete recovered 62-case mobile run. App/Convex types, changed-file ESLint and diff checks passed. The first browser run was interrupted by a local fixture-database storage error; targeted rechecks and the recovered mobile run account for every failure/unrun case. [Exact commands, fixes and limits](growth-engine/offline-acceptance-audit-2026-11-18.md); [per-case browser evidence](growth-engine/owner-workflow-verification-2026-11-18.json).
+
+[All 410 original requirements](growth-engine/requirements-reconciliation-2026-11-18.md) and [later owner contracts/library quality](growth-engine/requirements-scope-2026-11-18.md) are reconciled. Audit coverage is complete; broad feature and real-business acceptance remain partial. Paid API calls stayed paused and runtime models unchanged. Saved Livoform quality remains below acceptance. The user's unrelated `.gitignore` edits were preserved.
 
 ## 18 November 2026 — offline strategy replay and full-suite findings
 
-[Audit and exact commands](growth-engine/offline-acceptance-audit-2026-11-18.md): 47 focused regression tests and 366 strategy/permission checks passed (overlap is not added). App/Convex typechecks, changed-file ESLint and diff checks passed. Replayed 84 saved records without paid calls: 8 current contract passes, 16 lint failures, 22 obsolete-schema failures, 38 missing-context records. None establishes fresh model quality. Fixed audience-clock cache misses, an outdated owner credit estimate and benchmark treatment of calculator annotations. Desktop/mobile checks and complete requirements reconciliation continue separately. Runtime model and paid-test pause are unchanged.
+[Audit and exact commands](growth-engine/offline-acceptance-audit-2026-11-18.md): 47 focused regression tests and 366 strategy/permission checks passed (overlap is not added). App/Convex typechecks, changed-file ESLint and diff checks passed. Replayed 84 saved records without paid calls: 8 current contract passes, 16 lint failures, 22 obsolete-schema failures, 38 missing-context records. None establishes fresh model quality. Fixed audience-clock cache misses, an outdated owner credit estimate and benchmark treatment of calculator annotations. Completed desktop/mobile checks and full requirements reconciliation are recorded in the later batch above. Runtime model and paid-test pause are unchanged.
+
+## 18 November — retain only bound evidence in later repairs
 
 V3.210 preserves earlier validated product-plan and measurement findings while excluding misquoted or source-unbound review claims from repair history. Earlier judgments remain fallible context; final review stays independent. **264 tests**, types and lint passed. This closes the locally reproduced defects in this pass, without claiming fresh Livoform strategy acceptance. Paid calls remain paused and runtime models unchanged. [Audit and commands](growth-engine/focused-evidence-review-audit.md).
 

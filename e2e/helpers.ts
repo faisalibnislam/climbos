@@ -1,5 +1,20 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
+
+/** Exercise the actual shared calendar, including navigation, rather than filling a native date input. */
+export async function pickCalendarDate(page: Page, control: Locator, date: string) {
+  await control.click();
+  const grid = page.getByRole("grid", { name: "Choose a date", exact: true });
+  await expect(grid).toBeVisible();
+  const target = grid.locator(`[data-iso="${date}"]`);
+  for (let month = 0; month < 24 && await target.count() === 0; month++) {
+    const first = await grid.getByRole("gridcell").first().getAttribute("data-iso");
+    await page.getByRole("button", { name: date < first! ? "Previous month" : "Next month", exact: true }).click();
+  }
+  await expect(target).toBeEnabled();
+  await target.click();
+  await expect(grid).toHaveCount(0);
+}
 
 /** WCAG 2.2 AA scan; fails on serious or critical violations. */
 export async function expectAccessible(page: Page, label: string) {

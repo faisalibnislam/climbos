@@ -5,7 +5,7 @@ import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
 import { useState, type FormEvent } from "react";
 import { CUSTOMER_PROGRESS_LABELS, CUSTOMER_PROGRESS_STATES, type CustomerProgressObservation, type CustomerProgressState } from "@shared/growth/customerProgress";
-import { Button, Callout, Dialog, DialogContent, DialogTrigger, Field, Input, Select, Textarea, toast } from "@/components/ui";
+import { Button, Callout, DatePicker, Dialog, DialogContent, DialogTrigger, Field, Input, Select, Textarea, toast } from "@/components/ui";
 import { errorMessage } from "../errors";
 
 type Contact = NonNullable<FunctionReturnType<typeof api.marketing.contactProgress>>;
@@ -78,9 +78,9 @@ function ProgressEditor({ slug, contact, onSaved }: { slug: string; contact: Con
       <Field label="Reported progress"><Select value={state} onValueChange={v => setState(v as CustomerProgressState)} options={CUSTOMER_PROGRESS_STATES.map(value => ({ value, label: CUSTOMER_PROGRESS_LABELS[value] }))} /></Field>
       <Field label="What this state means" hint="For example, first value might mean completing a real export, not just signing up."><Textarea required maxLength={300} value={criterion} onChange={e => setCriterion(e.target.value)} /></Field>
       <Field label="What you observed" hint="Give the evidence or reason for uncertainty. Do not include sensitive personal information."><Textarea required maxLength={500} value={evidence} onChange={e => setEvidence(e.target.value)} /></Field>
-      <Field label="Observation date" hint="Use a calendar date no later than today in UTC. This is not a scheduled action."><Input type="date" required value={observedOn} onChange={e => setObservedOn(e.target.value)} /></Field>
+      <Field label="Observation date" hint="Use a calendar date no later than today in UTC. This is not a scheduled action."><DatePicker value={observedOn} onChange={setObservedOn} max={new Date().toISOString().slice(0, 10)} disabled={busy} /></Field>
       {error ? <Callout tone="danger" title="Could not save">{error}</Callout> : null}
-      <Button type="submit" loading={busy}>Save observation</Button>
+      <Button type="submit" loading={busy} disabled={!observedOn}>Save observation</Button>
       <p className="text-xs text-ink-3">Saving records an owner report. It does not change consent, enroll anyone or send a message. Correct an uncertain report by saving Unknown for the same scope.</p>
     </form> : <p className="text-sm text-ink-2">A workspace member who can manage connections can record or correct observations.</p>}
     {contact.progress.history.length ? <details className="text-sm"><summary className="cursor-pointer font-medium">Observation history</summary>

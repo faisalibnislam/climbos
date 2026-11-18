@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
+import { PlaySchema } from "../shared/agents/specs";
 import { localDemoFixtures } from "./local-demo-fixtures";
 
 const envFile = process.env.CLIMBOS_DESIGN_E2E_ENV_FILE;
@@ -29,7 +30,23 @@ test("owners can save zero and negative margins through both plan forms @mobile"
   const expert = plan.expert as Record<string, unknown>;
   await append("strategies", [{ ...copyRow(plan), orgId: org._id, businessId: savedBusiness._id, goalId: savedGoal._id, runId: undefined, approvalId: undefined, status: "approved", expert: { ...expert,
     economics: { revenuePerCustomerMonthUsd: 20, grossMargin: null, monthlyChurn: null, basis: "Synthetic test inputs; missing owner numbers remain unknown", assumed: ["margin", "churn"] },
-    plays: [{ ...(expert.plays as Record<string, unknown>[])[0], horizonDays: 90, unit: "paying customers", model: { weeklyReach: 100, steps: [{ name: "paid", rate: 0.1 }], monthlySpendUsd: 100, ownerHoursPerWeek: 0 } }],
+    // A focused demo has no commercial plays. Build a complete synthetic economics scenario explicitly.
+    plays: [PlaySchema.parse({
+      name: "Synthetic margin scenario", oneLiner: "Illustrative scenario for testing owner input", kind: "creative",
+      audience: "Synthetic visitors", trigger: "Owner input test", hook: "Fixture only", mechanic: "Synthetic scenario",
+      assetUsed: "Synthetic test page", route: "No real distribution", funnel: ["Synthetic reach", "Synthetic paid conversion"],
+      unit: "paying customers", p10: 0, p50: 0, p90: 0, horizonDays: 90, confidence: "low",
+      biggestUnknown: "Not real customer evidence", test: "Local fixture only", killIf: "No external actions allowed", scaleIf: "Never scale this fixture",
+      scores: [1, 1, 1, 1, 1, 1, 1, 1], firstActionToday: "Review synthetic inputs", climbosCanDo: "Display calculations",
+      actionContract: { diagnosis: "Fixture economics", intendedEffect: "Test input persistence", evidenceBasis: "assumption", evidenceNote: "Synthetic fixture",
+        evidenceRefs: [], targetOrAsset: "Synthetic test page", resourcePlan: "No external action", executionCapability: "owner", dependencies: [],
+        measurement: { metric: "Saved input", baseline: "Unknown", target: "Owner-supplied value", windowDays: 90, source: "Local fixture" } },
+      model: { weeklyReach: 100, weeklyReachLow: 100, weeklyReachHigh: 100,
+        reachSource: { source: "assumption", ref: "", quote: "Synthetic fixture" },
+        steps: [{ name: "paid", rate: 0.1, low: 0.1, high: 0.1, source: "assumption", ref: "", quote: "Synthetic fixture" }],
+        monthlySpendUsd: 100, spendSource: { source: "assumption", ref: "", quote: "Synthetic fixture" }, ownerHoursPerWeek: 0,
+        hoursSource: { source: "assumption", ref: "", quote: "Synthetic fixture" } },
+    })],
   } }]);
   const effects = async () => Promise.all(["artifacts", "approvals", "actionReceipts", "workflowRuns"].map(async table => (await rows(table)).filter(row => row.orgId === org._id)));
   const before = await effects();

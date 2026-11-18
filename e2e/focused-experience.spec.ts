@@ -1,52 +1,47 @@
 import { expect, test } from "@playwright/test";
 import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
 
-test("Focused tabs keep cycles small and preserve reviews @mobile", async ({ page }) => {
-  const errors: string[] = []; page.on("pageerror", (error) => errors.push(error.message));
+test("Focused timeline keeps task progress separate from business outcomes @mobile", async ({ page }) => {
+  const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   const slug = await openDemo(page);
   await page.goto(`/app/${slug}/plan`);
   const current = page.getByRole("tab", { name: "Next steps", exact: true });
   await expect(current).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("heading", { name: "Growth plays", exact: true })).toHaveCount(0);
-  const cycle = page.getByRole("region", { name: "Plan length and progress", exact: true });
-  await expect(cycle.getByRole("button", { name: "14 days", exact: true })).toBeVisible();
-  await expect(cycle.getByRole("button", { name: "7 days", exact: true })).toHaveCount(0);
-  await cycle.getByRole("button", { name: "14 days", exact: true }).click();
-  await expect(cycle.getByRole("button", { name: "14 days", exact: true })).toHaveAttribute("aria-pressed", "true");
+  const timeline = page.getByRole("region", { name: "Your plan timeline", exact: true });
+  await expect(timeline.getByRole("heading", { name: "Prepare the review", exact: true })).toBeVisible();
+  await timeline.getByText("Track this step", { exact: true }).click();
+  const task = timeline.getByRole("checkbox").first();
+  await task.click();
+  await expect(task).toBeChecked();
   await page.reload();
-  await expect(cycle.getByRole("button", { name: "14 days", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await cycle.getByRole("button", { name: "Tell us how it went", exact: true }).click();
-  await expect(cycle.getByRole("textbox")).toHaveCount(0);
-  await cycle.getByRole("radio", { name: "I’m not sure yet", exact: true }).check();
-  await cycle.getByRole("radio", { name: "30 days", exact: true }).check();
-  await cycle.getByRole("button", { name: "Save and move forward", exact: true }).click();
-  await expect(cycle.getByRole("button", { name: "30 days", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("tab", { name: "What we learned", exact: true }).click();
-  await expect(page.getByText("Length changed", { exact: false }).first()).toBeVisible();
-  await page.locator("summary").filter({ hasText: "What we learned" }).click();
-  await expect(page.getByText("Results have not been reviewed. No growth outcome is claimed.", { exact: true })).toBeVisible();
-  await expectAccessible(page, "cycle history");
-  await page.getByRole("tab", { name: "Next steps", exact: true }).focus();
-  await page.keyboard.press("ArrowRight");
-  await expect(page.getByRole("tab", { name: "Why this plan", exact: true })).toHaveAttribute("aria-selected", "true");
+  await timeline.getByText("Track this step", { exact: true }).click();
+  await expect(task).toBeChecked();
+  const learning = page.getByRole("region", { name: "Check your progress", exact: true });
+  await expect(learning.getByRole("button", { name: "Record outcome", exact: true })).toBeVisible();
+  await expect(learning).toContainText("Completing tasks alone does not establish a business result.");
+  await task.click();
+  await expect(task).not.toBeChecked();
+  await current.focus(); await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: "Strategy options", exact: true })).toHaveAttribute("aria-selected", "true");
+  await current.click();
+  await expectAccessible(page, "plan timeline and separate outcome");
   await expectNoHorizontalScroll(page);
+  await page.screenshot({ path: test.info().outputPath("focused-timeline.png"), fullPage: true });
   expect(errors).toEqual([]);
-  await page.getByRole("tab", { name: "Next steps", exact: true }).click();
-  await page.screenshot({ path: test.info().outputPath("focused-cycle.png"), fullPage: true });
 });
 
-test("AI activity and Results open with the useful view @mobile", async ({ page }) => {
+test("Work opens saved drafts and keeps activity and decisions discoverable @mobile", async ({ page }) => {
   const slug = await openDemo(page);
   await page.goto(`/app/${slug}/work`);
-  await expect(page.getByRole("tab", { name: "In progress", exact: true })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("link", { name: /Design editor/ })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Your drafts", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("region", { name: "Prepared drafts by goal", exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "AI activity", exact: true }).click();
   await page.getByText("Ask AI for something else", { exact: true }).click();
-  await expect(page.getByLabel("Describe a problem or a goal", { exact: true })).toBeEnabled();
-  await page.getByRole("tab", { name: "Ready for you", exact: true }).click();
+  await expect(page.getByLabel("Your request", { exact: true })).toBeEditable();
+  await page.getByRole("tab", { name: "Needs a decision", exact: true }).click();
   await expect(page.getByRole("heading", { name: /^Needs you/ })).toBeVisible();
   await page.goto(`/app/${slug}/results`);
   await expect(page.getByRole("tab", { name: "What happened", exact: true })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByText("Reported by the platform", { exact: true })).toHaveCount(0);
   await expectAccessible(page, "focused results");
   await expectNoHorizontalScroll(page);
 });
@@ -75,13 +70,15 @@ test("AI questions use choices, support unknown and reveal text only for Other @
   await page.screenshot({ path: test.info().outputPath("friendly-question.png"), fullPage: false });
 });
 
-test("Make it happen prepares the saved move and opens the actual work @mobile", async ({ page }) => {
+test("Demo explains preparation limits without offering a paid action @mobile", async ({ page }) => {
   const slug = await openDemo(page);
-  const recommendation = page.getByRole("region", { name: "Your next step", exact: true });
-  await recommendation.getByRole("button", { name: "Make it happen", exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/app/${slug}/work`));
-  const requests = page.getByRole("region", { name: "Your requests", exact: true });
-  await expect(requests).toContainText(/Start the.*play/);
-  await expect(requests.getByText(/See result|Done|Working|Ready for review/).first()).toBeVisible();
+  await page.goto(`/app/${slug}/plan`);
+  const timeline = page.getByRole("region", { name: "Your plan timeline", exact: true });
+  await expect(timeline.getByText("Explore saved work in the demo", { exact: true })).toBeVisible();
+  await expect(timeline.getByRole("link", { name: "Use my own business", exact: true })).toHaveAttribute("href", "/sign-in?switch=1&next=/onboarding");
+  await expect(timeline.getByRole("button", { name: "Make it happen", exact: true })).toHaveCount(0);
+  await expect(timeline.getByText(/Up to .*credits/)).toHaveCount(0);
+  await timeline.getByText("Track this step", { exact: true }).click();
+  await expect(timeline.getByRole("checkbox", { checked: true })).toHaveCount(0);
   await expectNoHorizontalScroll(page);
 });

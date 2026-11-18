@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
-import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
+import { expectAccessible, expectNoHorizontalScroll, openDemo, pickCalendarDate } from "./helpers";
 import { localDemoFixtures } from "./local-demo-fixtures";
 const envFile = process.env.CLIMBOS_DESIGN_E2E_ENV_FILE;
 const { rows, append } = localDemoFixtures(envFile);
@@ -26,7 +26,7 @@ test("Owner records and corrects scoped customer progress without sending @mobil
   await page.getByRole("option", { name: "Reached first value", exact: true }).click();
   await dialog.getByLabel("What this state means", { exact: true }).fill("Completed a real client export");
   await dialog.getByLabel("What you observed", { exact: true }).fill("Owner watched the customer complete an export");
-  await dialog.getByLabel("Observation date", { exact: true }).fill("2026-11-16");
+  await pickCalendarDate(page, dialog.getByLabel("Observation date", { exact: true }), "2026-11-16");
   await dialog.getByRole("button", { name: "Save observation", exact: true }).click();
   await expect(dialog.getByText("Document app: Reached first value", { exact: true })).toBeVisible();
   await dialog.getByRole("button", { name: "Update Document app", exact: true }).click();

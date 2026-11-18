@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
+import { expectAccessible, expectNoHorizontalScroll, openDemo, pickCalendarDate } from "./helpers";
 import { localDemoFixtures } from "./local-demo-fixtures";
 const envFile = process.env.CLIMBOS_DESIGN_E2E_ENV_FILE;
 const { rows, append } = localDemoFixtures(envFile);
@@ -35,7 +35,7 @@ test("Buying context saves dated reports and prepares review without contacting 
   await page.getByRole("option", { name: "Reported", exact: true }).click();
   await need.getByLabel("What is known or needs checking?").fill("Customer wants one shared reporting process for regional teams.");
   await need.getByLabel("Where did this come from?").fill("Owner notes from the discovery call");
-  await need.getByLabel("Observation date", { exact: true }).fill("2026-01-12");
+  await pickCalendarDate(page, need.getByLabel("Observation date", { exact: true }), "2026-01-12");
   await expectAccessible(page, "buying context entry");
   await need.getByRole("button", { name: "Save observation" }).click();
   await expect(need.getByRole("button", { name: "Update", exact: true })).toBeVisible();

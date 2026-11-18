@@ -23,8 +23,8 @@ test.describe.serial("Formkit demo end-to-end", () => {
 
   test("today: goal, next actions, chat becomes action cards, cards run", async () => {
     await page.goto(`/app/${slug}/today`);
-    await expect(page.getByRole("heading", { name: "Let’s keep things moving.", exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Your next step", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "What’s next?", exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Ask ClimbOS", exact: true })).toBeVisible();
     // Make a wish: safe work starts on its own; anything else waits for "Do it".
     await page.getByLabel("Your request", { exact: true }).fill("Write a welcome email sequence for new sign-ups");
     await page.getByRole("button", { name: "Let’s get started" }).click();
@@ -74,7 +74,9 @@ test.describe.serial("Formkit demo end-to-end", () => {
     await page.goto(`/app/${slug}/results`);
     await page.getByRole("tab", { name: "Where it came from", exact: true }).click();
     await expect(page.getByRole("rowheader", { name: /Unattributed/ }).first()).toBeVisible();
-    await expect(page.getByText("Reported by the platform", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("region", { name: "What ad platforms say Reported figures", exact: true })).toBeVisible();
+    await expect(page.getByText("Record origin unknown", { exact: true })).toBeVisible();
+    await expect(page.getByText("They overlap and aren't billing revenue.", { exact: true })).toBeVisible();
     await expectAccessible(page, "results");
     await page.getByRole("tab", { name: "Look ahead", exact: true }).click();
     const forecastLink = page.locator("a[href*='/results/forecasts/']").first();
@@ -149,6 +151,6 @@ test.describe.serial("Formkit demo end-to-end", () => {
     await expect(page.getByRole("link", { name: /skip to content/i })).toBeFocused();
     await page.keyboard.press("Enter");
     const nav = page.getByRole("navigation", { name: "Primary" }).first();
-    await expect(nav.getByRole("link", { name: "Results" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Your goals" })).toBeVisible();
   });
 });

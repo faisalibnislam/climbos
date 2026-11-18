@@ -7,7 +7,7 @@ test("plain-language Home, suggestions, tools, and review links @mobile", async 
   const request = page.getByLabel("Your request", { exact: true });
   await expect(request).toBeVisible();
   await expect(page.getByText("Demo: no credits used, nothing sent or posted.", { exact: true })).toBeVisible();
-  await page.getByText("Your conversations", { exact: true }).click();
+  await page.getByRole("tab", { name: "Activity", exact: true }).click();
   const history = page.getByRole("region", { name: "Your requests", exact: true });
   const before = await history.innerText();
   await page.screenshot({ path: test.info().outputPath("home.png"), fullPage: false });
