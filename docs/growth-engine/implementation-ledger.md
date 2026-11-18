@@ -1,3 +1,7 @@
+## 18 November — preserve published setup detail without rewriting baselines
+
+An opt-in setup pack adds omitted published steps from the already-read payment help page. Both older evidence packs remain byte-identical; mixed-pack comparisons fail. No product/account action or source upgrade to verified behavior. 25 tests in three files, types/lint passed. Runtime model and original cap unchanged. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — distinguish visible steps from expandable detail
 
 V3.185 gives the existing reviewer verified source-level context about separate tabs, the selected timeline step and expandable details. It still judges actual workload and unclear instructions. 158 focused/render/permission tests, types/lint passed. No UI change or fresh browser test; paid effect pending. [Audit](focused-evidence-review-audit.md).

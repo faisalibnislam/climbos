@@ -1,3 +1,7 @@
+## 18 November 2026 — explicit setup-evidence acceptance variant
+
+An opt-in setup pack adds omitted published steps from the already-read payment help page. Both older evidence packs remain byte-identical; mixed-pack comparisons fail. No product/account action or source upgrade to verified behavior. 25 tests in three files, types/lint passed. Runtime model and original cap unchanged. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November 2026 — review against the actual plan presentation
 
 V3.185 gives the existing reviewer verified source-level context about separate tabs, the selected timeline step and expandable details. It still judges actual workload and unclear instructions. 158 focused/render/permission tests, types/lint passed. No UI change or fresh browser test; paid effect pending. [Audit](growth-engine/focused-evidence-review-audit.md).

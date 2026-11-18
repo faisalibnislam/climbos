@@ -1,6 +1,17 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — review the actual progressive presentation
+## Current status — retain published setup steps in an explicit evidence variant
+
+The same saved `/help/payments` page contains a concrete setup path that the concise documentation pack omitted. The reviewer asked for a click-by-click private check, but the evaluation supplied only a capability summary. An opt-in `public-docs-setup-20261118` pack now appends that page's published restricted-key path, named permissions and form-settings destination, with the original retrieval/update dates. It also clarifies that the form owner receives submitted answers; the payment step does not deliver a consultant's answer to the payer. Documentation is not a tested integration. Stripe's current requirements, account access and end-to-end behavior remain unverified, and no key was created or account accessed.
+
+Both earlier packs remain byte-identical; an additional frozen hash covers the prior documentation notes. Owner reports, unknowns, task, source identities and budget controls do not change. Comparisons across packs still fail, so any gain from the added source detail cannot be attributed solely to code. **25 tests in three files passed (0.56 seconds)**, including retained provenance, unchanged owner inputs, explicit pack selection, mismatched-evidence rejection, evaluation identity and cumulative budget enforcement. App/Convex types, changed-file lint and diff checks passed. No new runtime feature or provider was introduced. A later test must explicitly select the new pack; active docs V7 still uses the earlier pack.
+
+```sh
+pnpm exec vitest run tests/unit/livoform-launch-input.test.ts tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts
+pnpm typecheck
+```
+
+## V3.185 — review the actual progressive presentation
 
 V3.185 supplies missing presentation context to the existing reviewer. Source inspection traced the active plan route to `GoalWorkspace`: it starts on Next steps, shows one selected `PlanTimeline` step, and keeps task/timing details expandable. `PreparedWork` drafts are individually collapsed in a separate tab. `StrategyExplorationPanel` shows the three mechanisms and upside, with evidence/risk/test details expandable. The reviewer previously received the entire stored JSON without this context, while sometimes penalizing the length of the full exploration as owner workload.
 

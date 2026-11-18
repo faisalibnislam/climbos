@@ -40,6 +40,7 @@ describe("owner-selected Livoform launch acceptance", () => {
     expect(new Set(enriched.availableSourceUrls).size).toBe(8);
     expect(enriched.precomputedResearch).not.toHaveProperty("retrievedAt");
     const notes = enriched.precomputedResearch!.notes;
+    expect(createHash("sha256").update(notes).digest("hex")).toBe("3ffd318deafa9bbdba66c7090ca179f779d6919d30339622db2518c164a854c9");
     for (const source of LIVOFORM_PUBLIC_DOCS) {
       expect(enriched.availableSourceUrls).toContain(source.url);
       expect(referenceEvidenceBasis(source.url, enriched.constraints?.factEvidenceBases, enriched.availableSourceUrls!)).toBe("source_reported");
@@ -56,6 +57,24 @@ describe("owner-selected Livoform launch acceptance", () => {
     expect(notes).toContain("No product or payment behavior was tested");
     expect(notes).toContain("No connector has been connected or tested");
     expect(notes).toContain("do not grant ClimbOS access or execution authority");
+  });
+  it("adds published setup detail explicitly while preserving earlier evidence and owner unknowns", () => {
+    const prior = livoformLaunchInput(owner, now, "public-docs-20261118");
+    const setup = livoformLaunchInput(owner, now, "public-docs-setup-20261118");
+    expect(setup.facts).toEqual(prior.facts);
+    expect(setup.constraints).toEqual(prior.constraints);
+    expect(setup.task).toEqual(prior.task);
+    expect(setup.availableSourceUrls).toEqual(prior.availableSourceUrls);
+    expect(setup.precomputedResearch!.notes).toContain(prior.precomputedResearch!.notes);
+    expect(prior.precomputedResearch!.notes).not.toContain("Create restricted key");
+    expect(setup.precomputedResearch!.notes).toContain("Settings → Payments");
+    expect(setup.precomputedResearch!.notes).toContain("form owner receives the respondent's submitted answers");
+    expect(setup.precomputedResearch!.notes).toContain("Current Stripe permissions/terms, key creation and the end-to-end flow remain unverified");
+    expect(setup.precomputedResearch!.notes).toContain("no action is authorized");
+    expect(parseLaunchEvidencePack("launch-acceptance", "public-docs-setup-20261118")).toBe("public-docs-setup-20261118");
+    const artifact = (input: ReturnType<typeof livoformLaunchInput>) => ({ caseId: "livoform", schemaPassed: true, input, result: { output: { summary: "Synthetic" } } });
+    expect(() => livoformLaunchComparison(artifact(prior), artifact(setup))).toThrow("identical business evidence");
+    expect(() => livoformLaunchComparison(artifact(setup), artifact(setup))).not.toThrow();
   });
   it("rejects unknown packs and refuses to silently ignore pack selection on another stage", () => {
     expect(parseLaunchEvidencePack("launch-acceptance")).toBe("original");

@@ -47,3 +47,9 @@ export const LIVOFORM_PUBLIC_DOCS = [
 export function livoformPublicDocsResearch() {
   return LIVOFORM_PUBLIC_DOCS.map(source => `${source.url}\nRetrieved ${source.retrievedAt}; publisher update date ${source.updatedAt ?? "unknown"}. Source-reported claims, not tested product behavior:\n${source.claims}`).join("\n\n");
 }
+
+/** Additional detail from the same saved page, deliberately separate from the frozen pack. */
+export const LIVOFORM_PAYMENT_SETUP = `Evidence-pack addendum public-docs-setup-20261118.
+https://livoform.com/help/payments
+Retrieved 2026-11-18T02:00:50.104256Z; publisher update date 2026-10-15. Source-reported setup instructions, not a tested workflow:
+The page directs the owner to Stripe's Developers → API keys → Create restricted key, granting Write for Checkout Sessions and Webhook Endpoints, then pasting it into the form's Settings → Payments. It documents rk_test_ keys for tests without real money. Pay and send opens Stripe checkout; the form owner receives the respondent's submitted answers after payment. It does not deliver a consultant's answer to the payer. The booking illustration's amounts and counts are sample data, not Livoform business inputs. Current Stripe permissions/terms, key creation and the end-to-end flow remain unverified here; no account was accessed and no action is authorized.`;
