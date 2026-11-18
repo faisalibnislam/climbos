@@ -40,6 +40,12 @@ describe("creative preparation within the existing focused run", () => {
       },
     });
     expect(requests).toHaveLength(3);
+    for (const request of requests.slice(0, 2)) {
+      const system = JSON.stringify(request.system);
+      expect(system).toContain("existing features");
+      expect(system).toContain("Evidence constrains factual claims, not the range of proposed futures");
+      expect(system).toContain("A proposal never supports a present-tense promise in customer copy or authorizes implementation");
+    }
     expect(requests.every(req => req.customTools === undefined && req.webSearch === undefined && req.webFetch === undefined)).toBe(true);
     const writer = JSON.stringify(requests[1].messages), critic = JSON.stringify(requests[2].system);
     expect(writer).toContain("concrete public research query or source to inspect");

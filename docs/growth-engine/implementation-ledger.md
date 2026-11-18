@@ -1,3 +1,7 @@
+## 18 November — distinguish future designs from fabricated existing features
+
+V3.181 clarifies the highest-priority truth rule: labelled future designs are allowed in strategy exploration, while invented existing claims and unsupported customer promises remain prohibited. 166 focused/permission tests, types/lint passed. This resolves an instruction ambiguity; paid semantic benefit is not yet established. Latest completed docs V4 failed at 3.63, cumulative $81.785357 / $100; V5 loaded the preceding engine. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — preserve average-deficit review instructions
 
 V3.180 fixes feedback omitted at scores of 3–3.5 under the actual 3-minimum / 4-average rubric. The earlier simplified request test did not cover that case; the updated regression now uses the production rubric. 188 tests in 12 files, types/lint passed. No acceptance threshold, runtime model or authorization change. [Audit](focused-evidence-review-audit.md).

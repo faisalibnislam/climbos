@@ -1,12 +1,23 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — repair the actual average deficit
+## Current status — distinguish proposed futures from invented present facts
+
+V3.181 removes an ambiguity in the highest-priority operating rule. It prohibited inventing “features” without distinguishing invented current claims from deliberately proposed future designs, while the creative task separately permitted unbuilt ideas. The truth rule now explicitly protects hypothetical future features, offers, partnerships and business models during strategic exploration. These remain labelled proposals, cannot justify present-tense customer promises and grant no implementation authority. No factual, numeric, source, budget, approval or tenant control is removed. This clarification is a plausible instruction-level contributor to feature-bound ideation, not a proven explanation for all conventional outputs.
+
+Captured actual preparation and writer requests verify that both receive the clarified rule. **166 tests in nine files passed (19.90 seconds)**, including evidence rejection, strategy exploration, generation and permission regressions. App/Convex types, changed-file lint and diff checks passed. The active docs V5 evaluation loaded v3.180, so it measures the preceding review/repair changes only. A separate fresh run is required to assess this clarification. Runtime model remains unchanged, tester access and founder time stay unknown, and all paid evaluations share the original cumulative $100 cap.
+
+```sh
+pnpm exec vitest run tests/unit/creative-preparation.test.ts tests/unit/strategy-exploration.test.ts tests/unit/focused-originality-review.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-plan.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+## V3.180 — repair the actual average deficit
 
 V3.180 fixes a confirmed feedback-selection bug behind incomplete revisions. The real focused rubric uses **minimum each = 3, minimum average = 4**. The feedback helper previously forwarded only scores below 3. A 3 or 3.5 originality score could therefore keep the whole review below 4 while its criterion-specific fix and mechanism-replacement instructions were omitted. V3.176's request regression used a simplified minimum of 4 and did not represent this production case; its semantic effect had remained unproven. This limitation is now corrected explicitly rather than treating that earlier test as proof.
 
 For a complete, valid review below its average requirement, the helper now includes criteria below the average target as well as any individual-floor failure. Passing overall reviews do not gain optional rewrites; invalid or duplicate scores cannot establish an average. The actual runtime-request regression now uses the repository's real rubric and verifies that a 3/5 F7 result among 4/5 criteria delivers the replacement guidance, preserves other work and receives a fresh full review. Neither threshold nor maximum revisions, provider, runtime model, source evidence or permission changes. The separate recovery-review command also receives the new originality-audit instructions alongside its required schema.
 
-**188 tests in 12 files passed (21.27 seconds)**, including the actual scoring configuration, fractional deficits, completed-review validation, revision limits, evidence checks, budget identity, generation and approval boundaries. App/Convex types, changed-file ESLint and diff checks passed. The active docs V4 paid run loaded v3.178 before these edits; only a fresh run can measure V3.179/V3.180.
+**188 tests in 12 files passed (21.27 seconds)**, including the actual scoring configuration, fractional deficits, completed-review validation, revision limits, evidence checks, budget identity, generation and approval boundaries. App/Convex types, changed-file ESLint and diff checks passed. Docs V4 loaded v3.178 before these edits: seven calls cost **$1.442046**, with reviews 3.50 / four hard errors → 3.44 / no hard errors → **3.63 / no hard errors, ship false**. The final critic still found a familiar integration-entry bold idea and weak customer rationale; it also noted the no-account invitation versus optional account-based session ambiguity. No failed result is promoted to a pass. Combined charged/held reached **$81.785357 / $100**. Fresh docs V5 is running on V3.180 to measure the new contracts.
 
 ```sh
 pnpm exec vitest run tests/unit/focused-evidence-review.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-originality-review.test.ts tests/unit/focused-evidence-repair.test.ts tests/unit/focused-length-repair.test.ts tests/unit/creative-preparation.test.ts tests/unit/agent-escalation.test.ts tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
