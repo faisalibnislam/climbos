@@ -1,3 +1,7 @@
+## 18 November — retain mixed quality evidence and complete the public comparison
+
+The explicit no-feedback run was clean but still failed at **3.88/5**. A separate-context comparison preferred the earlier with-feedback plan for usable activation work, despite more distinct alternatives in the newer one. Production retains its existing workflow and runtime model. Combined charged/held **$94.007488 / $100**. A separately selected, dated public-comparison pack adds official plan/billing claims while preserving unresolved billing intervals, unknown access/time and all older packs. **31 provenance/identity/budget tests**, types/lint/diff checks passed. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November — correct false precedent matches and retain the evaluation cap
 
 V3.193 removes plan labels and verification qualifiers that falsely matched unrelated precedents; **202 tests in seven files passed**, including protected original exploration and permission controls. A separate QA-only change enforces a smaller text-input envelope so complete revision pairs can fit within the remaining authorized budget; **30 budget/identity/source tests passed**. The cumulative cap stays $100, with both ledgers and uncertain holds included. No model or source-library change. [Audit](growth-engine/focused-evidence-review-audit.md).

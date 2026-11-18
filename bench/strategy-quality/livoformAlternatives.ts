@@ -37,3 +37,32 @@ export const LIVOFORM_ALTERNATIVE_SOURCES = [
 export function livoformAlternativesResearch() {
   return `Evidence-pack addendum public-alternatives-20261118. These current first-party competitor pages supplement the older Livoform documentation; they are not an exhaustive market review, customer interviews or tested feature comparisons. No account was accessed. Owner time, audience access and willingness to pay remain unknown. No action is authorized.\n\n${LIVOFORM_ALTERNATIVE_SOURCES.map(source => `${source.url}\nRetrieved ${source.retrievedAt}; publisher update date ${source.publishedAt ?? "unknown"}; response SHA-256 ${source.responseSha256}. Source-reported claims:\n${source.claims}`).join("\n\n")}`;
 }
+
+/** Additional reads requested by the failed comparison; never silently added to older packs. */
+export const LIVOFORM_COMPARISON_SOURCES = [
+  {
+    url: "https://tally.so/help/plans-and-pricing",
+    title: "Tally plans and pricing",
+    retrievedAt: "2026-11-18T04:53:46.425903Z",
+    responseSha256: "c5512819c32e604c748534de37c1ae947d810f88fa74ae2f4c30c2acf2d197a7",
+    claims: "The official help page displays Tally Pro at $29/month and lists removal of Tally branding, custom domains, partial submissions and team collaboration as Pro features. This verifies a published plan claim, not tested restrictions, checkout availability, equal functionality or buyer preference. Do not infer anyone needs a paid branding feature simply because it is listed.",
+  },
+  {
+    url: "https://tally.so/pricing",
+    title: "Tally pricing page",
+    retrievedAt: "2026-11-18T04:54:06.603698Z",
+    responseSha256: "0a30cbf0f7f0a728e49d19df157d1d934f9717dad3febd01ac6c11a65dba1546",
+    claims: "The pricing page lists payments among free features, subject to fair use. Its Pro section advertises hiding Tally branding and hosting forms on a custom subdomain. The retrieved text displays $24 per month beside monthly/yearly choices, but the selected billing mode was not established by this text-only read. Preserve that display separately from the help page's $29/month; do not turn an apparent annual equivalent into a monthly charge or declare a price conflict resolved. Taxes, checkout and the buyer's location remain unverified. No customer testimonial or example count is business evidence for Livoform.",
+  },
+  {
+    url: "https://tally.so/help/billing-and-payment-info",
+    title: "Tally billing and payment information",
+    retrievedAt: "2026-11-18T05:07:24.261166Z",
+    responseSha256: "bd7f71d926d00eb807e8ab8fc791bfa05e44baf87804bc9ff3e0ad19b0a90ac2",
+    claims: "Tally says paid plans are charged upfront and recur for the selected month or year. Billing is in USD or EUR based on IP location; no customer geography is established here. The page explicitly says it does not offer free trials. These are published billing terms, not an accessed account or a tested purchase. Reconfirm the exact currency, billing interval, taxes and relevant plan at checkout before any public numerical comparison. Do not assume a free Pro trial or compare unlike billing periods.",
+  },
+] as const;
+
+export function livoformComparisonResearch() {
+  return `Evidence-pack addendum public-comparison-20261118. The earlier limitation about unchecked competing plan terms is superseded only for the dated public claims below. Product behavior, actual buyer need, account access and owner time remain unverified; no action is authorized.\n\n${LIVOFORM_COMPARISON_SOURCES.map(source => `${source.url}\nRetrieved ${source.retrievedAt}; publisher update date unknown; response SHA-256 ${source.responseSha256}. Source-reported claims:\n${source.claims}`).join("\n\n")}`;
+}

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
 import { livoformLaunchInput, livoformLaunchComparison, LIVOFORM_LAUNCH_QUESTIONS, normalizeLaunchComparison, parseLaunchEvidencePack } from "../../bench/strategy-quality/livoformLaunch";
 import { LIVOFORM_PUBLIC_DOCS } from "../../bench/strategy-quality/livoformPublicDocs";
-import { LIVOFORM_ALTERNATIVE_SOURCES } from "../../bench/strategy-quality/livoformAlternatives";
+import { LIVOFORM_ALTERNATIVE_SOURCES, LIVOFORM_COMPARISON_SOURCES } from "../../bench/strategy-quality/livoformAlternatives";
 import { referenceEvidenceBasis } from "../../shared/agents/evidenceKind";
 
 // Synthetic reports exercise provenance; these are not claims about the real business.
@@ -109,6 +109,28 @@ describe("owner-selected Livoform launch acceptance", () => {
     expect(parseLaunchEvidencePack("launch-acceptance", "public-docs-20261118")).toBe("public-docs-20261118");
     expect(() => parseLaunchEvidencePack("launch-acceptance", "guessed-pack")).toThrow();
     for (const stage of ["launch-judge", "plans", "industries"]) expect(() => parseLaunchEvidencePack(stage, "original")).toThrow("only accepted");
+  });
+  it("keeps later plan and billing reads separate, with unresolved billing periods and owner access", () => {
+    const before = livoformLaunchInput(owner, now, "public-alternatives-20261118");
+    const after = livoformLaunchInput(owner, now, "public-comparison-20261118");
+    expect(after.facts).toEqual(before.facts);
+    expect(after.constraints).toEqual(before.constraints);
+    expect(after.task).toEqual(before.task);
+    expect(after.brief).toEqual(before.brief);
+    expect(after.precomputedResearch!.notes).toContain(before.precomputedResearch!.notes);
+    expect(before.availableSourceUrls).toHaveLength(12);
+    expect(after.availableSourceUrls).toHaveLength(15);
+    for (const source of LIVOFORM_COMPARISON_SOURCES) {
+      expect(after.availableSourceUrls).toContain(source.url);
+      expect(after.precomputedResearch!.notes).toContain(source.retrievedAt);
+      expect(after.precomputedResearch!.notes).toContain(source.responseSha256);
+    }
+    expect(after.precomputedResearch!.notes).toContain("selected billing mode was not established");
+    expect(after.precomputedResearch!.notes).toContain("does not offer free trials");
+    expect(after.precomputedResearch!.notes).toContain("no customer geography is established");
+    const record = (input: typeof after) => ({ caseId: "livoform", schemaPassed: true, input, result: { output: { summary: "Synthetic" } } });
+    expect(() => livoformLaunchComparison(record(before), record(after))).toThrow("identical business evidence");
+    expect(parseLaunchEvidencePack("launch-acceptance", "public-comparison-20261118")).toBe("public-comparison-20261118");
   });
   it("uses the shared focused task with an evaluation clock, no source of execution authority", () => {
     const input = livoformLaunchInput(owner, now);
