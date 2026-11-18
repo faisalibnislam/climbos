@@ -1,5 +1,21 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.202 — preserve complete creative records and validate resume boundaries
+
+A maximum-size, schema-valid feedback fixture reproduced silent truncation at the old 20,000-character wrapper limit. The writer received an incomplete JSON record, potentially losing the end of the developed direction and its evidence references. A second regression showed that malformed saved exploration could trigger a feedback request before being rejected.
+
+The creative preparation and feedback schemas already bound candidate count and every field. Runtime now parses both fresh and resumed records before use, discards unknown checkpoint fields through the same schema projection, and wraps the complete validated JSON as untrusted proposal context. It no longer slices individual creative records at an unrelated character boundary. Invalid saved exploration stops before another call. Every candidate remains available; none is ranked or filtered for low confidence, missing precedent or feasibility. Call counts, output allowances, request-budget enforcement and the runtime model remain unchanged. Larger valid records can use more input tokens than a silently truncated record; existing reservations and context limits still apply.
+
+Both regressions failed before the correction. Fresh and checkpointed maximum-size feedback now round-trips intact, including the last source reference, while unknown checkpoint fields remain excluded. **187 tests in 11 files passed (14.34 seconds)**; app/Convex typechecks, changed-file ESLint and diff checks passed.
+
+```sh
+pnpm exec vitest run tests/unit/creative-preparation.test.ts tests/unit/focused-originality-review.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-length-repair.test.ts tests/unit/focused-evidence-repair.test.ts tests/unit/strategy-prompt-cost.test.ts tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+pnpm exec eslint shared/agents/runtime.ts shared/agents/specs.ts tests/unit/creative-preparation.test.ts
+```
+
+This completes the current locally reproducible review-binding, repair-feedback and creative-context defects. It does not establish improved real-provider strategy quality. The latest paid result remains the preserved 3.5/5 agency-evidence failure; product-tier reasoning, originality and first-use usefulness require future semantic verification. Paid tests remain paused, the $100 cap and runtime model are unchanged, and tester access/founder time remain unknown. No deployment, customer contact, live product action or business result occurred.
+
 ## V3.201 — preserve the current originality finding during repair
 
 A request-level regression reproduced a second loss: the current review's detailed closest-alternative comparison and test were omitted from the writer's repair packet, even though older findings were retained. The short scored fix could say only to rework the idea, losing the distinction between comparing against an ordinary capped quote and against a bare calculator.

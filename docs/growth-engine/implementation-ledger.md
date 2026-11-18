@@ -1,3 +1,7 @@
+## 18 November — retain complete creative context on fresh and resumed runs
+
+V3.202 fixes reproduced truncation of valid creative feedback and rejects invalid exploration checkpoints before another call. Complete schema-bounded candidates and feedback reach the writer; unknown checkpoint fields are excluded. **187 focused/budget/permission tests**, types and lint passed. Paid testing stays paused; no runtime model or permission change, and no fresh semantic quality claim. [Audit and command](focused-evidence-review-audit.md).
+
 ## 18 November — deliver the current originality finding to repairs
 
 V3.201 fixes a reproduced loss of the reviewer’s current mechanism comparison and proposed control. Repairs now receive the complete bound finding as fallible context only when needed; final review remains independent. **210 focused/permission tests**, types and lint passed. Paid tests remain paused at **$99.063401 used/held**, model unchanged. No semantic quality gain is claimed. [Audit and command](focused-evidence-review-audit.md).

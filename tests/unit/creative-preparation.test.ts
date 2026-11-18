@@ -30,6 +30,50 @@ const spec = () => ({ ...focusedStrategySpec({ maxRevisions: 0 }), schema: z.obj
 });
 
 describe("creative preparation within the existing focused run", () => {
+  it.each([false, true])("keeps every bounded candidate and the complete developed direction past the old cutoff (checkpoint=%s)", async cached => {
+    const fill = (prefix: string, max: number) => prefix + "x".repeat(max - prefix.length);
+    const marker = "END_OF_SYNTHETIC_DEVELOPED_SOURCE";
+    const direction = { ...seeds.directions[0], methodApplication: fill("Synthetic method ", 600), title: fill("Synthetic candidate ", 120),
+      businessTension: fill("Synthetic tension ", 500), mechanism: fill("Synthetic exchange ", 700), changedBehavior: fill("Proposed behavior ", 400),
+      whyParticipantsCare: fill("Unknown demand ", 500), closestFamiliarAlternative: fill("Synthetic comparison ", 300), meaningfulDifference: fill("Unverified difference ", 500),
+      unsupportedAssumptions: Array.from({ length: 5 }, (_, i) => fill(`Assumption ${i} `, 220)), reversibleTest: fill("Private synthetic comparison ", 500),
+      evidenceRefs: Array.from({ length: 5 }, (_, i) => fill(`https://example.com/synthetic-${i}/`, 500 - marker.length) + marker),
+    };
+    const possibilities = CreativePreparationSchema.parse({ directions: ["convention_inversion", "distant_transfer", "asset_recombination", "ownable_behavior"].map((creativeMethod, i) => ({ ...direction, creativeMethod, title: `Synthetic direction ${i}` })) });
+    const largeFeedback = CreativeFeedbackSchema.parse({ developedDirection: direction, directions: possibilities.directions.map(candidate => ({
+      creativeMethod: candidate.creativeMethod, candidateTitle: candidate.title, mechanismQuote: candidate.mechanism,
+      closestFamiliarAlternative: fill("Closest synthetic practice ", 600), consequentialDifference: fill("Unverified consequential difference ", 900),
+      mechanismVerdict: "unclear_difference", testOfDifference: fill("Synthetic comparison only ", 700),
+    })) });
+    expect(JSON.stringify(largeFeedback).length).toBeGreaterThan(20_000);
+    const requests: TurnRequest[] = [];
+    await runAgent(spec(), { brief: "Synthetic bounded-context test", task: "Prepare possibilities", facts: [] }, {
+      phase: async (key, _label, fn) => {
+        if (cached && key.index === 49) return { ...possibilities, extra: "UNVALIDATED_CHECKPOINT_EXTRA" } as never;
+        if (cached && key.index === 48) return { ...largeFeedback, extra: "UNVALIDATED_CHECKPOINT_EXTRA" } as never;
+        return (await fn()).value;
+      },
+      turn: async req => {
+        requests.push(req); const output = req.schema === CreativePreparationSchema ? possibilities : req.schema === CreativeFeedbackSchema ? largeFeedback : req.system.some(s => s.text.includes("HARD GATES")) ? review : draft;
+        return { ok: true, output, text: JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" };
+      },
+    });
+    const writer = String(requests[cached ? 0 : 2].messages[0].content);
+    const packet = writer.split('<untrusted_content source="advisory mechanism feedback">\n')[1]?.split("\n</untrusted_content>")[0];
+    expect(packet?.endsWith("}")).toBe(true);
+    expect(JSON.parse(packet!)).toEqual(largeFeedback);
+    expect(writer).not.toContain("UNVALIDATED_CHECKPOINT_EXTRA");
+    expect(requests).toHaveLength(cached ? 2 : 4);
+    expect(requests.every(req => !req.customTools && !req.webSearch && !req.webFetch)).toBe(true);
+  });
+  it("rejects a malformed exploration checkpoint before requesting feedback or drafting", async () => {
+    let calls = 0;
+    await expect(runAgent(spec(), { brief: "Synthetic", task: "Resume possibilities", facts: [] }, {
+      phase: async (key, _label, fn) => key.index === 49 ? { directions: seeds.directions.slice(0, 1) } as never : (await fn()).value,
+      turn: async () => { calls++; return { ok: true, output: feedback, text: "{}", appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" }; },
+    })).rejects.toMatchObject({ kind: "invalid_output" });
+    expect(calls).toBe(0);
+  });
   it.each([false, true])("rejects feedback about a different mechanism even when method and candidate title match (checkpoint=%s)", async cached => {
     const wrong = structuredClone(feedback); wrong.directions[0].mechanismQuote = "An unrelated exchange from another candidate or earlier run.";
     let calls = 0;
