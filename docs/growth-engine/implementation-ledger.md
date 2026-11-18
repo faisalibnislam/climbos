@@ -1,3 +1,7 @@
+## 18 November — targeted creative replacement during repair
+
+`v3.176-creative-replacement`: failed-originality feedback can replace a familiar mechanism rather than preserve its substance, while narrow test/evidence defects and passing work retain their scope. Same calls, model, budget and independent review. 171 tests, types/lint passed. Documentation baseline failed honestly; combined charged/held $78.005667 / $100. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — preserve page excerpts alongside research summaries
 
 `v3.175-preserved-page-context`: the existing planning context now retains current same-business page text even when cached AI notes are present, with per-record dates and visible bounded omissions. One red generation regression; then 128 tests, types/lint passed. No new calls, provider, model or permissions. [Audit](focused-evidence-review-audit.md).

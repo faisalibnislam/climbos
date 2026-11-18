@@ -516,7 +516,8 @@ it("does not reuse another website's or another tenant's cached evidence", async
   const { runId } = await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
   await t.run(async ctx => { const run = (await ctx.db.get(runId))!; const b = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", run.orgId)).first())!; await ctx.db.patch(b._id, { website: "https://changed.example/" }); });
   expect((await t.query(internal.jobWrites.jobContext, { runId }))?.focusedResearch).toBeNull();
-  // No model call needed to inspect this cache boundary.
+  // The context read needs no model call; drain the queued synthetic job before the next test.
+  await t.finishAllScheduledFunctions(() => undefined);
 });
 
 it("retains dated first-party excerpts alongside cached research in the actual writer and review inputs", async () => {
@@ -533,8 +534,9 @@ it("retains dated first-party excerpts alongside cached research in the actual w
   });
   await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
   await t.finishAllScheduledFunctions(() => undefined);
-  const writer = JSON.stringify(state.requests.find(req => !req.system.some(block => block.text.includes("HARD GATES")) && req.schema?.safeParse(focusedPlanFixture()).success)?.messages);
-  const critic = JSON.stringify(state.requests.find(req => req.system.some(block => block.text.includes("HARD GATES")))?.messages);
+  const scoped = state.requests.filter(req => JSON.stringify(req.messages).includes("https://business.example/help/setup"));
+  const writer = JSON.stringify(scoped.find(req => !req.system.some(block => block.text.includes("HARD GATES")) && req.schema?.safeParse(focusedPlanFixture()).success)?.messages);
+  const critic = JSON.stringify(scoped.find(req => req.system.some(block => block.text.includes("HARD GATES")))?.messages);
   for (const text of [writer, critic]) {
     expect(text).toContain("the basic plan excludes automation; the plus plan includes it");
     expect(text).toContain(new Date(fetchedAt).toISOString());

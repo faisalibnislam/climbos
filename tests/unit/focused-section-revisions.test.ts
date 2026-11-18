@@ -35,6 +35,27 @@ async function run(patch: unknown, lastReview = review(5)) {
 }
 
 describe("bounded focused section repairs", () => {
+  it("delivers mechanism-replacement guidance in the existing reserved repair, then reviews the complete result", async () => {
+    const creativeSchema = schema.extend({ strategyExploration: z.object({ bold: z.string() }) });
+    const first = { ...original, strategyExploration: { bold: "A familiar synthetic trial mechanism" } };
+    const patch = { strategyExploration: { bold: "A changed synthetic participant exchange" } };
+    const creativeReview = (score: number) => ({ ...review(score), scores: ["F7", "XV"].map(id => ({ id, score, note: "Synthetic originality assessment", fix: score < 4 ? "Replace the familiar bold mechanism." : "none" })) });
+    const responses = [first, creativeReview(3), patch, creativeReview(5)], requests: TurnRequest[] = [];
+    let reservations = 0;
+    const result = await runAgent({ ...spec, schema: creativeSchema, rubric: { ...spec.rubric, criteria: [{ ...spec.rubric.criteria[0], id: "F7" }] } }, { brief: "Synthetic, access and time unknown", task: "Explore distinct mechanisms", facts: [] }, {
+      beforeRevision: async () => { reservations++; return true; },
+      phase: async (_key, _label, fn) => (await fn()).value,
+      turn: async req => { requests.push(req); const output = responses.shift(); return { ok: true, output, text: JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" }; },
+    });
+    expect(reservations).toBe(1); expect(requests).toHaveLength(4);
+    expect(JSON.stringify(requests[2].messages)).toContain("CREATIVE REPAIR SCOPE");
+    expect(JSON.stringify(requests[2].messages)).toContain("You may discard every preliminary candidate");
+    expect(requests.every(req => req.customTools === undefined && req.webSearch === undefined)).toBe(true);
+    expect(JSON.stringify(requests[3].messages)).toContain(patch.strategyExploration.bold);
+    expect(JSON.stringify(requests[3].messages)).toContain(first.preparedWork[0].draft);
+    expect(result.output).toEqual({ ...first, ...patch });
+    expect(result.assessment?.ship).toBe(true); // synthetic review, not an originality claim
+  });
   it("keeps omitted sections, preserves the raw patch and reviews the complete merged draft before accepting it", async () => {
     const patch = { summary: "Audience availability remains unknown." };
     const { result, requests, records, reservations, resume } = await run(patch);

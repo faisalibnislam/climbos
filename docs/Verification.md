@@ -1,3 +1,7 @@
+## 18 November 2026 — replace a rejected mechanism instead of polishing it
+
+V3.176 adds targeted creative-repair scope to the existing reserved revision, preserving useful passing work and full re-review. **171 tests in 11 files passed**, types/lint passed; an observed synthetic queue leak was fixed before rerunning the focused suite. Documentation baseline remains failed at 3.88 because originality scored 3; seven calls cost $1.328379, cumulative **$78.005667 / $100**. [Audit and limits](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November 2026 — preserve collected page detail in strategy generation
 
 V3.175 fixes saved page excerpts disappearing when cached AI research exists. A new production-request regression failed first, then **128 tests in eight files passed**, including the writer/critic input, source dates, context ceiling, tenant/cache isolation and permissions. App/Convex types and changed-file lint passed. Paid acceptance uses precomputed sources and does not exercise this Convex handoff. [Audit and commands](growth-engine/focused-evidence-review-audit.md).

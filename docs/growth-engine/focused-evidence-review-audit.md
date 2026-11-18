@@ -1,6 +1,19 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — retain source-page detail through production planning
+## Current status — replace rejected creative mechanisms in the existing repair
+
+Documentation baseline `launch-docs-v1-20261118` (v3.173; source hash `89407a686fcb6837fcf2c66cc63c028eb48ffbbb71a8d1b44be165833de5ddc2`) cost **$1.328379 across seven calls**. Reviews progressed 3.56 → 3.88 → 3.63; the engine correctly retained the reviewed 3.88 result with **ship false** because originality scored 3. The added public documentation resolved the test-key uncertainty but did not establish reliable strategy quality. All intermediate and final records remain intact. Combined charged/held is **$78.005667 / $100**.
+
+The writer repeatedly kept a conventional “pay after your first sale” mechanism through both repairs, mainly refining wording and its mock-up. V3.176 makes the existing below-threshold originality feedback explicit about repair scope: when the mechanism itself is familiar, replace that option rather than polish it. Preliminary possibilities are not an approved shortlist. When only evidence labelling or the experiment is weak, repair that narrower issue instead. Passing main work and other options remain preserved unless consistency/diversity requires a change. No new call, provider, model, score threshold or execution power is added; the existing reserved revision is fully re-reviewed.
+
+**171 tests in 11 files passed (13.68 seconds)**, including actual repair-message delivery, preservation of other sections, fresh review, no added action tools, invalid/duplicate/passing-score handling and permission/budget regressions. The first suite run exposed a test-isolation issue: a preceding synthetic queued job could leak into the next test's captured requests. That test now drains its queue, and the new evidence assertion selects its own source-bearing requests. The full focused suite then passed. App/Convex typechecks, changed-file ESLint and diff checks passed. These tests establish wiring and safeguards, not actual originality; paid semantic effect is pending.
+
+```sh
+pnpm exec vitest run tests/unit/focused-evidence-review.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-length-repair.test.ts tests/unit/agent-escalation.test.ts tests/unit/creative-preparation.test.ts tests/unit/strategy-exploration.test.ts tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+## V3.175 — retain source-page detail through production planning
 
 A focused Convex regression reproduced a real evidence-loss bug: when a recent same-business research summary existed, `jobContext` kept current first-party page URLs but omitted all their saved excerpts. The writer and reviewer could therefore miss product eligibility/setup details that the repository had already collected. V3.175 includes both scoped, unexpired successful page excerpts and cached notes, with separate retrieval dates and explicit source/summary classes. Conflicting claims remain visible; no claim is silently upgraded to tested behavior.
 

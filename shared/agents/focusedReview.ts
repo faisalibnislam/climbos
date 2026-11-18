@@ -12,7 +12,8 @@ export function focusedRevisionCriteria(critique: CritiqueResult, rubric: Rubric
     if (matches.length !== 1) return [];
     const score = matches[0];
     if (!Number.isFinite(score.score) || score.score < 1 || score.score >= rubric.shipRule.minEach || !score.fix.trim() || score.fix.trim().toLowerCase() === "none") return [];
-    return [{ score: score.score, text: `- ${criterion.id} (${criterion.name}, ${score.score}/5): ${score.note.slice(0, 800)} Fix: ${score.fix.slice(0, 1200)}` }];
+    const creativeRepair = criterion.id === "F7" ? "\nCREATIVE REPAIR SCOPE: Preserve passing work, not a rejected mechanism. If the weakness is a familiar bold mechanism, replace that option with a different value exchange, participant role, source of distribution or ownable behavior tied to this business. Do not spend the repair renaming it, adding a celebratory moment, or improving the test for the same conventional idea. You may discard every preliminary candidate; they are not an approved shortlist. If the mechanism is already distinctive and only its evidence labelling or test is weak, repair that specific weakness instead. Keep grounded/adjacent work unless a diversity or consistency correction is needed. State the closest familiar alternative, the consequential difference and a reversible comparison that could show the difference matters. New capabilities remain proposals, with honest unknowns; no precedent, high confidence or immediate feasibility is required, and no execution is authorized." : "";
+    return [{ score: score.score, text: `- ${criterion.id} (${criterion.name}, ${score.score}/5): ${score.note.slice(0, 800)} Fix: ${score.fix.slice(0, 1200)}${creativeRepair}` }];
   }).sort((a, b) => a.score - b.score).map(row => row.text).join("\n");
 }
 export const EVIDENCE_AUDIT_CATEGORIES = ["business_state", "comparative_claims", "capabilities_and_results"] as const;

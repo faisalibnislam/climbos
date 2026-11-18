@@ -70,6 +70,23 @@ describe("focused review evidence integrity", () => {
     c.scores[0].score = 3;
     expect(focusedRevisionCriteria(c, rubric)).toContain("An optional stylistic change");
   });
+  it("allows a rejected creative mechanism to be replaced without forcing replacement for a narrow test defect", () => {
+    const creativeRubric = { ...rubric, criteria: [...rubric.criteria, { id: "F7", name: "Originality", anchors: { 1: "missing", 3: "familiar", 5: "distinct" } }] };
+    const c = review(); c.scores.push({ id: "F7", score: 3, note: "The bold option repeats a conventional billing trial.", fix: "Change the mechanism, preserve the useful main test." });
+    const feedback = focusedRevisionCriteria(c, creativeRubric);
+    expect(feedback).toContain("replace that option with a different value exchange");
+    expect(feedback).toContain("already distinctive and only its evidence labelling or test is weak");
+    expect(feedback).toContain("no precedent, high confidence or immediate feasibility is required");
+    expect(feedback).toContain("Keep grounded/adjacent work");
+    c.scores.at(-1)!.score = 4;
+    expect(focusedRevisionCriteria(c, creativeRubric)).toBe("");
+    c.scores.at(-1)!.score = NaN;
+    expect(focusedRevisionCriteria(c, creativeRubric)).toBe("");
+    c.scores.at(-1)!.score = 3;
+    c.scores.push({ ...c.scores.at(-1)! });
+    expect(focusedRevisionCriteria(c, creativeRubric)).toBe("");
+    expect(focusedRevisionCriteria(review(), { ...creativeRubric, id: "another-rubric" })).toBe("");
+  });
   it("refuses a missing semantic audit even when the reviewer gives every score five", () => {
     const c = review(); delete (c as unknown as { evidenceAudit?: unknown }).evidenceAudit;
     expect(assess(c, [], rubric).ship).toBe(false);
