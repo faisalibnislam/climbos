@@ -211,12 +211,22 @@ const FICTIONAL_TEST_LABEL = /^(?:[-*]\s*)?(?:fictional|synthetic|illustrative|i
 /** An adjacent parenthetical labels its value, not every other number in the sentence. */
 const INLINE_FICTIONAL_TEST_VALUE = /[$£€]?\d[\d,.]*(?:\s?%|(?:k|m|x)(?![a-z])|×)?\s*\((?:fictional|synthetic|illustrative|invented)\s+(?:test|sample|example|demo)\b[^)\n]*\)/gi;
 
-/** Numbers in the output that don't appear anywhere in the evidence. */
+const NUMERIC_TOKEN = /[$£€]?\d[\d,.]*(?:\s?%|(?:k|m|x)(?![a-z])|×)?/gi;
+const withoutPrecedentIds = (value: string) => value.replace(/\bCP-\d{3}\b/g, "");
+/** Exact decimal identity, without floating-point rounding or joining separate values. */
+function numericValue(raw: string): string | null {
+  const digits = raw.replace(/[,\s$£€%kmx×]/gi, "").replace(/\.$/, "");
+  const parts = /^(\d+)(?:\.(\d+))?$/.exec(digits);
+  if (!parts) return null;
+  const whole = parts[1].replace(/^0+(?=\d)/, ""), fraction = (parts[2] ?? "").replace(/0+$/, "");
+  return `${whole}${fraction ? `.${fraction}` : ""}`;
+}
+
+/** Numeric presence is necessary, not proof of matching units, subject, period or claim scope. */
 export function untracedNumbers(text: string, evidence: string, opts: { labelled?: boolean } = {}): string[] {
   // Stable corpus identifiers are references, not business quantities. Citation membership is checked separately.
-  text = text.replace(/\bCP-\d{3}\b/g, "");
-  const normalize = (s: string) => s.replace(/[,\s]/g, "");
-  const ev = normalize(evidence);
+  text = withoutPrecedentIds(text);
+  const evidenceValues = new Set([...withoutPrecedentIds(evidence).matchAll(NUMERIC_TOKEN)].map(match => numericValue(match[0])).filter(value => value !== null));
   const found: string[] = [];
   // Labelled plans: drop sentences that say the number is an assumption, target or rule.
   // Deadlines ("by day 21", "45 days", "week 6") are plan decisions, not claims.
@@ -229,15 +239,15 @@ export function untracedNumbers(text: string, evidence: string, opts: { labelled
         .replace(/\b(?:days?|weeks?|months?)\s+\d+\b|\b\d+(?:\s*[-–]\s*\d+)?\s*(?:days?|weeks?|months?)\b/gi, " ")
     : text;
   // Units count only as whole tokens: "10k", "3x", "40%" — not the "m" of "1 month".
-  for (const m of checked.matchAll(/[$£€]?\d[\d,.]*(?:\s?%|(?:k|m|x)(?![a-z])|×)?/gi)) {
+  for (const m of checked.matchAll(NUMERIC_TOKEN)) {
     const raw = m[0].trim();
-    const digits = normalize(raw).replace(/[$£€%kmx×]/gi, "").replace(/\.$/, "");
-    if (!digits) continue;
-    const n = Number(digits);
+    const value = numericValue(raw);
+    if (value === null) continue;
+    const n = Number(value);
     // Small bare counts ("3 tips", "Step 2") and years are not factual claims on their own.
     const hasUnit = /[$£€%×]|\d(k|m|x)$/i.test(raw);
     if (!hasUnit && Number.isFinite(n) && (n <= 12 || (n >= 1990 && n <= 2035))) continue;
-    if (!ev.includes(digits)) found.push(raw);
+    if (!evidenceValues.has(value)) found.push(raw);
   }
   return [...new Set(found)];
 }

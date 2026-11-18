@@ -27,6 +27,24 @@ describe("copy lint", () => {
     expect(untracedNumbers("Grew 3x to 10k users", "")).toEqual(["3x", "10k"]);
   });
 
+  it.each([
+    ["Costs $29", "Published price: $129", "$29"],
+    ["Costs $29", "Published price: $29.99", "$29"],
+    ["Grew 40%", "Measured change: 140%", "40%"],
+    ["Grew 40%", "There were 4 visits and 0 sales", "40%"],
+    ["Served 500 customers", "Source describes 1,500 customers", "500"],
+    ["Costs $29", "Analogy CP-029 is available", "$29"],
+  ])("does not find %s inside an unrelated numeric value", (copy, evidence, missing) => {
+    expect(untracedNumbers(copy, evidence)).toContain(missing);
+    expect(lintCopy({ body: copy }, { evidence, publishable: true })).toContainEqual(expect.objectContaining({ rule: "invented_fact", path: "body", severity: "error" }));
+  });
+
+  it("accepts complete numeric values across ordinary formatting without rounding", () => {
+    expect(untracedNumbers("Costs $29.00; serves 1,500 teams", "Published price $29; 1500 teams.")).toEqual([]);
+    expect(untracedNumbers("Costs $29.99", "Published price $29.990")).toEqual([]);
+    expect(untracedNumbers("Costs $29.99", "Published price $29.991")).toEqual(["$29.99"]);
+  });
+
   it("checks limits and the fold", () => {
     expect(maxLength("x".repeat(31), 30, "h[0]", "Headline")[0].rule).toBe("length");
     expect(hookBeforeFold("a".repeat(200) + "\nrest", 140, "body")[0].rule).toBe("fold");

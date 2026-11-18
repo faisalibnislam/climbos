@@ -1,5 +1,21 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.203 — reject numeric fragments as evidence
+
+Six local regressions reproduced numeric-presence errors: a public price such as $29 could pass because a source contained $129 or $29.99, percentages/counts could match parts of larger values, and precedent IDs could supply apparent quantities. Equivalent decimal formatting was also rejected. The existing copy validator now compares complete decimal tokens without floating-point rounding; corpus IDs are excluded on both sides. No new model call, route, threshold or authorization is introduced. Existing local fictional-example labels and planning assumptions remain distinct from public factual claims.
+
+The mocked production strategy path now verifies that an invented $29 draft against an owner-reported $129 price is saved as failed quality, despite 5/5 AI scores. Approval and starting the play are denied, with no action receipts. The first integration run exposed fixture mistakes (a missing fact category and draft text below the schema minimum); those were corrected before verification.
+
+**258 tests in 13 files passed (11.22 seconds)**. App/Convex typechecks, changed-file ESLint and diff checks passed.
+
+```sh
+pnpm exec vitest run tests/unit/agent-lint.test.ts tests/unit/context-fit.test.ts tests/unit/capture-policy.test.ts tests/unit/copy-angles.test.ts tests/unit/focused-plan.test.ts tests/unit/prepared-work.test.tsx tests/unit/focused-offer-assessment.test.ts tests/unit/claims-uplift.test.ts tests/unit/plan-grounding.test.ts tests/unit/focused-evidence-review.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+pnpm exec eslint shared/agents/lint.ts shared/agents/specs.ts tests/unit/agent-lint.test.ts tests/convex/focused-plan.test.ts
+```
+
+This is a numeric-presence check, not semantic verification of units, subject, plan eligibility, period or commercial meaning; the existing evidence/offer checks and independent review remain necessary. The latest paid strategy failure is unchanged. Paid tests stay paused, the runtime model stays unchanged, and no real business outcome or improved live originality is claimed.
+
 ## V3.202 — preserve complete creative records and validate resume boundaries
 
 A maximum-size, schema-valid feedback fixture reproduced silent truncation at the old 20,000-character wrapper limit. The writer received an incomplete JSON record, potentially losing the end of the developed direction and its evidence references. A second regression showed that malformed saved exploration could trigger a feedback request before being rejected.

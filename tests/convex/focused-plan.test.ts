@@ -7,7 +7,7 @@ import { offerAssessmentFixture, offerFact } from "../fixtures/offerAssessment";
 import { approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import type { TurnRequest } from "../../shared/ai/types";
 import type { RateVersion } from "../../shared/economics/rates";
-const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], reviewScores: "", familiarBold: false, wrongBoldQuote: false, failTruth: false, unsupportedStateClaim: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", explorationReference: "", dismissedChannel: false, emailMode: "", competingFirstActions: false, competingChecklist: false }));
+const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], reviewScores: "", familiarBold: false, wrongBoldQuote: false, failTruth: false, unsupportedStateClaim: false, refusedTarget: false, unsupportedGuarantee: false, unsupportedPrice: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", explorationReference: "", dismissedChannel: false, emailMode: "", competingFirstActions: false, competingChecklist: false }));
 vi.mock("../../shared/ai/turn", async original => ({
   ...await original<typeof import("../../shared/ai/turn")>(),
   modelTurn: async (req: TurnRequest, rates: RateVersion) => {
@@ -57,6 +57,7 @@ vi.mock("../../shared/ai/turn", async original => ({
     plan.weekOneChecklist = [plan.focusedMove.firstAction];
     if (state.competingChecklist) plan.phases[0].tasks.push("Find participants and coordinate an additional experiment.");
     if (state.unsupportedGuarantee) plan.preparedWork[0] = { ...plan.preparedWork[0], kind: "social_post", draft: "Review our service for your next project. We guarantee your money back." };
+    if (state.unsupportedPrice) plan.preparedWork[0] = { ...plan.preparedWork[0], kind: "page_copy", draft: "Our subscription costs $29 per month. Review the workflow details before choosing your plan." };
     if (state.refusedTarget) plan.preparedWork[0] = { ...plan.preparedWork[0], kind: "creator_pitch", target: "Creator.example — suggest our product" };
     if (req.schema?.safeParse(plan).success) {
       const text = JSON.stringify(plan);
@@ -85,7 +86,7 @@ vi.mock("../../shared/ai/turn", async original => ({
     return result;
   },
 }));
-afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.reviewScores = ""; state.familiarBold = false; state.wrongBoldQuote = false; state.failTruth = false; state.unsupportedStateClaim = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.explorationReference = ""; state.dismissedChannel = false; state.emailMode = ""; state.competingFirstActions = false; state.competingChecklist = false; });
+afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.reviewScores = ""; state.familiarBold = false; state.wrongBoldQuote = false; state.failTruth = false; state.unsupportedStateClaim = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.unsupportedPrice = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.explorationReference = ""; state.dismissedChannel = false; state.emailMode = ""; state.competingFirstActions = false; state.competingChecklist = false; });
 
 async function workspace() {
   const t = setup(); delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE;
@@ -748,6 +749,22 @@ it.each(["familiar", "wrong_quote"])("persists an invalid originality review and
   expect(plan.expert?.quality?.fixes).toContainEqual(expect.objectContaining({ rule: "review_scores", path: "review.originalityAudit" }));
   const revision = state.requests.find(req => JSON.stringify(req.messages).includes("A senior reviewer assessed your draft"));
   expect(JSON.stringify(revision?.messages)).toContain(failure === "familiar" ? "A better test or presentation cannot make an unchanged familiar mechanism original" : "quote the complete current strategyExploration.bold.businessMechanism");
+  await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
+  await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: plan._id, playId: "focused" })).rejects.toThrow();
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
+
+
+it("blocks an invented price whose digits occur inside a real price despite passing AI scores", async () => {
+  const { t, owner, slug, orgId } = await workspace(); state.unsupportedPrice = true;
+  await owner.client.mutation(api.orgs.addFact, { slug, category: "pricing", statement: "Our subscription costs $129 per month." });
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(plan, JSON.stringify(await t.run(async ctx => (await ctx.db.query("workflowRuns").collect()).map(run => ({ status: run.status, error: run.error }))))).not.toBeNull();
+  expect(plan.expert?.quality?.state).toBe("failed");
+  expect(plan.expert?.quality?.agents[0].average).toBe(5);
+  expect(plan.expert?.quality?.fixes).toContainEqual(expect.objectContaining({ rule: "invented_fact", path: "preparedWork[0].draft", message: expect.stringContaining("$29") }));
   await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
   await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: plan._id, playId: "focused" })).rejects.toThrow();
   expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);

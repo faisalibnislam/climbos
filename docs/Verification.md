@@ -1,3 +1,7 @@
+## 18 November — reject numeric fragments as source support
+
+V3.203 fixes reproduced substring matches such as an invented $29 price being accepted against $129. Complete decimal values now match without rounding, and corpus IDs cannot supply quantities. The mocked strategy path persists failure and denies approval/start despite passing AI scores. **258 tests**, types and lint passed. Numeric presence does not establish semantic claim support. Paid tests remain paused and the runtime model is unchanged. [Audit and commands](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November — retain complete creative context on fresh and resumed runs
 
 V3.202 fixes reproduced truncation of valid creative feedback and rejects invalid exploration checkpoints before another call. Complete schema-bounded candidates and feedback reach the writer; unknown checkpoint fields are excluded. **187 focused/budget/permission tests**, types and lint passed. Paid testing stays paused; no runtime model or permission change, and no fresh semantic quality claim. [Audit and command](growth-engine/focused-evidence-review-audit.md).
