@@ -1,3 +1,7 @@
+## 18 November 2026 — bounded repair of decreasing factual errors
+
+V3.178 separates fallback selection from whether one remaining reserved repair can help. 161 tests in nine files, app/Convex types, lint and diff checks passed. Docs V3 still failed: factual errors decreased but one plan-eligibility contradiction remained; its originality score was also overly generous. Combined charged/held **$80.343311 / $100**. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November 2026 — preserve actual product-value events for paid features
 
 V3.177 corrects review guidance that wrongly replaced product activation with a sample walkthrough when payment comes first. **161 focused/permission tests passed**, types/lint passed. Docs V2 scored 4/5 but manual inspection found this measurement error, so its passing score is not trusted as acceptance. Seven calls cost $1.325832; combined charged/held **$79.331499 / $100**. [Audit and exact distinction](growth-engine/focused-evidence-review-audit.md).

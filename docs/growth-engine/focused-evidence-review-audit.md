@@ -1,6 +1,19 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — correct paid-feature activation measurement
+## Current status — preserve productive bounded evidence repair
+
+`launch-docs-v3-20261118` (v3.177, source hash `49a7d69bebbb5ae0bc90fcb29d02c5ba247d9adfe16a77a32441a970d30169f1`) cost **$1.011812 across five calls**. Reviews progressed **3.38 / two factual errors → 3.75 / one factual error**. The second reviewer correctly kept paid access and actual product use distinct, and the revised private brief contained a concrete conditional access-research route. But it still contradicted plan eligibility by saying Livoform earns *only* when the buyer picks Core, despite Pro/Business including Core. The bold approval-gate idea also remained familiar; a 4/5 originality score is not accepted as proof of originality. Combined charged/held is **$80.343311 / $100**. Tester access, founder time, costs and real outcomes remain unknown.
+
+The run exposed premature stopping: the reviewer changed the truth gate from pass to fail while reducing factual defects, so the fallback ranking retained the earlier failed draft and also prevented the remaining repair. V3.178 separates fallback selection from repair eligibility. A focused section repair with fewer factual errors, no lower average/minimum and intact budget/focus/safety gates may use the remaining already-bounded revision. Both versions must have only factual hard errors; malformed reviews, other hard failures, no progress, deteriorating scores, a clean original or an exhausted/refused allowance do not qualify. The existing fallback, maximum revision count, fresh full review, runtime model and acceptance bar stay unchanged. This is permission to repair, never permission to execute or accept a failed draft.
+
+**161 tests in nine files passed (21.10 seconds)**, including reservation refusal, exhausted revisions, malformed review, unchanged errors, safety/focus/budget failures, successful fresh review and failed fallback. App/Convex typechecks, changed-file ESLint and diff checks passed. Paid semantic quality remains to be retested.
+
+```sh
+pnpm exec vitest run tests/unit/focused-evidence-repair.test.ts tests/unit/focused-length-repair.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/agent-escalation.test.ts tests/unit/anthropic-budget.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+## V3.177 — correct paid-feature activation measurement
 
 `launch-docs-v2-20261118` used v3.176, source hash `1f0545cbb6b9d9a1be4689e53271c95a3d2472adb445db00446a73f723f37a7a`, and the same dated documentation pack as the previous run. Seven calls cost **$1.325832**; combined charged/held is **$79.331499 / $100**. Its review progressed 3.50 → 3.63 → **4/5 throughout, ship true**, correcting an invented completed product test and restoring the conditional public-access research branch. No external product test or outreach occurred.
 

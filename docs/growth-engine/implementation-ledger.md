@@ -1,3 +1,7 @@
+## 18 November — retain the bounded repair when factual errors decrease
+
+`v3.178-bounded-evidence-repair`: allow productive factual repair under intact non-truth gates and unchanged revision/reservation limits; never accept failed work. 161 tests, types/lint passed. Docs V3 failed honestly; cumulative $80.343311 / $100. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — paid prerequisite is not a reason to redefine activation
 
 `v3.177-paid-activation-order`: writer, reviewer and separate launch comparator preserve the product user, value event and actual payment order. A sample supports job-fit learning, not proof of product activation. 161 tests, types/lint passed. Docs V2 received a passing AI score but manual inspection rejected its metric relabelling; no historical grade was overwritten. Combined charged/held $79.331499 / $100. [Audit](focused-evidence-review-audit.md).

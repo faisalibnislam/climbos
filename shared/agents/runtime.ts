@@ -218,6 +218,21 @@ function repairableFocusedLengthRegression(current: Assessment, best: Assessment
       && score.score > (best.critique.scores.find(prior => prior.id === score.id)?.score ?? 5));
 }
 
+/** Gate wording can change while factual errors decrease. A failed truth gate still
+ * blocks acceptance, but need not discard a productive, already-bounded repair. */
+function repairableFocusedEvidenceProgress(current: Assessment, best: Assessment): boolean {
+  const currentErrors = current.lint.filter(issue => issue.severity === "error");
+  const bestErrors = best.lint.filter(issue => issue.severity === "error");
+  const intactNonTruthGates = (assessment: Assessment) => ["G2", "G3", "G4"].every(id => {
+    const entries = assessment.critique.gates.filter(gate => gate.id === id);
+    return entries.length === 1 && entries[0].pass;
+  });
+  return currentErrors.length > 0 && currentErrors.length < bestErrors.length
+    && [...currentErrors, ...bestErrors].every(issue => issue.rule === "invented_fact")
+    && current.average >= best.average && current.minimum >= best.minimum
+    && intactNonTruthGates(current) && intactNonTruthGates(best);
+}
+
 export function draftSystem<T>(spec: AgentSpec<T>): SystemBlock[] {
   const playbooks = spec.skills.map((id) => skillPlaybook(id)).join("\n\n---\n\n");
   return [
@@ -538,9 +553,10 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     if (!best.assessment || rank(a) > rank(best.assessment)) best = { output: current, assessment: a, round };
     const shipped = spec.shipOn === "gates" ? a.gatesPassed && a.lint.every((l) => l.severity !== "error") : a.ship;
     if (shipped || round === reviews - 1) break;
-    // Preserve early stopping except for a strategically improved focused revision whose
-    // only new hard failure is draft length. The clean best remains the fallback.
-    if (round > 0 && best.round !== round && !(spec.sectionRevisions && spec.rubric.id === FOCUSED_REVIEW_ID && best.assessment && repairableFocusedLengthRegression(a, best.assessment))) break;
+    // Choosing the safest reviewed fallback is separate from deciding whether the next
+    // reserved repair is productive. Neither exception makes a failed draft acceptable.
+    if (round > 0 && best.round !== round && !(spec.sectionRevisions && spec.rubric.id === FOCUSED_REVIEW_ID && best.assessment
+      && (repairableFocusedLengthRegression(a, best.assessment) || repairableFocusedEvidenceProgress(a, best.assessment)))) break;
     checkDeadline(deps);
     const escalation = c.escalation && c.escalation.reason !== "none" && c.escalation.evidence.trim().length > 0 ? deps.escalationModel : undefined;
     const revisionModel = escalation ?? spec.models.revise ?? spec.models.draft;
