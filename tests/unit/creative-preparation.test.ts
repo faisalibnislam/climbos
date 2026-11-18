@@ -66,6 +66,9 @@ describe("creative preparation within the existing focused run", () => {
     expect(critic).toContain("Payment can legitimately precede activation");
     expect(critic).toContain("A sample walkthrough supports comprehension or job-fit learning only");
     expect(critic).toContain("Preserve prepared assets and useful alternative mechanisms");
+    expect(critic).toContain("PRESENTATION CONTEXT:");
+    expect(critic).toContain("Do not treat the full stored JSON as one screen");
+    expect(critic).toContain("Collapsing detail does not make real work disappear");
     expect(critic).toContain("another product's connector documentation does not establish ClimbOS account access");
     expect(critic).toContain("Preparing a checklist is different from running its product/payment test");
     expect(critic).toContain("FOCUSED ORIGINALITY AUDIT:");

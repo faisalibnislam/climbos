@@ -1,6 +1,19 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — bind fictional labels to their actual numeric values
+## Current status — review the actual progressive presentation
+
+V3.185 supplies missing presentation context to the existing reviewer. Source inspection traced the active plan route to `GoalWorkspace`: it starts on Next steps, shows one selected `PlanTimeline` step, and keeps task/timing details expandable. `PreparedWork` drafts are individually collapsed in a separate tab. `StrategyExplorationPanel` shows the three mechanisms and upside, with evidence/risk/test details expandable. The reviewer previously received the entire stored JSON without this context, while sometimes penalizing the length of the full exploration as owner workload.
+
+The review now distinguishes immediate visible content, opened artifacts and actual later conditional work. Hidden detail does not make necessary work disappear: overloaded steps, missing instructions, unclear actors and unsupported automation promises remain valid defects. It must not delete useful source/test detail or approvals merely to shrink the stored object. Numeric thresholds, draft schema, model, calls and UI are unchanged. This is source inspection and existing render-contract verification, **not a new browser or usability test**.
+
+**158 tests in ten files passed (17.45 seconds)**, including delivery of the presentation contract to the critic, existing collapsed-draft rendering, option retrieval, timeline behavior and approval boundaries. App/Convex types, changed-file lint and diff checks passed. Docs V7 loaded v3.184 before this clarification; semantic effect remains to be tested.
+
+```sh
+pnpm exec vitest run tests/unit/creative-preparation.test.ts tests/unit/prepared-work.test.tsx tests/unit/strategy-options-view.test.ts tests/unit/plan-timeline.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/focused-originality-review.test.ts tests/unit/focused-section-revisions.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+## V3.184 — bind fictional labels to their actual numeric values
 
 `launch-docs-v6-20261118` used v3.182, source hash `8c4c80eca55a875367b6d9a29be8237275d8e14121eca9160dbd11e8729f7bcf`. Seven calls cost **$1.432857**; combined charged/held is **$84.649842 / $100**. History: **3.31 / three hard errors → 3.63 / two → 3.69 / two, ship false**. Its bold respondent-controlled answer wallet was classified as materially different; the critic still found a weak test of real sharing behavior and customer acquisition. It caught and repaired a respondent-demo versus organizer-use measurement error before acceptance. Customer rationale improved but owner workload and test design remained below the bar.
 

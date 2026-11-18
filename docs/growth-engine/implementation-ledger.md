@@ -1,3 +1,7 @@
+## 18 November — distinguish visible steps from expandable detail
+
+V3.185 gives the existing reviewer verified source-level context about separate tabs, the selected timeline step and expandable details. It still judges actual workload and unclear instructions. 158 focused/render/permission tests, types/lint passed. No UI change or fresh browser test; paid effect pending. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — correct mid-sentence fictional-value validation
 
 V3.184 fixes a reproduced false rejection of a locally labelled private test amount and prevents that label from exempting unrelated numbers. 192 tests in 11 files, types/lint passed. A read-only V6 replay removes only that error; the incomplete review and 3.69 quality failure remain. Seven paid calls cost $1.432857, cumulative $84.649842 / $100. [Audit](focused-evidence-review-audit.md).
