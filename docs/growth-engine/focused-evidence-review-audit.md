@@ -1,5 +1,20 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.186 — compare creative mechanisms before expanding the plan
+
+Docs V7 used V3.184 and the unchanged documentation pack (`d9d2e1aad38756289a06b3a76c79950ab23362ae862e2f18a13d245d5747c500`). Seven calls cost **$1.416242**. All three drafts failed (3.25, 3.31, 3.44); final hard errors reached zero but originality remained 2. The initial buyer questionnaire, vendor reply promise and final AI question-cut suggestion all remained familiar mechanisms. The brief-to-form practical choice also lacked an observable reason to choose Pro over Free. The separate-context comparison preferred docs V6, particularly its paid-only customer job and different mechanisms; it cost $0.073717. Combined charged/held is **$86.139801 / $100**. These same-model judgments are not human acceptance or market evidence. Its suggestion to use real customer work is conditional on access and consent, not permission to collect sensitive data or a reason to pretend a fictional exercise measures real activation.
+
+The existing full focused workflow now adds one bounded, checkpointed candidate comparison between divergent preparation and full drafting. It reuses the same critic model and originality-audit structure, checks each exact candidate once, and gives all candidates plus advisory feedback to the writer. Nothing is ranked or filtered. Speculative, unbuilt and unprecedented options remain eligible; feedback separates an ordinary mechanism from an original mechanism with a weak incentive or test. The writer may disagree or replace all candidates. The final reviewer never sees these preliminary judgments.
+
+The additional call is quoted up front at 40,000 input and 6,000 output tokens, uses the existing model/effort and phase accounting, and has no action or research tools. Exact identities, deadline checks and checkpoint replay prevent missing/substituted reviews or repeated paid work. Starter and other specialists are unchanged, as are the two reserved revision opportunities, final acceptance thresholds and tenant/action approvals. This changes the workflow's cost; its quality benefit must be measured, not assumed. Tester access and founder time remain unknown.
+
+**180 tests in 11 files passed (17.84 seconds)** after the first run caught a missing human-readable diagnosis in the new reviewer input; the same deterministic diagnosis now reaches it. Coverage includes exact candidate identity, advisory disagreement without a gate, independent final review, checkpoints, matching quote, actual Convex generation, approval/tenant denial, budget and evaluation identity. App/Convex type checks and changed-file lint passed. No paid V3.186 result yet.
+
+```sh
+pnpm exec vitest run tests/unit/creative-preparation.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-evidence-repair.test.ts tests/unit/focused-originality-review.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/agent-escalation.test.ts tests/unit/anthropic-budget.test.ts tests/unit/evaluation-identity.test.ts
+pnpm typecheck
+```
+
 ## Current status — retain published setup steps in an explicit evidence variant
 
 The same saved `/help/payments` page contains a concrete setup path that the concise documentation pack omitted. The reviewer asked for a click-by-click private check, but the evaluation supplied only a capability summary. An opt-in `public-docs-setup-20261118` pack now appends that page's published restricted-key path, named permissions and form-settings destination, with the original retrieval/update dates. It also clarifies that the form owner receives submitted answers; the payment step does not deliver a consultant's answer to the payer. Documentation is not a tested integration. Stripe's current requirements, account access and end-to-end behavior remain unverified, and no key was created or account accessed.

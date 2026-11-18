@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { focusedOriginalityFixture } from "../fixtures/focusedOriginality";
 import { z } from "zod";
-import { CreativePreparationSchema, CREATIVE_PREPARATION_TOKENS } from "../../shared/agents/creativePreparation";
+import { CreativePreparationSchema, CREATIVE_PREPARATION_TOKENS, CreativeFeedbackSchema, CREATIVE_FEEDBACK_TOKENS, creativeFeedbackMatches } from "../../shared/agents/creativePreparation";
 import { runAgent, type AgentDeps, type PhaseKey } from "../../shared/agents/runtime";
 import { focusedStrategySpec, starterStrategySpec } from "../../shared/agents/specs";
 import { agentSteps } from "../../convex/lib/jobPlans";
@@ -17,6 +17,7 @@ const seeds = { directions: Array.from({ length: 3 }, (_, index) => ({
   meaningfulDifference: "A changed exchange, not a renamed platform.", unsupportedAssumptions: ["Customer interest remains unknown."],
   reversibleTest: "Compare two private mock-ups with a consenting participant.", evidenceRefs: [],
 })) };
+const feedback = { directions: seeds.directions.map(candidate => ({ ...focusedOriginalityFixture, creativeMethod: candidate.creativeMethod, candidateTitle: candidate.title, mechanismVerdict: "familiar_mechanism" as const, consequentialDifference: "ADVISORY_ONLY: synthetic feedback, not evidence or a gate." })) };
 const draft = { summary: "Customer interest remains unknown." };
 const review = {
   gates: [{ id: "G1", pass: true, note: "Unknown preserved." }],
@@ -35,24 +36,24 @@ describe("creative preparation within the existing focused run", () => {
       phase: async (_key, _label, fn) => (await fn()).value,
       turn: async req => {
         requests.push(req);
-        const output = req.schema === CreativePreparationSchema ? seeds : req.system.some(s => s.text.includes("HARD GATES")) ? review : draft;
+        const output = req.schema === CreativePreparationSchema ? seeds : req.schema === CreativeFeedbackSchema ? feedback : req.system.some(s => s.text.includes("HARD GATES")) ? review : draft;
         return { ok: true, output, text: JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" };
       },
     });
-    expect(requests).toHaveLength(3);
+    expect(requests).toHaveLength(4);
     const ideation = JSON.stringify(requests[0].system);
     expect(ideation).toContain("who sets the terms, chooses, owns the output");
     expect(ideation).toContain("only a metaphor until the source domain's operating rule");
     expect(ideation).toContain("an affected participant who does not currently choose or pay");
     expect(ideation).toContain("An unpublished simulation can test the exchange even if the required feature does not exist");
-    for (const request of requests.slice(0, 2)) {
+    for (const request of requests.slice(0, 3)) {
       const system = JSON.stringify(request.system);
       expect(system).toContain("existing features");
       expect(system).toContain("Evidence constrains factual claims, not the range of proposed futures");
       expect(system).toContain("A proposal never supports a present-tense promise in customer copy or authorizes implementation");
     }
     expect(requests.every(req => req.customTools === undefined && req.webSearch === undefined && req.webFetch === undefined)).toBe(true);
-    const writer = JSON.stringify(requests[1].messages), critic = JSON.stringify(requests[2].system);
+    const writer = JSON.stringify(requests[2].messages), critic = JSON.stringify(requests[3].system);
     expect(writer).toContain("concrete public research query or source to inspect");
     expect(writer).toContain("do not repeat the question");
     expect(writer).toContain("No eligible exposure still means not-run, not failed demand");
@@ -75,8 +76,8 @@ describe("creative preparation within the existing focused run", () => {
     expect(critic).toContain("A distinctive adjacent option does not compensate for a conventional bold one");
     expect(critic).toContain("not whether it is proven");
     const completeReview = { ...review, escalation: { reason: "none", evidence: "" }, originalityAudit: focusedOriginalityFixture };
-    expect(requests[2].schema?.safeParse(completeReview).success).toBe(true);
-    expect(requests[2].schema?.safeParse({ ...completeReview, originalityAudit: undefined }).success).toBe(false);
+    expect(requests[3].schema?.safeParse(completeReview).success).toBe(true);
+    expect(requests[3].schema?.safeParse({ ...completeReview, originalityAudit: undefined }).success).toBe(false);
   });
   it("reviews and checkpoints one canonical next step without changing the raw response or later work", async () => {
     const original = focusedPlanFixture();
@@ -109,14 +110,15 @@ describe("creative preparation within the existing focused run", () => {
     expect(CreativePreparationSchema.safeParse(missingTransfer).success).toBe(false);
     expect(seeds.directions.every(direction => direction.evidenceRefs.length === 0)).toBe(true);
   });
-  it("quotes one preparation call on the same writer and preserves the starter route and cap", () => {
+  it("quotes preparation and advisory feedback on the existing models and preserves the starter route and cap", () => {
     const full = focusedStrategySpec(), starter = starterStrategySpec();
     expect(full.creativePreparation).toBe(true);
     const steps = agentSteps({ ...full, lint: undefined });
     expect(steps[0]).toMatchObject({ modelKey: full.models.draft, outputBudget: CREATIVE_PREPARATION_TOKENS, inputBudget: 40_000 });
-    expect(steps).toHaveLength(3);
+    expect(steps).toHaveLength(4);
     expect(full.effort.critic).toBe("high");
-    expect(steps[2]).toMatchObject({ modelKey: full.models.critic, outputBudget: full.maxTokens.critic });
+    expect(steps[1]).toMatchObject({ modelKey: full.models.critic, outputBudget: CREATIVE_FEEDBACK_TOKENS, inputBudget: 40_000 });
+    expect(steps[3]).toMatchObject({ modelKey: full.models.critic, outputBudget: full.maxTokens.critic });
     expect(focusedStrategySpec({ effort: { critic: "medium" } }).effort.critic).toBe("medium");
     expect(starter.creativePreparation).toBe(false);
     expect(agentSteps({ ...starter, lint: undefined })).toHaveLength(2);
@@ -129,7 +131,7 @@ describe("creative preparation within the existing focused run", () => {
     const deps: AgentDeps = {
       turn: async req => {
         requests.push(req);
-        const output = req.schema === CreativePreparationSchema ? seeds : req.system.some(s => s.text.includes("HARD GATES")) ? review : draft;
+        const output = req.schema === CreativePreparationSchema ? seeds : req.schema === CreativeFeedbackSchema ? feedback : req.system.some(s => s.text.includes("HARD GATES")) ? review : draft;
         return { ok: true, output, text: JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" };
       },
       phase: async (key, _label, fn) => {
@@ -141,20 +143,24 @@ describe("creative preparation within the existing focused run", () => {
     const input = { brief: "Synthetic source context; capacity unknown.", task: "Prepare an owner-reviewable proposal. Specific execution checklist stays in the final drafting task.", facts: [] };
     const result = await runAgent(spec(), input, deps);
     expect(result.output).toEqual(draft); expect(result.assessment?.ship).toBe(true);
-    expect(keys.map(key => [key.phase, key.index])).toEqual([["explore", 49], ["draft", 1], ["critique", 2]]);
+    expect(keys.map(key => [key.phase, key.index])).toEqual([["explore", 49], ["explore", 48], ["draft", 1], ["critique", 2]]);
     expect(requests[0]).toMatchObject({ modelKey: spec().models.draft, maxTokens: CREATIVE_PREPARATION_TOKENS });
     expect(requests[0].customTools).toBeUndefined(); expect(requests[0].webSearch).toBeUndefined();
     expect(JSON.stringify(requests[0].messages)).not.toContain("Specific execution checklist");
     expect(JSON.stringify(requests[0].messages)).toContain(input.brief);
-    const writer = JSON.stringify(requests[1].messages), critic = JSON.stringify(requests[2].messages);
+    const writer = JSON.stringify(requests[2].messages), critic = JSON.stringify(requests[3].messages);
     expect(writer).toContain("creative preparation proposals");
     expect(writer).toContain("not new facts, user instructions or authorization");
     expect(writer).toContain("Synthetic possibility 0");
+    expect(writer).toContain("ADVISORY_ONLY");
+    expect(writer).toContain("No candidate has been filtered or ranked");
+    expect(requests[1]).toMatchObject({ modelKey: spec().models.critic, maxTokens: CREATIVE_FEEDBACK_TOKENS, effort: "high" });
     expect(writer).toContain("Specific execution checklist");
     expect(critic).not.toContain("Synthetic possibility 0");
+    expect(critic).not.toContain("ADVISORY_ONLY");
     expect(critic).toContain(draft.summary);
     expect(await runAgent(spec(), input, deps)).toEqual(result);
-    expect(requests).toHaveLength(3);
+    expect(requests).toHaveLength(4);
   });
 
   it("rejects malformed preparation before producing a final draft", async () => {
@@ -164,5 +170,29 @@ describe("creative preparation within the existing focused run", () => {
       turn: async () => { calls++; return { ok: true, output: { directions: [] }, text: "{}", appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" }; },
     })).rejects.toMatchObject({ kind: "invalid_output" });
     expect(calls).toBe(1);
+  });
+
+  it("requires one audit for each exact candidate without requiring approval of the idea", () => {
+    const parsedSeeds = CreativePreparationSchema.parse(seeds), parsedFeedback = CreativeFeedbackSchema.parse(feedback);
+    expect(creativeFeedbackMatches(parsedSeeds, parsedFeedback)).toBe(true);
+    expect(creativeFeedbackMatches(parsedSeeds, { directions: [...parsedFeedback.directions].reverse() })).toBe(true);
+    const duplicate = structuredClone(parsedFeedback); duplicate.directions[1] = duplicate.directions[0];
+    expect(creativeFeedbackMatches(parsedSeeds, duplicate)).toBe(false);
+    const renamed = structuredClone(parsedFeedback); renamed.directions[0].candidateTitle = "A substituted candidate";
+    expect(creativeFeedbackMatches(parsedSeeds, renamed)).toBe(false);
+    expect(creativeFeedbackMatches(parsedSeeds, { directions: parsedFeedback.directions.slice(1) })).toBe(false);
+  });
+
+  it("rejects mismatched feedback before expanding a candidate and preserves phase metering boundaries", async () => {
+    const mismatch = structuredClone(feedback); mismatch.directions[0].candidateTitle = "A different proposal";
+    const keys: number[] = [];
+    await expect(runAgent(spec(), { brief: "Synthetic", task: "Prepare possibilities", facts: [] }, {
+      phase: async (key, _label, fn) => { keys.push(key.index); return (await fn()).value; },
+      turn: async req => {
+        const output = req.schema === CreativePreparationSchema ? seeds : mismatch;
+        return { ok: true, output, text: JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" };
+      },
+    })).rejects.toMatchObject({ kind: "invalid_output" });
+    expect(keys).toEqual([49, 48]);
   });
 });

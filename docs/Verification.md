@@ -1,3 +1,7 @@
+## 18 November — review candidate mechanisms before full drafting
+
+V3.186 adds one bounded advisory comparison using the same model, existing originality structure and reserved accounting. All candidates remain available; no confidence/precedent filter or action tools. The independent final critic sees no preliminary judgments. **180 tests in 11 files**, types and lint passed after repairing a diagnosis-context omission caught by the first run. Docs V7 still failed at 3.44, and a separate comparison preferred V6. Combined charged/held **$86.139801 / $100**; paid effect of the new phase pending. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November 2026 — explicit setup-evidence acceptance variant
 
 An opt-in setup pack adds omitted published steps from the already-read payment help page. Both older evidence packs remain byte-identical; mixed-pack comparisons fail. No product/account action or source upgrade to verified behavior. 25 tests in three files, types/lint passed. Runtime model and original cap unchanged. [Audit](growth-engine/focused-evidence-review-audit.md).

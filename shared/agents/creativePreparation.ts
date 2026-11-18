@@ -1,10 +1,13 @@
 import { z } from "zod";
+import { FocusedOriginalityAuditSchema } from "./focusedReview";
 
 /** A bounded preparation step in the same strategy run, never facts or action authority. */
 export const CREATIVE_PREPARATION_TOKENS = 12_000;
+export const CREATIVE_FEEDBACK_TOKENS = 6_000;
+const CreativeMethodSchema = z.enum(["convention_inversion", "distant_transfer", "asset_recombination", "ownable_behavior"]);
 export const CreativePreparationSchema = z.object({
   directions: z.array(z.object({
-    creativeMethod: z.enum(["convention_inversion", "distant_transfer", "asset_recombination", "ownable_behavior"]),
+    creativeMethod: CreativeMethodSchema,
     methodApplication: z.string().trim().min(20).max(600),
     title: z.string().trim().min(3).max(120),
     businessTension: z.string().trim().min(10).max(500),
@@ -23,6 +26,29 @@ export const CreativePreparationSchema = z.object({
     }
   }),
 });
+
+/** Advisory comparison before expansion, never a ranking or an originality gate. */
+export const CreativeFeedbackSchema = z.object({
+  directions: z.array(FocusedOriginalityAuditSchema.extend({
+    creativeMethod: CreativeMethodSchema,
+    candidateTitle: z.string().trim().min(3).max(120),
+  })).min(3).max(4),
+});
+
+export function creativeFeedbackMatches(
+  preparation: z.infer<typeof CreativePreparationSchema>, feedback: z.infer<typeof CreativeFeedbackSchema>,
+): boolean {
+  return feedback.directions.length === preparation.directions.length && preparation.directions.every(candidate =>
+    feedback.directions.filter(row => row.creativeMethod === candidate.creativeMethod && row.candidateTitle === candidate.title).length === 1);
+}
+
+export const CREATIVE_FEEDBACK_TASK = `Independently examine every preliminary strategic direction before a writer expands it into a complete plan. These are proposals, not selected recommendations, facts or authority. Return one concise audit per supplied candidate, copying its creativeMethod and title exactly into candidateTitle.
+
+Compare the operating mechanism with the closest familiar alternative. Remove the branding, metaphor, new job title and test instrumentation: what do participants actually do, exchange, control or gain differently? Explain whether the claimed difference is consequential for this business, whether each necessary participant has a plausible reason to participate, and where the stated analogy breaks. A renamed template, concierge service, feedback workflow or feature suggestion is not automatically a bold mechanism. Do not invent worldwide novelty or evidence of demand.
+
+Use material_difference for an explained consequential departure, familiar_mechanism for an ordinary mechanism, and unclear_difference for an unexplained departure. Novelty is separate from evidence strength, business fit, feasibility, risk and upside. A speculative or unbuilt idea without a precedent can have a material difference. Do not reject an idea for missing integrations, customer access, available time, direct precedent or high confidence. Keep those as unknowns and propose a private test of the changed exchange. testOfDifference should isolate that difference from the closest ordinary alternative rather than confound it with better copy, advice or a different audience. Fictional simulations can reveal comprehension or observed choices in that simulation; they cannot prove real demand, trust, willingness to pay or product activation.
+
+This is advisory feedback for the writer, not a filter, ranking, score or approval. Retain an audit for every candidate, including unfamiliar or uncertain ones. Identify a precise weak link and what needs rethinking; do not replace the portfolio with conventional recommendations. The writer may improve or replace any candidate and is not required to agree with this judgment. The final plan receives a separate independent review.`;
 
 export const CREATIVE_PREPARATION_TASK = `Prepare strategic possibilities for the focused plan, not the plan itself. This is a private ideation step in the same run. The later writer will create the complete grounded, adjacent and bold portfolio, choose one practical move, and prepare its work. Do not write campaign copy, a timeline, a task checklist or forecasts here.
 

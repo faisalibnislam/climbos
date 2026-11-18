@@ -1,5 +1,5 @@
 import { milestoneWindows } from "./planningCycles";
-import { CreativePreparationSchema } from "./creativePreparation";
+import { CreativePreparationSchema, CreativeFeedbackSchema } from "./creativePreparation";
 import { demoBusinessModelCheck } from "./businessModel";
 import { z } from "zod";
 import { turnCostMicros, ZERO_USAGE, type TurnRequest, type TurnResult } from "../ai/types";
@@ -97,6 +97,14 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
   let output: unknown;
   if (!req.schema) {
     output = "FAKE RESEARCH NOTES\n- Competitor A: example.com\n- Existing comparison page: https://example.com/compare\nSources: https://example.com";
+  } else if (req.schema === CreativeFeedbackSchema) {
+    output = { directions: ["convention_inversion", "distant_transfer", "asset_recombination"].map((creativeMethod, index) => ({
+      creativeMethod, candidateTitle: `Synthetic direction ${index + 1}`,
+      closestFamiliarAlternative: "Synthetic alternative; not a real strategy judgment.",
+      consequentialDifference: "Synthetic difference for workflow checks only.",
+      mechanismVerdict: "unclear_difference",
+      testOfDifference: "Synthetic test suggestion; no evidence of quality or demand.",
+    })) };
   } else if (system.includes("HARD GATES")) {
     const { gates, criteria } = rubricIds(system);
     const reviewingFirstDraft = lastUser.includes("fake-v1");
