@@ -1,3 +1,7 @@
+## 18 November — deliver the current originality finding to repairs
+
+V3.201 fixes a reproduced loss of the reviewer’s current mechanism comparison and proposed control. Repairs now receive the complete bound finding as fallible context only when needed; final review remains independent. **210 focused/permission tests**, types and lint passed. Paid tests remain paused at **$99.063401 used/held**, model unchanged. No semantic quality gain is claimed. [Audit and command](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November — bind originality judgments to their actual mechanisms
 
 V3.200 closes reproduced review-integrity gaps in candidate feedback, final review and checkpoint resume. A wrong-idea or stale quotation cannot validate the current bold option, even with passing scores. Existing speculative options remain eligible. **216 focused/permission tests**, then **30 affected tests**, types and lint passed. Paid tests remain paused, runtime model unchanged, and no semantic quality gain is claimed. [Audit and commands](growth-engine/focused-evidence-review-audit.md).

@@ -4,6 +4,7 @@ import { focusedStrategySpec } from "../../shared/agents/specs";
 import { focusedOriginalityFixture } from "../fixtures/focusedOriginality";
 import type { CritiqueResult } from "../../shared/agents/types";
 import { focusedPlanFixture } from "../fixtures/focusedPlan";
+import { focusedRevisionOriginality } from "../../shared/agents/focusedReview";
 
 const rubric = { ...focusedStrategySpec().rubric, shipRule: { minEach: 4, minAverage: 4 } };
 function review(): CritiqueResult {
@@ -17,6 +18,29 @@ function review(): CritiqueResult {
 }
 
 describe("the protected bold mechanism has an inspectable originality assessment", () => {
+  it("forwards the full current mechanism finding only for a required repair, including an average deficit", () => {
+    const critique = review(), plan = focusedPlanFixture(), actual = focusedStrategySpec().rubric;
+    expect(focusedRevisionOriginality(critique, actual, plan)).toBe("");
+    // F7 meets the individual floor but contributes to a failed average.
+    critique.scores.find(score => score.id === "F7")!.score = 3.5;
+    const before = structuredClone(critique);
+    expect(JSON.parse(focusedRevisionOriginality(critique, actual, plan))).toEqual(critique.originalityAudit);
+    expect(critique).toEqual(before);
+    critique.scores.forEach(score => { score.score = 5; });
+    critique.originalityAudit!.mechanismVerdict = "familiar_mechanism";
+    expect(JSON.parse(focusedRevisionOriginality(critique, actual, plan))).toEqual(critique.originalityAudit);
+  });
+  it("does not forward unbound, missing or malformed originality findings as repair guidance", () => {
+    const critique = review(), plan = focusedPlanFixture(); critique.scores.find(score => score.id === "F7")!.score = 2;
+    expect(focusedRevisionOriginality(critique, { ...rubric, id: "another-task" }, plan)).toBe("");
+    expect(focusedRevisionOriginality(critique, rubric, {})).toBe("");
+    const stale = structuredClone(critique); stale.originalityAudit!.mechanismQuote = plan.strategyExploration.adjacent.businessMechanism;
+    expect(focusedRevisionOriginality(stale, rubric, plan)).toBe("");
+    const duplicate = structuredClone(critique); duplicate.scores.push({ ...duplicate.scores.find(score => score.id === "F7")! });
+    expect(focusedRevisionOriginality(duplicate, rubric, plan)).toBe("");
+    critique.originalityAudit!.testOfDifference = " ";
+    expect(focusedRevisionOriginality(critique, rubric, plan)).toBe("");
+  });
   it("binds the originality verdict to the complete current bold mechanism, not another idea or a stale excerpt", () => {
     const plan = focusedPlanFixture(), critique = review();
     Object.assign(critique.originalityAudit!, { mechanismQuote: plan.strategyExploration.bold.businessMechanism });

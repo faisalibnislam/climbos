@@ -132,7 +132,10 @@ describe("bounded focused section repairs", () => {
     const patch = { strategyExploration: { bold: { businessMechanism: "A changed synthetic participant exchange" } } };
     const realRubric = focusedStrategySpec().rubric;
     const creativeReview = (score: number, mechanism: string) => ({ ...review(score),
-      originalityAudit: { ...focusedOriginalityFixture, mechanismQuote: mechanism },
+      originalityAudit: { ...focusedOriginalityFixture, mechanismQuote: mechanism,
+        closestFamiliarAlternative: "Synthetic closest practice: a manual not-to-exceed quote with stated assumptions.",
+        testOfDifference: "Use the manual capped quote as the control, not a bare calculator; test the changed allocation of risk.",
+      },
       gates: realRubric.gates.map(gate => ({ id: gate.id, pass: true, note: "Synthetic gate" })),
       scores: [...realRubric.criteria.map(criterion => criterion.id), "XV"].map(id => ({ id, score: id === "F7" ? score : 4, note: "Synthetic originality assessment", fix: id === "F7" && score < 4 ? "Replace the familiar bold mechanism." : "none" })),
     });
@@ -146,9 +149,12 @@ describe("bounded focused section repairs", () => {
     expect(reservations).toBe(1); expect(requests).toHaveLength(4);
     expect(JSON.stringify(requests[2].messages)).toContain("CREATIVE REPAIR SCOPE");
     expect(JSON.stringify(requests[2].messages)).toContain("You may discard every preliminary candidate");
+    expect(JSON.stringify(requests[2].messages)).toContain("manual not-to-exceed quote with stated assumptions");
+    expect(JSON.stringify(requests[2].messages)).toContain("manual capped quote as the control");
     expect(requests.every(req => req.customTools === undefined && req.webSearch === undefined)).toBe(true);
     expect(JSON.stringify(requests[3].messages)).toContain(patch.strategyExploration.bold.businessMechanism);
     expect(JSON.stringify(requests[3].messages)).toContain(first.preparedWork[0].draft);
+    expect(JSON.stringify(requests[3].messages)).not.toContain("manual capped quote as the control");
     expect(result.output).toEqual({ ...first, ...patch });
     expect(result.assessment?.ship).toBe(true); // synthetic review, not an originality claim
   });

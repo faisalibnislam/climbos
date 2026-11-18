@@ -2,7 +2,7 @@ import { boundedPageReads } from "./provenance";
 import { diagnosisBrief } from "./diagnosis";
 import { CreativePreparationSchema, CREATIVE_PREPARATION_TASK, CREATIVE_PREPARATION_TOKENS, CreativeFeedbackSchema, CREATIVE_FEEDBACK_TASK, CREATIVE_FEEDBACK_TOKENS, creativeFeedbackMatches } from "./creativePreparation";
 import { focusedSectionRevisionSchema, mergeFocusedSections, projectFocusedFirstStep } from "./focusedPlan";
-import { FOCUSED_REVIEW_ID, FOCUSED_EVIDENCE_REVIEW, FOCUSED_DECISION_REVIEW, FOCUSED_ORIGINALITY_REVIEW, FocusedEvidenceAuditSchema, FocusedOriginalityAuditSchema, lintFocusedEvidenceAudit, lintFocusedOriginalityAudit, focusedRevisionCriteria, resolveFocusedEvidencePaths } from "./focusedReview";
+import { FOCUSED_REVIEW_ID, FOCUSED_EVIDENCE_REVIEW, FOCUSED_DECISION_REVIEW, FOCUSED_ORIGINALITY_REVIEW, FocusedEvidenceAuditSchema, FocusedOriginalityAuditSchema, lintFocusedEvidenceAudit, lintFocusedOriginalityAudit, focusedRevisionCriteria, focusedRevisionOriginality, resolveFocusedEvidencePaths } from "./focusedReview";
 import { OWNER_LANGUAGE_RULES } from "./ownerLanguage";
 import { fitJson, fitText, reportDropped } from "./context";
 import { z } from "zod";
@@ -474,7 +474,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
       : baseUser,
   }];
 
-  const draftOnce = async (round: number, feedback: { previous: T; fixes: string[]; strengths: string[]; lint: LintIssue[]; criteria: string; failedGates: string[]; priorFindings: string } | null, modelOverride?: ModelKey): Promise<T> => {
+  const draftOnce = async (round: number, feedback: { previous: T; fixes: string[]; strengths: string[]; lint: LintIssue[]; criteria: string; originality: string; failedGates: string[]; priorFindings: string } | null, modelOverride?: ModelKey): Promise<T> => {
     checkDeadline(deps);
     const key: PhaseKey = round === 0 ? { phase: "draft", round: 0, index: 1 } : { phase: "revise", round, index: 1 + round * 2 };
     const phaseValue = await deps.phase<T | RevisionLengthFailure>(key, round === 0 ? `${spec.label}: draft` : `${spec.label}: revision ${round}`, async () => {
@@ -484,7 +484,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
       const shortFixes = feedback?.fixes.map(f => `- ${f}`).join("\n") ?? "";
       const checks = feedback?.lint.map(l => `- ${focused ? `[${l.severity}] ` : ""}${l.path ? `${l.path}: ` : ""}${l.message}`).join("\n") ?? "";
       const repairFeedback = feedback && focused
-        ? `FAILED GATES (address these concrete violations first):\n${feedback.failedGates.join("\n") || "None reported."}\n\nAUTOMATIC CHECK FINDINGS (errors block acceptance; warnings are advisory):\n${checks || "None reported."}\n\nCRITERION FEEDBACK (deficits under the actual acceptance thresholds):\n${feedback.criteria || "No scored deficit reported."}${feedback.priorFindings ? `\n\nEARLIER REVIEW CONTEXT: These findings concern earlier drafts, not the current draft or established business facts. Do not cycle back to the same mechanism or unsupported claim merely because it disappeared from the latest review. You may revisit or disagree with an earlier judgment: explain the consequential change or evidence that addresses its weakness. No idea is banned and unknown evidence does not disqualify novelty. The final reviewer will independently assess only the new complete draft and original sources.\n${untrusted("earlier review findings", feedback.priorFindings)}` : ""}\n\nADDITIONAL REVIEWER SUGGESTIONS (context, not separate assignments; use only when needed for the required repairs or cross-section consistency):\n${shortFixes}`
+        ? `FAILED GATES (address these concrete violations first):\n${feedback.failedGates.join("\n") || "None reported."}\n\nAUTOMATIC CHECK FINDINGS (errors block acceptance; warnings are advisory):\n${checks || "None reported."}\n\nCRITERION FEEDBACK (deficits under the actual acceptance thresholds):\n${feedback.criteria || "No scored deficit reported."}${feedback.originality ? `\n\nCURRENT BOLD MECHANISM COMPARISON (fallible reviewer judgment, not business evidence or an instruction to copy its suggestion):\n${untrusted("current originality finding", feedback.originality, feedback.originality.length)}\nAddress the specific closest alternative, consequential difference and comparison test. You may disagree with the review when you can explain the difference; unknown feasibility or absent precedent does not veto novelty.` : ""}${feedback.priorFindings ? `\n\nEARLIER REVIEW CONTEXT: These findings concern earlier drafts, not the current draft or established business facts. Do not cycle back to the same mechanism or unsupported claim merely because it disappeared from the latest review. You may revisit or disagree with an earlier judgment: explain the consequential change or evidence that addresses its weakness. No idea is banned and unknown evidence does not disqualify novelty. The final reviewer will independently assess only the new complete draft and original sources.\n${untrusted("earlier review findings", feedback.priorFindings)}` : ""}\n\nADDITIONAL REVIEWER SUGGESTIONS (context, not separate assignments; use only when needed for the required repairs or cross-section consistency):\n${shortFixes}`
         : `FIX (most important first):\n${shortFixes}${feedback?.criteria ? `\n\nCRITERION FEEDBACK:\n${feedback.criteria}` : ""}${checks ? `\n\nAUTOMATIC CHECKS FAILED:\n${checks}` : ""}`;
       const messages: MessageParam[] = feedback
         ? [
@@ -637,7 +637,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     const previous = current;
     const priorFindings = spec.rubric.id === FOCUSED_REVIEW_ID && earlierFindings.length ? reportDropped("earlier review findings", fitJson(earlierFindings.slice(-2).reverse(), 6_000)) : "";
     if (spec.rubric.id === FOCUSED_REVIEW_ID) earlierFindings.push(priorFocusedFindings(current, c));
-    const repair = { previous, fixes: c.fixes, strengths: c.strengths, lint: a.lint, criteria: focusedRevisionCriteria(c, withVerdict(spec.rubric)), failedGates: c.gates.filter(gate => !gate.pass).map(gate => `- ${gate.id}: ${gate.note}`), priorFindings };
+    const repair = { previous, fixes: c.fixes, strengths: c.strengths, lint: a.lint, criteria: focusedRevisionCriteria(c, withVerdict(spec.rubric)), originality: focusedRevisionOriginality(c, withVerdict(spec.rubric), current), failedGates: c.gates.filter(gate => !gate.pass).map(gate => `- ${gate.id}: ${gate.note}`), priorFindings };
     try {
       current = await draftOnce(round + 1, repair, escalation);
     } catch (error) {

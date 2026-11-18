@@ -32,16 +32,33 @@ export function lintFocusedOriginalityAudit(critique: CritiqueResult, rubric: Ru
 
 export const FOCUSED_ORIGINALITY_REVIEW = `FOCUSED ORIGINALITY AUDIT: Independently compare the actual bold option with its closest familiar practice before scoring F7. Return originalityAudit with mechanismQuote (copy the complete current strategyExploration.bold.businessMechanism verbatim), closestFamiliarAlternative, consequentialDifference, mechanismVerdict and testOfDifference. Bind the comparison to that quoted mechanism, not an adjacent option, preliminary candidate or replacement you wish the writer had proposed. Describe what participants do, exchange or gain differently; remove the branding, labels, audience job titles and test instrumentation mentally, then ask what consequential mechanism remains. An approval log added to an approval workflow, a paid trial or a template with feedback is not automatically an unconventional strategy. Explain the actual difference for this business rather than inventing a new one for the writer. Use material_difference only for a specific consequential departure; familiar_mechanism when the mechanism remains ordinary; unclear_difference when the proposal does not explain its departure. This classification concerns the idea, not whether it is proven: an unprecedented, speculative, difficult or currently unbuilt mechanism may have a material difference. Do not require matching precedents, research validation, immediate feasibility or high confidence. Keep evidence, business fit, feasibility, risk and upside separate. testOfDifference compares the changed mechanism with the closest ordinary alternative; a better test does not retroactively make a familiar mechanism original. F7 cannot pass while your own audit finds a familiar or unexplained difference. A distinctive adjacent option does not compensate for a conventional bold one. If the difference is material but relevance or the test is weak, identify that narrower defect without discarding the idea. Assess only the current draft; this is an inspectable judgment, not a claim of worldwide originality.`;
 
-/** Preserve actionable criterion feedback that the review's short fixes list may omit. */
-export function focusedRevisionCriteria(critique: CritiqueResult, rubric: Rubric): string {
-  if (rubric.id !== FOCUSED_REVIEW_ID) return "";
+function focusedRepairTarget(critique: CritiqueResult, rubric: Rubric): number {
   // Meeting an individual floor does not mean a criterion passed the overall review.
   // Include its deficit when a complete review is below the rubric's average target.
   const requiredScores = rubric.criteria.map(criterion => critique.scores.filter(score => score.id === criterion.id));
   const complete = requiredScores.every(scores => scores.length === 1 && Number.isFinite(scores[0].score) && scores[0].score >= 1 && scores[0].score <= 5);
   const belowAverage = complete && requiredScores.length > 0
     && requiredScores.reduce((sum, scores) => sum + scores[0].score, 0) / requiredScores.length < rubric.shipRule.minAverage;
-  const repairTarget = belowAverage ? Math.max(rubric.shipRule.minEach, rubric.shipRule.minAverage) : rubric.shipRule.minEach;
+  return belowAverage ? Math.max(rubric.shipRule.minEach, rubric.shipRule.minAverage) : rubric.shipRule.minEach;
+}
+
+/** Only a current, bound finding needed for a repair belongs in the writer's context. */
+export function focusedRevisionOriginality(critique: CritiqueResult, rubric: Rubric, output: unknown): string {
+  if (rubric.id !== FOCUSED_REVIEW_ID || !rubric.criteria.some(criterion => criterion.id === "F7")) return "";
+  const audit = FocusedOriginalityAuditSchema.safeParse(critique.originalityAudit);
+  const mechanism = stringFields(output).find(field => field.path === "strategyExploration.bold.businessMechanism")?.text;
+  if (!audit.success || !mechanism?.trim() || audit.data.mechanismQuote !== mechanism.trim()) return "";
+  const scores = critique.scores.filter(score => score.id === "F7");
+  if (scores.length !== 1 || !Number.isFinite(scores[0].score) || scores[0].score < 1 || scores[0].score > 5) return "";
+  const needsRepair = scores[0].score < focusedRepairTarget(critique, rubric)
+    || (scores[0].score >= rubric.shipRule.minEach && audit.data.mechanismVerdict !== "material_difference");
+  return needsRepair ? JSON.stringify(audit.data) : "";
+}
+
+/** Preserve actionable criterion feedback that the review's short fixes list may omit. */
+export function focusedRevisionCriteria(critique: CritiqueResult, rubric: Rubric): string {
+  if (rubric.id !== FOCUSED_REVIEW_ID) return "";
+  const repairTarget = focusedRepairTarget(critique, rubric);
   return rubric.criteria.flatMap(criterion => {
     const matches = critique.scores.filter(score => score.id === criterion.id);
     if (matches.length !== 1) return [];

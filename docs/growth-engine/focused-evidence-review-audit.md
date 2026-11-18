@@ -1,5 +1,20 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.201 — preserve the current originality finding during repair
+
+A request-level regression reproduced a second loss: the current review's detailed closest-alternative comparison and test were omitted from the writer's repair packet, even though older findings were retained. The short scored fix could say only to rework the idea, losing the distinction between comparing against an ordinary capped quote and against a bare calculator.
+
+The existing repair call now receives the complete, bounded current originality audit when F7 needs repair under the actual individual/average thresholds or its passing score contradicts its verdict. The mechanism must match the current draft. Missing, malformed, duplicate-score or wrong-idea findings are excluded; passing work gets no extra originality rewrite. The packet labels the judgment as fallible, untrusted context and permits a reasoned disagreement. The independent final critic still sees only the finished draft and original evidence. No new model call, score change, execution permission or requirement for a matching precedent.
+
+The reproduction failed before repair. **210 tests in 13 files passed (13.81 seconds)**, including reserved repair, independent review, fallback, checkpoint, budget and approval tests; app/Convex typechecks and changed-file lint/diff checks passed.
+
+```sh
+pnpm exec vitest run tests/unit/focused-originality-review.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/focused-length-repair.test.ts tests/unit/focused-evidence-repair.test.ts tests/unit/creative-preparation.test.ts tests/unit/agent-runtime.test.ts tests/unit/agent-escalation.test.ts tests/unit/strategy-prompt-cost.test.ts tests/unit/anthropic-budget.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+Both paid ledgers still total **$99.063401 used/held**. Paid tests remain paused, the cap stays $100, the runtime model is unchanged and owner access/time remain unknown. Local tests verify delivery and enforcement of review findings; semantic originality, product-tier reasoning and real-business usefulness remain unverified.
+
 ## V3.200 — bind originality reviews to the mechanism actually reviewed
 
 Local reproductions found that a passing originality review could quote another idea while still passing the score/verdict consistency check. Candidate feedback likewise checked method and title but not the operating mechanism. Two new regressions failed before the fix.
