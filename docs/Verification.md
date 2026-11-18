@@ -1,3 +1,7 @@
+## 18 November 2026 — preserve actual product-value events for paid features
+
+V3.177 corrects review guidance that wrongly replaced product activation with a sample walkthrough when payment comes first. **161 focused/permission tests passed**, types/lint passed. Docs V2 scored 4/5 but manual inspection found this measurement error, so its passing score is not trusted as acceptance. Seven calls cost $1.325832; combined charged/held **$79.331499 / $100**. [Audit and exact distinction](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November 2026 — replace a rejected mechanism instead of polishing it
 
 V3.176 adds targeted creative-repair scope to the existing reserved revision, preserving useful passing work and full re-review. **171 tests in 11 files passed**, types/lint passed; an observed synthetic queue leak was fixed before rerunning the focused suite. Documentation baseline remains failed at 3.88 because originality scored 3; seven calls cost $1.328379, cumulative **$78.005667 / $100**. [Audit and limits](growth-engine/focused-evidence-review-audit.md).

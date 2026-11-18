@@ -1,3 +1,7 @@
+## 18 November — paid prerequisite is not a reason to redefine activation
+
+`v3.177-paid-activation-order`: writer, reviewer and separate launch comparator preserve the product user, value event and actual payment order. A sample supports job-fit learning, not proof of product activation. 161 tests, types/lint passed. Docs V2 received a passing AI score but manual inspection rejected its metric relabelling; no historical grade was overwritten. Combined charged/held $79.331499 / $100. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — targeted creative replacement during repair
 
 `v3.176-creative-replacement`: failed-originality feedback can replace a familiar mechanism rather than preserve its substance, while narrow test/evidence defects and passing work retain their scope. Same calls, model, budget and independent review. 171 tests, types/lint passed. Documentation baseline failed honestly; combined charged/held $78.005667 / $100. [Audit](focused-evidence-review-audit.md).

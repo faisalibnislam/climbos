@@ -44,9 +44,13 @@ describe("creative preparation within the existing focused run", () => {
     expect(writer).toContain("concrete public research query or source to inspect");
     expect(writer).toContain("do not repeat the question");
     expect(writer).toContain("No eligible exposure still means not-run, not failed demand");
+    expect(writer).toContain("A required paid plan may put payment before activation");
+    expect(writer).toContain("actual product activation remains untested");
     expect(writer).not.toContain("at most 3 immediate items in weekOneChecklist");
     expect(critic).toContain("not a distribution fallback");
     expect(critic).toContain("not an already verified channel");
+    expect(critic).toContain("Payment can legitimately precede activation");
+    expect(critic).toContain("A sample walkthrough supports comprehension or job-fit learning only");
     expect(critic).toContain("Preserve prepared assets and useful alternative mechanisms");
   });
   it("reviews and checkpoints one canonical next step without changing the raw response or later work", async () => {

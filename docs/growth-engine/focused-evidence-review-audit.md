@@ -1,6 +1,21 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — replace rejected creative mechanisms in the existing repair
+## Current status — correct paid-feature activation measurement
+
+`launch-docs-v2-20261118` used v3.176, source hash `1f0545cbb6b9d9a1be4689e53271c95a3d2472adb445db00446a73f723f37a7a`, and the same dated documentation pack as the previous run. Seven calls cost **$1.325832**; combined charged/held is **$79.331499 / $100**. Its review progressed 3.50 → 3.63 → **4/5 throughout, ship true**, correcting an invented completed product test and restoring the conditional public-access research branch. No external product test or outreach occurred.
+
+Manual inspection found a material false-positive within that passing result. An intermediate reviewer said a paid prerequisite “tangled” payment with activation and suggested counting a sample walkthrough instead. The writer adopted that advice: a prospective form owner filling the hosted sample as a respondent was labelled product activation, while building their own form was labelled intent/payment. The final reviewer accepted the relabelling. The original score remains recorded, but this run is **not accepted as trustworthy measurement quality**. Viewing/filling a demonstration may teach job fit; it does not establish that the buyer can use the software for their own job.
+
+V3.177 corrects this specific writer/reviewer guidance: purchase may legitimately precede successful product use; record both separately and preserve their actual order. Unavailable paid access leaves activation untested. The separate-context launch comparator receives the same event/actor distinction so it cannot reward a false “activation” shortcut. No new schema, model, call, permission or numeric threshold is introduced. Unknown access, founder time and costs remain unknown. Paid tests use unchanged source evidence; the next run will test the correction rather than relabel prior history.
+
+**161 tests in eight files passed (23.51 seconds)**, including actual writer/reviewer request delivery, focused generation and permission controls. App/Convex typechecks, changed-file ESLint and diff checks passed. Instruction-wiring tests do not prove semantic quality; a fresh paid run is pending.
+
+```sh
+pnpm exec vitest run tests/unit/creative-preparation.test.ts tests/unit/focused-plan.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/agent-escalation.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+## V3.176 — replace rejected creative mechanisms in the existing repair
 
 Documentation baseline `launch-docs-v1-20261118` (v3.173; source hash `89407a686fcb6837fcf2c66cc63c028eb48ffbbb71a8d1b44be165833de5ddc2`) cost **$1.328379 across seven calls**. Reviews progressed 3.56 → 3.88 → 3.63; the engine correctly retained the reviewed 3.88 result with **ship false** because originality scored 3. The added public documentation resolved the test-key uncertainty but did not establish reliable strategy quality. All intermediate and final records remain intact. Combined charged/held is **$78.005667 / $100**.
 
