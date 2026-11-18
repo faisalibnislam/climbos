@@ -105,6 +105,20 @@ describe("a focused plan does useful work without invented forecasts", () => {
     expect(lintPreparedDrafts([{kind:"test_brief",draft:"0:40 Show the existing question.\n0:52 Close with the next step. Proposed demo, not recorded or tested."}],input).some(issue=>issue.rule==="invented_fact")).toBe(false);
     expect(lintPreparedDrafts([{kind:"social_post",draft:"Our form had 417 completions yesterday. See [page link]."}],input)).toEqual(expect.arrayContaining([expect.objectContaining({rule:"invented_fact",severity:"error"}),expect.objectContaining({rule:"generic_action",severity:"error"})]));
   });
+  it("keeps locally labelled fictional prices in a private worked example, not business facts or public copy", () => {
+    const input = { task: "Prepare a private example", brief: "Business prices and performance are unknown", facts: [] };
+    const sample = "Fictional test data: small service $47.\nIllustrative test amount: large service $83.\nInvented sample fee: travel $17.";
+    expect(lintPreparedDrafts([{ kind: "test_brief", draft: sample }], input).filter(issue => issue.rule === "invented_fact")).toEqual([]);
+    for (const kind of ["creator_pitch", "social_post", "page_copy"]) {
+      expect(lintPreparedDrafts([{ kind, draft: sample }], input)).toContainEqual(expect.objectContaining({ severity: "error", rule: "invented_fact" }));
+    }
+    expect(lintPreparedDrafts([{ kind: "test_brief", draft: "This is not fictional: our real plan costs $97." }], input)).toContainEqual(expect.objectContaining({ rule: "invented_fact" }));
+    const outside = `${sample}\nOur real plan costs $97 and 8500 customers paid.`;
+    expect(lintPreparedDrafts([{ kind: "test_brief", draft: outside }], input)).toContainEqual(expect.objectContaining({ severity: "error", rule: "invented_fact", message: expect.stringContaining("$97") }));
+    expect(lintPreparedDrafts([{ kind: "test_brief", draft: "Fictional sample:\nA service costs $47." }], input)).toContainEqual(expect.objectContaining({ rule: "invented_fact" }));
+    const plan = focusedPlanFixture(); plan.preparedWork[0].draft = sample;
+    expect(focusedStrategySpec().lint?.(plan, { ...input, constraints: { horizonDays: 14 } }).filter(issue => issue.rule === "invented_fact")).toEqual([]);
+  });
   it("carries useful draft work into an update without turning old forecasts or approvals into context",()=>{
     const value=JSON.parse(focusedRefreshContext({...focusedPlanFixture(),approved:true,permission:"publish",facts:["Unverified old claim"],economics:{forecast:10000},plays:[{name:"An old proposal",oneLiner:"Useful idea to recheck",model:{conversion:0.2},approved:true}]}));
     expect(value.strategyExploration.bold.businessMechanism).toBe(focusedPlanFixture().strategyExploration.bold.businessMechanism);

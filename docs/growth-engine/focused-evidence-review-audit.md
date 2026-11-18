@@ -1,6 +1,19 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — bounded length repair, V17 still evaluating
+## Current status — V17 truncated review and fictional-example correction
+
+V17 (`launch-quality-v17-20261118`, v3.170, source hash `e2aad4138815d4ba8a41b7eb94f6fbfe2383f1a803f32fd61bfcfb9b4a17be6f`) did not produce a completed final assessment. Its last reviewer used the full **12,000-output-token limit**, including 7,872 thinking tokens, and returned truncated output. Seven paid calls cost **$1.347709**. Combined charged/held is **$75.745228 / $100**. No pass is claimed from the partial review. Completed intermediate reviews and revisions remain available locally. Milestone separation initially scored simplicity 4, but later workload, originality and economic-depth edits remained; this is partial improvement, not stable acceptance.
+
+V3.172 fixes a demonstrated conflict in that run: the writer supplied a clearly fictional worked price sheet, numeric lint rejected its amounts, and the repair removed them, after which the reviewer correctly found the example incomplete. Planning-number checks now recognize explicit **local fictional test-data labels** at a sentence/line start or in a trailing parenthetical. A heading does not exempt later lines, a negated label does not exempt a real price, and public page/pitch/social-copy checks retain their normal source requirements. Writer guidance requires local labels and preserves the distinction from actual business prices, costs and results. This does not invent missing business inputs.
+
+Reviewer guidance also explains the canonical next-step aliases on separate application surfaces. It must assess real owner workload rather than asking the generator to remove required matching text. The paid-evaluation hash now includes the numeric-lint module. **170 tests in 10 files passed (15.42 seconds)**, including private-vs-public, heading-only, negated-label and full-plan paths, plus focused approval/permission regressions. App/Convex typechecks, changed-file ESLint and diff checks passed.
+
+```sh
+pnpm exec vitest run tests/unit/focused-plan.test.ts tests/unit/prepared-work.test.tsx tests/unit/focused-evidence-review.test.ts tests/unit/focused-length-repair.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/creative-preparation.test.ts tests/unit/agent-escalation.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+## V3.171 — bounded length repair before V17 completed
 
 V3.171 addresses the second concrete V16 failure: a strategically improved revision exceeded the test-document bound by 32 characters and lost to the earlier failed draft. The runtime may now use its **already allowed and separately reserved remaining revision** only when a full focused-plan revision improves judgment, economics or originality, does not reduce the average/minimum score, passes all gates, and its only hard failures are prepared-draft length bounds. The prior clean draft remains the fallback. Truth, permission, schema, malformed-review and other hard failures do not receive this exception. No length limit, acceptance score, maximum call count, reservation or runtime model changes.
 

@@ -1,3 +1,7 @@
+## 18 November 2026 — complete fictional examples without inventing business facts
+
+V3.172 recognizes locally labelled fictional numbers in private planning examples; public copy, unlabelled values and real-business claims remain checked. Canonical UI aliases are explained to the reviewer. **170 focused/permission tests passed**, lint passed. V17 final review truncated at 12,000 output tokens; no final pass claimed. Seven calls cost $1.347709, combined charged/held **$75.745228 / $100**. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November 2026 — recover a narrowly overlong improved revision
 
 V3.171 permits the existing remaining repair for a strategically improved full focused revision whose only hard failure is prepared-draft length. No bound, quality score, model or spending cap is relaxed. **167 tests passed**; types/lint passed. Zero-cost replay of V16 verifies budget refusal preserves the exact clean failed fallback. V17 is still evaluating the prior milestone change. [Audit](growth-engine/focused-evidence-review-audit.md).

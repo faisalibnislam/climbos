@@ -1,3 +1,7 @@
+## 18 November — private example labels and canonical review context
+
+`v3.172-labelled-test-examples`: preserve complete fictional test data with local labels, maintaining public-copy numeric checks; explain canonical next-step UI aliases to the reviewer. 170 tests and lint pass. V17 ended with a truncated final review, not acceptance; combined charged/held $75.745228 / $100. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — bounded length correction with reviewed fallback
 
 `v3.171-bounded-length-repair`: narrowly allow the already-budgeted second repair when improved strategy introduces only prepared-draft length errors. Preserve clean best output, all safety gates and fresh full review. 167 tests, types/lint and read-only V16 replay passed. Paid effect pending; V17 retains its loaded v3.170 snapshot. [Audit](focused-evidence-review-audit.md).
