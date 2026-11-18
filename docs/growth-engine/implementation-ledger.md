@@ -1,3 +1,7 @@
+## 18 November — retain only bound evidence in later repairs
+
+V3.210 preserves earlier validated product-plan and measurement findings while excluding misquoted or source-unbound review claims from repair history. Earlier judgments remain fallible context; final review stays independent. **264 tests**, types and lint passed. This closes the locally reproduced defects in this pass, without claiming fresh Livoform strategy acceptance. Paid calls remain paused and runtime models unchanged. [Audit and commands](focused-evidence-review-audit.md).
+
 ## 18 November — deliver worked strategy reasoning contrasts
 
 V3.209 carries three explicitly instructional contrasts through exploration, feedback, drafting and review, including resumed paths. They address weak comparisons, unbuilt exchange hypotheses and paid-plan/value confusion without becoming business facts or verified precedents. **260 tests**, types and lint passed. Delivery is verified; better live model reasoning is not. Paid API calls remain paused and the runtime model is unchanged. [Audit and commands](focused-evidence-review-audit.md).

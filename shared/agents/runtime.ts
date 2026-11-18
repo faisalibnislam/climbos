@@ -2,7 +2,7 @@ import { boundedPageReads } from "./provenance";
 import { diagnosisBrief } from "./diagnosis";
 import { CreativePreparationSchema, CREATIVE_PREPARATION_TASK, CREATIVE_PREPARATION_TOKENS, CreativeFeedbackSchema, CREATIVE_FEEDBACK_TASK, CREATIVE_FEEDBACK_TOKENS, creativeFeedbackMatches } from "./creativePreparation";
 import { focusedSectionRevisionSchema, mergeFocusedSections, projectFocusedFirstStep } from "./focusedPlan";
-import { FOCUSED_REVIEW_ID, FOCUSED_EVIDENCE_REVIEW, FOCUSED_DECISION_REVIEW, FOCUSED_ORIGINALITY_REVIEW, FocusedEvidenceAuditSchema, FocusedOriginalityAuditSchema, lintFocusedEvidenceAudit, lintFocusedOriginalityAudit, focusedRevisionCriteria, focusedRevisionOriginality, focusedOriginalityMatches, resolveFocusedEvidencePaths } from "./focusedReview";
+import { FOCUSED_REVIEW_ID, FOCUSED_EVIDENCE_REVIEW, FOCUSED_DECISION_REVIEW, FOCUSED_ORIGINALITY_REVIEW, FocusedEvidenceAuditSchema, FocusedOriginalityAuditSchema, lintFocusedEvidenceAudit, lintFocusedOriginalityAudit, focusedRevisionCriteria, focusedRevisionOriginality, focusedOriginalityMatches, resolveFocusedEvidencePaths, focusedHistoricalEvidenceFindings } from "./focusedReview";
 import { OWNER_LANGUAGE_RULES } from "./ownerLanguage";
 import { fitJson, fitText, reportDropped } from "./context";
 import { z } from "zod";
@@ -60,16 +60,14 @@ function creativeProposalBlock(source: string, value: z.infer<typeof CreativePre
 }
 
 /** Prior judgments are fallible revision context, never business facts or a ban on an idea. */
-function priorFocusedFindings(output: unknown, critique: CritiqueResult) {
+function priorFocusedFindings(output: unknown, critique: CritiqueResult, input: AgentInput) {
   const bold = (output as { strategyExploration?: { bold?: { title?: unknown; businessMechanism?: unknown } } } | null)?.strategyExploration?.bold;
   const short = (value: unknown, limit: number) => typeof value === "string" ? value.slice(0, limit) : "";
   const audit = FocusedOriginalityAuditSchema.safeParse(critique.originalityAudit);
-  const evidence = FocusedEvidenceAuditSchema.safeParse(critique.evidenceAudit);
   return {
     earlierBoldProposal: { title: short(bold?.title, 120), mechanism: short(bold?.businessMechanism, 500) },
     originalityFinding: audit.success && focusedOriginalityMatches(audit.data, output) ? { verdict: audit.data.mechanismVerdict, closestAlternative: short(audit.data.closestFamiliarAlternative, 400), difference: short(audit.data.consequentialDifference, 500), testVerdict: audit.data.comparisonVerdict, proposedTest: audit.data.testQuote, test: short(audit.data.testOfDifference, 400) } : null,
-    unsupportedClaims: (evidence.success ? evidence.data : []).flatMap(row => row.claims).filter(claim => claim.verdict === "unsupported").slice(0, 3)
-      .map(claim => ({ path: short(claim.path, 200), quote: short(claim.quote, 400), correction: short(claim.correction, 400) })),
+    evidenceFindings: focusedHistoricalEvidenceFindings(critique, output, input),
   };
 }
 
@@ -674,7 +672,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     if (deps.beforeRevision && !(await deps.beforeRevision(round + 1, revisionModel))) break;
     const previous = current;
     const priorFindings = spec.rubric.id === FOCUSED_REVIEW_ID && earlierFindings.length ? reportDropped("earlier review findings", fitJson(earlierFindings.slice(-2).reverse(), 6_000)) : "";
-    if (spec.rubric.id === FOCUSED_REVIEW_ID) earlierFindings.push(priorFocusedFindings(current, c));
+    if (spec.rubric.id === FOCUSED_REVIEW_ID) earlierFindings.push(priorFocusedFindings(current, c, reviewInput));
     const repair = { previous, fixes: c.fixes, strengths: c.strengths, lint: a.lint, criteria: focusedRevisionCriteria(c, withVerdict(spec.rubric)), originality: focusedRevisionOriginality(c, withVerdict(spec.rubric), current), failedGates: c.gates.filter(gate => !gate.pass).map(gate => `- ${gate.id}: ${gate.note}`), priorFindings };
     try {
       current = await draftOnce(round + 1, repair, escalation);

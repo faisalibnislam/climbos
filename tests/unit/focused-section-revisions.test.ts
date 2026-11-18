@@ -5,6 +5,7 @@ import { AgentYield, runAgent, type AgentDeps, type PhaseRecord } from "../../sh
 import { focusedSectionRevisionSchema, mergeFocusedSections } from "../../shared/agents/focusedPlan";
 import { focusedStrategySpec, starterStrategySpec } from "../../shared/agents/specs";
 import { ZERO_USAGE, type TurnRequest } from "../../shared/ai/types";
+import type { CritiqueResult } from "../../shared/agents/types";
 
 const schema = z.object({ summary: z.string().min(4), preparedWork: z.array(z.object({ draft: z.string().min(10) })).min(1) });
 const original = { summary: "An unsupported audience claim", preparedWork: [{ draft: "A complete, useful synthetic private example." }] };
@@ -37,6 +38,35 @@ async function run(patch: unknown, lastReview = review(5)) {
 }
 
 describe("bounded focused section repairs", () => {
+  it.each(["plan", "measurement", "wrong_quote", "unbound_plan"] as const)("retains only bound earlier evidence findings in later repairs: %s", async mode => {
+    const first = { ...original, summary: mode === "measurement" ? "Count a buyer's sample walkthrough as product activation." : "If Core access exists, use AI brief creation." };
+    if (mode === "measurement") first.preparedWork = [{ draft: "The buyer walks through the owner's fictional sample as a respondent, not their own customer workflow." }];
+    const earlier = review(3) as CritiqueResult;
+    const capability = earlier.evidenceAudit!.find(row => row.category === "capabilities_and_results")!;
+    if (mode === "plan" || mode === "unbound_plan") capability.planChecks = [{ path: "summary", quote: first.summary, claimedPlans: ["Core"], availabilityClaim: "asserted_available",
+      requirements: [{ capabilityQuote: "AI brief creation", eligiblePlans: ["Pro"], excludedPlans: ["Core"], basis: "owner_reported", evidenceRef: "fact:0", sourceQuote: mode === "unbound_plan" ? "An absent source quotation." : "Synthetic owner report: Pro supports AI brief creation; Core excludes it." }] }];
+    if (mode === "measurement") capability.measurementChecks = [{ claimPath: "summary", claimQuote: first.summary,
+      observationPath: "preparedWork[0].draft", observationQuote: first.preparedWork[0].draft,
+      activity: "simulation_or_walkthrough", claimedOutcome: "product_use", actorMatchesTarget: false, basis: "A sample walkthrough does not demonstrate the buyer's own workflow." }];
+    if (mode === "wrong_quote") capability.claims = [{ path: "summary", quote: "A quotation absent from this draft.", verdict: "unsupported", basis: "Synthetic mismatched review", correction: "REJECTED_QUOTE_MUST_NOT_RETURN" }];
+    const responses = [first, earlier, { summary: "The narrower proposed observation still needs clearer purpose." }, review(3.5), { summary: "The final proposed test keeps outcomes and access unknown." }, review(5)];
+    const requests: TurnRequest[] = [];
+    const result = await runAgent({ ...spec, maxRevisions: 2 }, { task: "Synthetic repair", brief: "Access and time unknown", facts: ["Synthetic owner report: Pro supports AI brief creation; Core excludes it."], constraints: { factEvidenceBases: ["owner_reported"] } }, {
+      beforeRevision: async () => true,
+      phase: async (_key, _label, fn) => (await fn()).value,
+      turn: async req => { requests.push(req); const output = responses.shift(); return { ok: true, output, text: JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" }; },
+    });
+    expect(requests).toHaveLength(6);
+    const prior = String(requests[4].messages.at(-1)!.content).split('<untrusted_content source="earlier review findings">\n')[1]?.split("\n</untrusted_content>")[0];
+    expect(prior).toBeDefined();
+    if (mode === "plan") expect(prior).toContain("does not support Core");
+    if (mode === "measurement") expect(prior).toContain("does not establish successful product use");
+    expect(prior).not.toContain("REJECTED_QUOTE_MUST_NOT_RETURN");
+    if (mode === "unbound_plan") expect(prior).not.toContain("does not support Core");
+    expect(JSON.stringify(requests[5].messages)).not.toContain("earlier review findings");
+    expect(result.assessment?.ship).toBe(true);
+  });
+
   it("carries earlier mechanism and factual findings into a later repair without feeding them to the independent critic", async () => {
     const creativeSchema = schema.extend({ strategyExploration: z.object({ bold: z.object({ title: z.string(), businessMechanism: z.string(), reversibleTest: z.object({ method: z.string() }) }) }) });
     const first = { ...original, summary: "Payers carry all the outcome risk.", strategyExploration: { bold: { title: "Original refund proposal", businessMechanism: "A familiar paid inbox and refund guarantee.", reversibleTest: { method: focusedOriginalityFixture.testQuote } } } };

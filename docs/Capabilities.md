@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Later strategy repairs retain earlier product-plan and measurement findings only when bound to their actual draft and supplied evidence. Misquoted claims and unbound eligibility annotations are excluded from that history. Earlier judgments remain advisory, and the final reviewer checks the new draft independently. [Verified behavior and remaining quality limits](growth-engine/focused-evidence-review-audit.md).
+
 Strategy exploration, feedback, drafting and review now share worked reasoning contrasts for stronger comparisons, unbuilt exchange hypotheses and the difference between plan eligibility and customer value. These are instructional examples, not verified precedents or prescribed recommendations. Their delivery is locally tested; improved model originality and business usefulness remain unverified. [Details](growth-engine/focused-evidence-review-audit.md).
 
 Focused strategy distinguishes demonstrations, stated interest, successful customer use, payment and repeat use in its measurement review. A passing score cannot override the review's own contradictory event or customer-role classification. Useful job-fit tests remain valid without claiming activation; unknown access leaves dependent outcomes untested. These are consistency checks on model annotations, not proof that the model always interprets the test correctly or that any customer outcome occurred. [Tests and limits](growth-engine/focused-evidence-review-audit.md).

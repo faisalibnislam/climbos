@@ -1,5 +1,20 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.210 — preserve bound earlier reasoning defects during repair
+
+The final local pass traced the existing two-repair sequence. Three regressions reproduced two failures: product-plan and measurement findings disappeared from the next repair's historical context, while an unsupported-claim quotation absent from its alleged draft was retained. These defects could encourage a later repair to repeat an earlier mistake or act on a misattributed criticism. An additional negative case confirms that an unavailable source quotation cannot supply historical plan guidance.
+
+Historical evidence context now reuses the actual plan/measurement validators against the earlier draft and its bounded input evidence. It retains only bound failed findings and supported path corrections, excludes invalid annotations or unmatched claim quotations, deduplicates records, and reports the number omitted beyond the existing three-finding bound. The overall recent-history ceiling remains 6,000 characters. Earlier findings stay explicitly fallible, untrusted context; the writer may disagree with them, and no idea is banned. The final reviewer continues to receive only the current draft and original evidence, not earlier judgments.
+
+**264 focused, budget and permission tests passed in 14 files (14.98 seconds)**; app/Convex typechecks, changed-file ESLint and diff checks passed. Tests exercise the actual mocked draft/review/repair sequence, including retained eligibility/measurement findings, rejected wrong quotations and independent final review.
+
+```sh
+pnpm exec vitest run tests/unit/focused-measurement-review.test.ts tests/unit/focused-plan-eligibility.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/focused-evidence-repair.test.ts tests/unit/focused-originality-review.test.ts tests/unit/creative-preparation.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-length-repair.test.ts tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts tests/unit/strategy-prompt-cost.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+This finishes the locally reproduced measurement and repair-context defects identified in this pass, plus delivery of the worked originality/product-value contrasts. It does **not** establish that the runtime model now generates consistently original or useful plans. Its classification, source interpretation and use of the guidance remain unverified by new live calls; actual customer adoption and business outcomes are unknown. The latest saved paid Livoform draft remains failed at 3.5/5. Paid calls stay paused, recorded usage/holds stay $99.063401 of $100, tester access and founder time remain unknown, and the runtime model, call/revision limits and execution permissions are unchanged. No deployment or live business action occurred.
+
 ## V3.209 — worked reasoning contrasts in the actual strategy workflow
 
 The saved agency review exposed two reasoning weaknesses beyond mechanical validation: the capped-quote comparison used a weaker control, and correct paid-plan eligibility was confused with a reason for a customer to pay. The existing workflow had abstract instructions but no worked contrasts showing how to preserve useful conventional work while developing a distinct hypothesis. A small shared instructional passage now supplies three contrasts: same-benefit comparison, an explicitly unbuilt reciprocal exchange, and required feature bundle versus customer value.

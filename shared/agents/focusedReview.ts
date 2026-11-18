@@ -210,6 +210,32 @@ export function lintFocusedEvidenceAudit(value: unknown, output?: unknown, input
   return issues;
 }
 
+/** Bound earlier judgments remain fallible repair context, never facts or bans. */
+export function focusedHistoricalEvidenceFindings(critique: CritiqueResult, output: unknown, input?: AgentInput) {
+  const parsed = FocusedEvidenceAuditSchema.safeParse(resolveFocusedEvidencePaths(critique, output).evidenceAudit);
+  const fields = new Map(stringFields(output).map(field => [field.path, field.text]));
+  const findings: { kind: string; path: string; quote: string; correction: string }[] = [];
+  if (parsed.success && EVIDENCE_AUDIT_CATEGORIES.every(category => parsed.data.filter(row => row.category === category).length === 1)) for (const row of parsed.data) {
+    if (row.category === "capabilities_and_results") {
+      for (const check of row.planChecks) {
+        const issues = lintProductPlanCheck(check, fields, input);
+        if (issues.some(issue => issue.rule === "review_scores")) continue;
+        for (const issue of issues) findings.push({ kind: "product_plan", path: check.path, quote: check.quote, correction: issue.message });
+      }
+      for (const check of row.measurementChecks) {
+        const issues = lintFocusedMeasurementCheck(check, fields);
+        if (issues.some(issue => issue.rule === "review_scores")) continue;
+        for (const issue of issues) findings.push({ kind: "measurement", path: check.claimPath, quote: check.claimQuote, correction: issue.message });
+      }
+    }
+    for (const claim of row.claims) if (claim.verdict === "unsupported" && claim.quote.trim() && claim.correction.trim() && fields.get(claim.path)?.includes(claim.quote)) {
+      findings.push({ kind: "unsupported_claim", path: claim.path, quote: claim.quote, correction: claim.correction });
+    }
+  }
+  const unique = [...new Map(findings.map(finding => [JSON.stringify(finding), finding])).values()];
+  return { findings: unique.slice(0, 3), omitted: Math.max(0, unique.length - 3) };
+}
+
 export const FOCUSED_EVIDENCE_REVIEW = `FOCUSED EVIDENCE AUDIT: Before scoring, inspect the whole draft (including strategicDirection, channel rationale, actions and prepared copy) for qualitative factual claims, not just numbers. Return evidenceAudit with exactly one row per category:
 - business_state: check unknown versus absent audiences, contacts, traffic, revenue, budget, readiness and capacity. One missing measure or no traffic does not prove no followers, contacts or customers. An evaluation spending cap is not the owner's real budget.
 - comparative_claims: check fastest, cheapest, best, easiest or most effective route claims. Preference with an explicit hypothesis and tradeoff is allowed; an objective comparison needs supplied comparative evidence. Do not require a precedent for a novel proposal.
