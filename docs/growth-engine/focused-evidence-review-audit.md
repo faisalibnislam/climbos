@@ -1,5 +1,13 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.195 — complete the advisory comparison response
+
+Comparison-pack V2 completed exploration, then its candidate review reached the 8,000-token output ceiling, including 5,405 thinking tokens. The incomplete review was rejected before drafting; it has no strategy score. The two calls cost **$0.231162**, bringing combined charged/held to **$94.389896 / $100**. Both failed comparison-pack runs and their receipts remain intact.
+
+The advisory review now shares the **16,000-token allowance** used by the other bounded review stage. Its actual request and upfront quote still use one constant. This retains the model, high effort, every candidate, the independent final review and the existing call count. No automatic retry, partial-answer acceptance or budget increase. The regression for truncated feedback still proves that no writer call follows the incomplete response.
+
+**124 tests in six files passed (12.30 seconds)** using the same focused/runtime/budget/permission command recorded for V3.194. App/Convex types, changed-file lint and diff checks passed. The next paid run keeps the same public-comparison pack and unknown owner access/time.
+
 ## V3.194 — complete creative exploration before drafting
 
 The first new public-comparison run (`launch-comparison-v1-20261118`, source hash `0fe639ebe851f2f54eaefb7667e841aded6a7cb288962af3a5f848cbb4f61dc8`) stopped in exploration. The provider used all 12,000 output tokens, including 8,619 thinking tokens. The incomplete response was rejected before candidate feedback, drafting or scoring. The one completed paid request cost **$0.151246**; combined charged/held is **$94.158734 / $100**. There is no quality score for this failed run.

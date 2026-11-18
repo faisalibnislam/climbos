@@ -1,3 +1,7 @@
+## 18 November — finish the advisory comparison response
+
+Exploration completed, but comparison-pack V2 stopped at the candidate review's 8,000-token limit, with no plan score. Cumulative charged/held **$94.389896 / $100**. V3.195 quotes and allows 16,000 tokens for that review, retaining the same model, effort, call count and rejection of incomplete output. **124 tests in six files**, types/lint/diff checks passed. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November — finish the bounded exploration response
 
 The new comparison-pack run stopped before drafting at its 12,000-token exploration limit (8,619 thinking tokens); it has no quality score. Cost $0.151246; cumulative charged/held **$94.158734 / $100**. V3.194 uses a shared, quoted 16,000-token exploration allowance and still rejects incomplete output without a hidden retry. **124 tests in six files**, types/lint/diff checks passed. Runtime model, call count, acceptance rules and $100 cap unchanged. [Audit](growth-engine/focused-evidence-review-audit.md).

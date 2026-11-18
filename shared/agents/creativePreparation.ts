@@ -5,7 +5,7 @@ import { FocusedOriginalityAuditSchema } from "./focusedReview";
 // Includes adaptive reasoning plus all three or four complete candidate records.
 export const CREATIVE_PREPARATION_TOKENS = 16_000;
 // Includes adaptive reasoning and the complete per-candidate audits plus developed direction.
-export const CREATIVE_FEEDBACK_TOKENS = 8_000;
+export const CREATIVE_FEEDBACK_TOKENS = 16_000;
 const CreativeMethodSchema = z.enum(["convention_inversion", "distant_transfer", "asset_recombination", "ownable_behavior"]);
 export const CreativeDirectionSchema = z.object({
   creativeMethod: CreativeMethodSchema,

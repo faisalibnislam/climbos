@@ -238,7 +238,7 @@ describe("creative preparation within the existing focused run", () => {
       },
     })).rejects.toMatchObject({ kind: "invalid_output" });
     expect(requests).toHaveLength(2);
-    expect(requests[1]).toMatchObject({ maxTokens: 8000, modelKey: spec().models.critic, effort: "high" });
+    expect(requests[1]).toMatchObject({ maxTokens: 16000, modelKey: spec().models.critic, effort: "high" });
     expect(agentSteps({ ...focusedStrategySpec(), lint: undefined })[1].outputBudget).toBe(requests[1].maxTokens);
   });
 

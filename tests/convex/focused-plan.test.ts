@@ -450,7 +450,7 @@ it("runs the real focused path with a matching quote, reuses bound research and 
   expect(state.requests).toHaveLength(4); expect(state.requests.every(r => !r.webSearch && !r.webFetch && !r.customTools)).toBe(true);
   expect(state.requests[0].maxTokens).toBe(16000);
   expect(state.requests[0].modelKey).toBe(state.requests[2].modelKey);
-  expect(state.requests[1]).toMatchObject({ maxTokens: 8000, effort: "high", modelKey: state.requests[3].modelKey });
+  expect(state.requests[1]).toMatchObject({ maxTokens: 16000, effort: "high", modelKey: state.requests[3].modelKey });
   expect(state.requests[2].maxTokens).toBe(32000);
   expect(state.requests[3]).toMatchObject({ maxTokens: 16000, effort: "high" });
   expect(JSON.stringify(state.requests[2].messages)).toContain("advisory mechanism feedback");
