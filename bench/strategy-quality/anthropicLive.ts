@@ -25,7 +25,7 @@ import {planJob,estimateJobMicros,maxJobMicros} from "../../convex/lib/jobPlans"
 import { currentRateVersion } from "../../shared/economics";
 import type { AgentInput, AgentSpec } from "../../shared/agents/types";
 import type { TurnRequest } from "../../shared/ai/types";
-import { ANTHROPIC_QA_CAP_MICROS, reserveClaudeQaCall, claudeQaActualMicros, type ClaudeQaModel } from "./anthropicBudget";
+import { ANTHROPIC_QA_CAP_MICROS, canStartClaudeQaRevision, reserveClaudeQaCall, claudeQaActualMicros, type ClaudeQaModel } from "./anthropicBudget";
 
 async function main() {
 const { values } = parseArgs({ options: { variant: { type: "string", default: "baseline" }, stage: { type: "string", default: "plans" }, request: {type:"string"}, "review-file":{type:"string"}, "owner-context": {type:"string"}, "launch-evidence": {type:"string"}, "reference-plan": {type:"string"}, "compare-with": { type: "string", default: "baseline-fixed" }, cases: { type: "string", default: "macloving,livoform,folevi" }, "draft-tier": { type: "string", default: "advanced" }, "plan-style": { type: "string", default: "focused" }, "evidence-from": { type: "string" }, "extra-sources": { type: "string" }, "curated-sources": { type: "string" }, horizons: { type: "string", default: "14,30,90" }, "confirm-paid": { type: "boolean" } } });
@@ -43,7 +43,7 @@ if (!horizons.length || horizons.some((days) => ![14, 30, 90].includes(days)) ||
 if (!/^[a-z0-9-]{1,40}$/.test(variant)) throw new Error("Invalid variant name.");
 if (!values["confirm-paid"] || process.env.CLIMBOS_FAKE_LLM) throw new Error("Real QA needs --confirm-paid, with no fake LLM.");
 const out = resolve("bench/cache/anthropic-real-2026-11-09"); mkdirSync(out, { recursive: true });
-const loadedSourceHash = createHash("sha256").update(["bench/strategy-quality/anthropicLive.ts", "bench/strategy-quality/evaluationIdentity.ts", "bench/strategy-quality/livoformLaunch.ts", "bench/strategy-quality/livoformPublicDocs.ts", "shared/agents/runtime.ts", "shared/agents/specs.ts", "shared/agents/planTasks.ts", "shared/agents/contentTasks.ts", "shared/agents/focusedPlan.ts", "shared/agents/lint.ts", "shared/agents/planningCycles.ts", "shared/agents/goalTiming.ts", "shared/agents/focusedRubric.ts", "shared/agents/focusedReview.ts", "shared/agents/creativePreparation.ts", "shared/agents/channelJudgment.ts", "shared/agents/capacity.ts", "shared/agents/campaignTiming.ts", "shared/agents/routes.ts", "shared/agents/offerLanguage.ts", "shared/agents/offerAssessment.ts", "bench/strategy-quality/industryInput.ts", "shared/skills/generated.ts", "shared/knowledge/creativePrecedents.ts", "shared/knowledge/creativePrecedentExpansion.ts", "shared/ai/anthropic.ts"].map((f) => readFileSync(resolve(f), "utf8")).join("\n")).digest("hex");
+const loadedSourceHash = createHash("sha256").update(["bench/strategy-quality/anthropicLive.ts", "bench/strategy-quality/anthropicBudget.ts", "bench/strategy-quality/evaluationIdentity.ts", "bench/strategy-quality/livoformLaunch.ts", "bench/strategy-quality/livoformPublicDocs.ts", "shared/agents/runtime.ts", "shared/agents/specs.ts", "shared/agents/planTasks.ts", "shared/agents/contentTasks.ts", "shared/agents/focusedPlan.ts", "shared/agents/lint.ts", "shared/agents/planningCycles.ts", "shared/agents/goalTiming.ts", "shared/agents/focusedRubric.ts", "shared/agents/focusedReview.ts", "shared/agents/creativePreparation.ts", "shared/agents/channelJudgment.ts", "shared/agents/capacity.ts", "shared/agents/campaignTiming.ts", "shared/agents/routes.ts", "shared/agents/offerLanguage.ts", "shared/agents/offerAssessment.ts", "bench/strategy-quality/industryInput.ts", "shared/skills/generated.ts", "shared/knowledge/creativePrecedents.ts", "shared/knowledge/creativePrecedentExpansion.ts", "shared/ai/anthropic.ts"].map((f) => readFileSync(resolve(f), "utf8")).join("\n")).digest("hex");
 const secret = readFileSync(resolve(".env.anthropic.local"), "utf8").match(/^\s*ANTHROPIC_API_KEY\s*=\s*(.+)\s*$/m)?.[1]?.trim().replace(/^(['"])(.*)\1$/, "$2");
 if (!secret) throw new Error("Saved Anthropic key is missing.");
 process.env.ANTHROPIC_API_KEY = secret;
@@ -69,7 +69,7 @@ globalThis.fetch = async (input, init) => {
   const receipt: Receipt = { label, reservedMicros, chargedMicros: reservedMicros, status: "reserved", model: String(body.model), at: new Date().toISOString() };
   ledger.receipts.push(receipt); persist();
   writeFileSync(resolve(out, `receipt-${ledger.receipts.length}.request.json`), JSON.stringify(body, null, 2), { mode: 0o600 });
-  console.log(`CALL ${label} ${body.model}; reserved $${(reservedMicros / 1e6).toFixed(4)}, cumulative used/held $${(spent() / 1e6).toFixed(4)}`);
+  console.log(`CALL ${label} ${body.model}; reserved $${(reservedMicros / 1e6).toFixed(4)}, cumulative used/held $${((spent() + historicalHeldMicros) / 1e6).toFixed(4)}`);
   try {
     const response = await actualFetch(url, init);
     // Buffer the finite SSE response so metering is durable before the caller can start another turn.
@@ -87,7 +87,7 @@ globalThis.fetch = async (input, init) => {
     else receipt.status = "unknown_usage_hold_retained";
     persist();
     if (actual !== null && actual > reservedMicros) throw new Error("QA usage exceeded the reserved envelope; stop and investigate.");
-    console.log(`RECEIPT ${label}: ${receipt.status}; $${(receipt.chargedMicros / 1e6).toFixed(6)}, cumulative $${(spent() / 1e6).toFixed(6)}`);
+    console.log(`RECEIPT ${label}: ${receipt.status}; $${(receipt.chargedMicros / 1e6).toFixed(6)}, cumulative $${((spent() + historicalHeldMicros) / 1e6).toFixed(6)}`);
     return new Response(raw, { status: response.status, statusText: response.statusText, headers: response.headers });
   } catch (error) { if (receipt.status === "reserved") receipt.status = "network_uncertainty_hold_retained"; persist(); throw error; }
 };
@@ -137,7 +137,7 @@ async function execute<T>(id: string, name: string, spec: AgentSpec<T>, input: A
   const boundedPlan=spec.revisionWithinInitialCap?planJob("strategy",{planStyle:"starter"}):null;
   const revisionBound=boundedPlan?estimateJobMicros(boundedPlan):0,runCap=boundedPlan?maxJobMicros(boundedPlan):Infinity;
   try {
-    const result = await runAgent(spec, input, { turn, phase: async (key, phaseLabel, fn) => { label = `${id}/${variant}/${name}/${phaseLabel}`; const p = await fn(); phases.push({ key, label: phaseLabel, record: p.record }); writeFileSync(`${path}.phases.json`, JSON.stringify(phases, null, 2)); return p.value; }, beforeRevision: async () => spent() < 90_000_000 && (!spec.revisionWithinInitialCap || spent()-executionStart+revisionBound<=runCap) });
+    const result = await runAgent(spec, input, { turn, phase: async (key, phaseLabel, fn) => { label = `${id}/${variant}/${name}/${phaseLabel}`; const p = await fn(); phases.push({ key, label: phaseLabel, record: p.record }); writeFileSync(`${path}.phases.json`, JSON.stringify(phases, null, 2)); return p.value; }, beforeRevision: async () => canStartClaudeQaRevision(spent() + historicalHeldMicros) && (!spec.revisionWithinInitialCap || spent()-executionStart+revisionBound<=runCap) });
     writeFileSync(path, JSON.stringify({ caseId: id, variant, name, engine: ENGINE_VERSION, sourceHash, evaluationIdentity: identity, input, result, ...(boundedPlan?{budget:{initialQuoteMicros:revisionBound,costCapMicros:runCap,actualMicros:spent()-executionStart}}:{}), schemaPassed: spec.schema.safeParse(result.output).success, actualModels: [...new Set(phases.map((p) => (p as { record: { result: { actualModelId?: string } } }).record.result.actualModelId).filter(Boolean))], limits: input.brief.startsWith("SYNTHETIC") ? "Isolated synthetic acceptance brief; never imported into the real database. No measured business outcomes or external actions. AI review is not human validation." : "Real public-source business; no private analytics, measured demand, customer list or owner capacity supplied. No publication, outreach or ad spend. AI review is not human validation." }, null, 2));
     console.log(`SAVED ${id}/${variant}/${name}: ship ${result.assessment?.ship}; average ${result.assessment?.average}`); return result;
   } catch (error) { writeFileSync(path, JSON.stringify({ caseId: id, variant, name, engine: ENGINE_VERSION, sourceHash, error: error instanceof Error ? error.message.replaceAll(secret!, "[REDACTED]") : "Failed", phases }, null, 2)); throw error; }
@@ -203,7 +203,7 @@ try {
      const input = industryInput(item);
      await execute(item.id, "focused-14", selectedPlanSpec(), input);
    }
-   console.log(`COMPLETE isolated industry run: ${selected.length} cases; $${(spent()/1e6).toFixed(6)} used/held.`);
+   console.log(`COMPLETE isolated industry run: ${selected.length} cases; $${((spent() + historicalHeldMicros)/1e6).toFixed(6)} used/held.`);
    return;
  }
  for (const id of values.cases!.split(",") as (keyof typeof cases)[]) {
@@ -343,7 +343,7 @@ try {
     writeFileSync(comparisonPath, JSON.stringify({ scope: initialDraftComparison ? "matched_initial_growth_drafts" : "recommendation_and_plans", comparedHorizons: initialDraftComparison ? [] : horizons, mapping: reverse ? { A: variant, B: values["compare-with"] } : { A: values["compare-with"], B: variant }, result, evidenceLimits: input.brief }, null, 2));
   } else throw new Error("Unknown stage.");
  }
- console.log(`COMPLETE: cumulative used/held $${(spent()/1e6).toFixed(6)} / $100.`);
+ console.log(`COMPLETE: cumulative used/held $${((spent() + historicalHeldMicros)/1e6).toFixed(6)} / $100.`);
 } finally { globalThis.fetch = actualFetch; delete process.env.ANTHROPIC_API_KEY; closeSync(lock); unlinkSync(lockPath); }
 
 }

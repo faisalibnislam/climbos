@@ -1,3 +1,7 @@
+## 18 November — budget complete evaluation revisions cumulatively
+
+The paid runner now checks both ledgers against conservative headroom for a full revision/review pair and reports combined used/held amounts. The original $100 hard cap and per-attempt enforcement remain unchanged. **27 tests in three files**, types/lint/diff checks passed. No runtime model or acceptance change. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — develop one alternative alongside the candidate critique
 
 V3.188 reuses the candidate call and direction contract to develop one explicit hypothesis in response to a substantive weakness. Original candidates remain available; no novelty filter or endorsement. Final review stays independent. Same model, call count and token ceiling. **170 tests in ten files**, types/lint passed; paid quality effect pending. [Audit](focused-evidence-review-audit.md).

@@ -1,5 +1,15 @@
 # Focused strategy evidence review — 17 November 2026
 
+## Evaluation runner — use cumulative headroom for a complete revision
+
+The paid runner's actual HTTP guard already included both budget ledgers, but its pre-revision check used an unrelated $90 threshold from only the main ledger, and progress logs omitted the historical ledger. The preflight now uses combined charged/held amounts and reserves headroom for two text-only calls at the highest permitted input, cache-write, output and model limits: **$5.64**. This conservative check can stop before the cap, and neither spends that headroom nor authorizes a larger cap. The per-attempt $100 guard, global lock, uncertain holds, permitted endpoint/models and starter per-run cap remain intact. Progress logs now show both ledgers; the budget helper is also included in the loaded source fingerprint.
+
+**27 tests in three files passed (0.34 seconds)**, covering the exact preflight boundary, historical holds, invalid ledgers, per-attempt refusal, unchanged input packs and evaluation identity. App/Convex types, changed-file lint and diff checks passed. Runtime code, models, approvals and strategy criteria do not change. The active docs V9 process loaded the previous runner before this edit.
+
+```sh
+pnpm exec vitest run tests/unit/anthropic-budget.test.ts tests/unit/evaluation-identity.test.ts tests/unit/livoform-launch-input.test.ts
+```
+
 ## V3.188 — develop a response to the creative critique
 
 Candidate audits have repeatedly recognized familiar tactics, but the writer still returned an ordinary replacement in docs V8 and the first docs V9 draft. The bounded candidate call now also develops one additional hypothetical direction in the existing direction schema, addressing a substantive incentive, mechanism or test weakness. Every original candidate and its audit remain available. The new proposal is not scored, endorsed, independently validated or automatically selected. It can be uncertain or unbuilt; the writer may disagree, and final independent review still sees neither candidate critiques nor the developed proposal.
