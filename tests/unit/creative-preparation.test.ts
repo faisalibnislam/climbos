@@ -30,6 +30,36 @@ const spec = () => ({ ...focusedStrategySpec({ maxRevisions: 0 }), schema: z.obj
 });
 
 describe("creative preparation within the existing focused run", () => {
+  it("can omit advisory feedback without omitting exploration or the independent final review", async () => {
+    const requests: TurnRequest[] = [], keys: number[] = [], checkpoints = new Map<number, unknown>();
+    const selected = { ...spec(), creativeFeedback: false };
+    const deps: AgentDeps = {
+      phase: async (key, _label, fn) => {
+        if (checkpoints.has(key.index)) return checkpoints.get(key.index) as never;
+        keys.push(key.index); const result = await fn(); checkpoints.set(key.index, result.value); return result.value;
+      },
+      turn: async req => {
+        requests.push(req);
+        const output = req.schema === CreativePreparationSchema ? seeds : req.system.some(s => s.text.includes("HARD GATES")) ? review : draft;
+        return { ok: true, output, text: JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" };
+      },
+    };
+    const input = { brief: "Synthetic case, unknown capacity", task: focusedPlanTask(14), facts: [] };
+    const result = await runAgent(selected, input, deps);
+    expect(keys).toEqual([49, 1, 2]);
+    expect(requests).toHaveLength(3);
+    expect(requests.some(req => req.schema === CreativeFeedbackSchema)).toBe(false);
+    expect(JSON.stringify(requests[1].messages)).toContain("Synthetic possibility 0");
+    expect(JSON.stringify(requests[1].messages)).not.toContain("advisory mechanism feedback");
+    expect(JSON.stringify(requests[2].messages)).not.toContain("Synthetic possibility 0");
+    expect(requests[2].system.some(s => s.text.includes("FOCUSED ORIGINALITY AUDIT"))).toBe(true);
+    expect(requests.every(req => !req.customTools && !req.webSearch && !req.webFetch)).toBe(true);
+    const quoted = agentSteps({ ...selected, lint: undefined });
+    expect(quoted).toHaveLength(3);
+    expect(quoted.map(step => [step.modelKey, step.outputBudget])).toEqual(requests.map(req => [req.modelKey, req.maxTokens]));
+    expect(await runAgent(selected, input, deps)).toEqual(result);
+    expect(requests).toHaveLength(3);
+  });
   it("passes the unknown-access fallback contract to writer and independent reviewer without execution tools", async () => {
     const requests: TurnRequest[] = [];
     await runAgent(spec(), { brief: "Synthetic case. Keep tester access and founder time unknown.", task: focusedPlanTask(14), facts: [] }, {

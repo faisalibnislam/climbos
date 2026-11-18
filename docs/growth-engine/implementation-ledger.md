@@ -1,3 +1,7 @@
+## 18 November — compare the advisory stage with a simpler workflow
+
+The completed alternative-evidence V2 run failed at **3.50/5** with one unsupported state assertion; combined used/held **$92.553001 / $100**. V3.192 adds an explicit launch-evaluation switch to omit the advisory candidate stage, preserving exploration and independent final review. Runtime defaults and models are unchanged; exact quotes, checkpoints and evaluation identity cover the switch. **153 tests in eight files passed**. The paid comparison is running and has no result yet. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — require complete milestones when generating new plans
 
 V3.191 aligns the focused/starter output schema with existing required timeline fields while keeping legacy reads compatible. Synthetic fixtures were updated to the same contract; **141 focused/regression/permission tests in seven files passed**. Cost tests now preserve the smaller starter allowance instead of assuming fewer focused calls are always cheaper than detailed planning. The active paid V2 run still uses V3.190; no new quality result is claimed. [Audit](focused-evidence-review-audit.md).

@@ -45,7 +45,7 @@ export function agentSteps(spec: AgentSpec<unknown>, research?: { maxSearches: n
   // Best-of-two agents write (and review) a second first draft.
   if (spec.creativePreparation && spec.rubric.id === "focused-growth-strategy") {
     steps.push({ kind: "model", role: spec.role, modelKey: spec.models.draft, inputBudget: 40_000, outputBudget: CREATIVE_PREPARATION_TOKENS });
-    steps.push({ kind: "model", role: spec.role, modelKey: spec.models.critic, inputBudget: 40_000, outputBudget: CREATIVE_FEEDBACK_TOKENS });
+    if (spec.creativeFeedback !== false) steps.push({ kind: "model", role: spec.role, modelKey: spec.models.critic, inputBudget: 40_000, outputBudget: CREATIVE_FEEDBACK_TOKENS });
   }
   for (let r = 0; r < rounds + ((spec.drafts ?? 1) > 1 && spec.maxRevisions >= 0 ? 1 : 0); r++) {
     steps.push({ kind: "model", role: spec.role, modelKey: spec.models.draft, inputBudget: 40_000, outputBudget: spec.maxTokens.draft });

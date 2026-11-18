@@ -28,9 +28,10 @@ import type { TurnRequest } from "../../shared/ai/types";
 import { ANTHROPIC_QA_CAP_MICROS, canStartClaudeQaRevision, reserveClaudeQaCall, claudeQaActualMicros, type ClaudeQaModel } from "./anthropicBudget";
 
 async function main() {
-const { values } = parseArgs({ options: { variant: { type: "string", default: "baseline" }, stage: { type: "string", default: "plans" }, request: {type:"string"}, "review-file":{type:"string"}, "owner-context": {type:"string"}, "launch-evidence": {type:"string"}, "reference-plan": {type:"string"}, "compare-with": { type: "string", default: "baseline-fixed" }, cases: { type: "string", default: "macloving,livoform,folevi" }, "draft-tier": { type: "string", default: "advanced" }, "plan-style": { type: "string", default: "focused" }, "evidence-from": { type: "string" }, "extra-sources": { type: "string" }, "curated-sources": { type: "string" }, horizons: { type: "string", default: "14,30,90" }, "confirm-paid": { type: "boolean" } } });
+const { values } = parseArgs({ options: { variant: { type: "string", default: "baseline" }, stage: { type: "string", default: "plans" }, request: {type:"string"}, "review-file":{type:"string"}, "owner-context": {type:"string"}, "launch-evidence": {type:"string"}, "reference-plan": {type:"string"}, "compare-with": { type: "string", default: "baseline-fixed" }, cases: { type: "string", default: "macloving,livoform,folevi" }, "draft-tier": { type: "string", default: "advanced" }, "plan-style": { type: "string", default: "focused" }, "evidence-from": { type: "string" }, "extra-sources": { type: "string" }, "curated-sources": { type: "string" }, horizons: { type: "string", default: "14,30,90" }, "skip-candidate-feedback": { type: "boolean" }, "confirm-paid": { type: "boolean" } } });
 const variant = values.variant!;
 const launchEvidencePack = parseLaunchEvidencePack(values.stage!, values["launch-evidence"]);
+if (values["skip-candidate-feedback"] && values.stage !== "launch-acceptance") throw new Error("Candidate-feedback ablation is supported only by launch-acceptance.");
 if (values["owner-context"] && values.stage !== "launch-acceptance") throw new Error("Owner context is only accepted by the launch-acceptance stage; refusing to silently ignore it.");
 if (!["starter", "focused"].includes(values["plan-style"]!)) throw new Error("Unknown plan style.");
 const selectedPlanSpec = () => values["plan-style"] === "starter" ? starterStrategySpec() : focusedStrategySpec();
@@ -132,15 +133,16 @@ async function execute<T>(id: string, name: string, spec: AgentSpec<T>, input: A
   if (existsSync(path)) { const saved = JSON.parse(readFileSync(path, "utf8")); assertReusableEvaluation(saved, identity); console.log(`REUSE exact saved evaluation ${id}/${variant}/${name}`); return saved.result; }
   label = `${id}/${variant}/${name}`;
   const sourceHash = loadedSourceHash;
+  const evaluationWorkflow = { creativePreparation: Boolean(spec.creativePreparation), creativeFeedback: Boolean(spec.creativePreparation) && spec.creativeFeedback !== false };
   const phases: unknown[] = [];
   const executionStart=spent();
   const boundedPlan=spec.revisionWithinInitialCap?planJob("strategy",{planStyle:"starter"}):null;
   const revisionBound=boundedPlan?estimateJobMicros(boundedPlan):0,runCap=boundedPlan?maxJobMicros(boundedPlan):Infinity;
   try {
     const result = await runAgent(spec, input, { turn, phase: async (key, phaseLabel, fn) => { label = `${id}/${variant}/${name}/${phaseLabel}`; const p = await fn(); phases.push({ key, label: phaseLabel, record: p.record }); writeFileSync(`${path}.phases.json`, JSON.stringify(phases, null, 2)); return p.value; }, beforeRevision: async () => canStartClaudeQaRevision(spent() + historicalHeldMicros) && (!spec.revisionWithinInitialCap || spent()-executionStart+revisionBound<=runCap) });
-    writeFileSync(path, JSON.stringify({ caseId: id, variant, name, engine: ENGINE_VERSION, sourceHash, evaluationIdentity: identity, input, result, ...(boundedPlan?{budget:{initialQuoteMicros:revisionBound,costCapMicros:runCap,actualMicros:spent()-executionStart}}:{}), schemaPassed: spec.schema.safeParse(result.output).success, actualModels: [...new Set(phases.map((p) => (p as { record: { result: { actualModelId?: string } } }).record.result.actualModelId).filter(Boolean))], limits: input.brief.startsWith("SYNTHETIC") ? "Isolated synthetic acceptance brief; never imported into the real database. No measured business outcomes or external actions. AI review is not human validation." : "Real public-source business; no private analytics, measured demand, customer list or owner capacity supplied. No publication, outreach or ad spend. AI review is not human validation." }, null, 2));
+    writeFileSync(path, JSON.stringify({ caseId: id, variant, name, engine: ENGINE_VERSION, sourceHash, evaluationIdentity: identity, evaluationWorkflow, input, result, ...(boundedPlan?{budget:{initialQuoteMicros:revisionBound,costCapMicros:runCap,actualMicros:spent()-executionStart}}:{}), schemaPassed: spec.schema.safeParse(result.output).success, actualModels: [...new Set(phases.map((p) => (p as { record: { result: { actualModelId?: string } } }).record.result.actualModelId).filter(Boolean))], limits: input.brief.startsWith("SYNTHETIC") ? "Isolated synthetic acceptance brief; never imported into the real database. No measured business outcomes or external actions. AI review is not human validation." : "Real public-source business; no private analytics, measured demand, customer list or owner capacity supplied. No publication, outreach or ad spend. AI review is not human validation." }, null, 2));
     console.log(`SAVED ${id}/${variant}/${name}: ship ${result.assessment?.ship}; average ${result.assessment?.average}`); return result;
-  } catch (error) { writeFileSync(path, JSON.stringify({ caseId: id, variant, name, engine: ENGINE_VERSION, sourceHash, error: error instanceof Error ? error.message.replaceAll(secret!, "[REDACTED]") : "Failed", phases }, null, 2)); throw error; }
+  } catch (error) { writeFileSync(path, JSON.stringify({ caseId: id, variant, name, engine: ENGINE_VERSION, sourceHash, evaluationWorkflow, error: error instanceof Error ? error.message.replaceAll(secret!, "[REDACTED]") : "Failed", phases }, null, 2)); throw error; }
 }
 const JUDGE_DIMENSIONS = ["understanding", "next_step", "distribution", "seo", "social", "creativity", "prepared_work", "honesty", "readability", "feasibility"] as const;
 const JudgeSchema = z.object({ verdict: z.enum(["A", "B", "tie", "neither"]), confidence: z.enum(["low", "medium", "high"]), scores: z.array(z.object({ dimension: z.enum(JUDGE_DIMENSIONS), A: z.number().min(1).max(5), B: z.number().min(1).max(5), evidence: z.string() })), unsupportedClaims: z.array(z.string()), strengthsToKeep: z.array(z.string()), engineChanges: z.array(z.object({ problem: z.string(), example: z.string(), generalRule: z.string() })), ownerSummary: z.string() });
@@ -193,7 +195,8 @@ try {
    if (values.cases !== "livoform" || values["plan-style"] !== "focused" || cheapDraft || evidenceFrom || values["curated-sources"] || values["extra-sources"]) throw new Error("Launch acceptance uses the exact owner-selected Livoform evidence pack and current focused route.");
    if (!values["owner-context"]) throw new Error("Launch acceptance needs the explicitly approved local owner report file.");
    const ownerContext = JSON.parse(readFileSync(resolve(values["owner-context"]), "utf8"));
-   await execute("livoform", "focused-14", selectedPlanSpec(), livoformLaunchInput(ownerContext, Date.now(), launchEvidencePack));
+   const launchSpec = { ...selectedPlanSpec(), ...(values["skip-candidate-feedback"] ? { creativeFeedback: false } : {}) };
+   await execute("livoform", "focused-14", launchSpec, livoformLaunchInput(ownerContext, Date.now(), launchEvidencePack));
    return;
  }
  if (values.stage === "industries") {

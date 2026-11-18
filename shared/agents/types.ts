@@ -82,6 +82,8 @@ export interface AgentSpec<T> {
   drafts?: number;
   /** Full focused plans explore mechanisms before execution detail; same writer and run budget. */
   creativePreparation?: boolean;
+  /** Optional ablation of advisory candidate feedback; final independent review is never skipped. */
+  creativeFeedback?: boolean;
   /** Repair only explicitly returned top-level sections, then validate and review the complete merged draft. */
   sectionRevisions?: boolean;
   /**

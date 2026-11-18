@@ -20,6 +20,7 @@ describe("paid evaluation cache identity", () => {
     () => identity({ ...input, creativeRetrievalQuery: "Different mechanism" }),
     () => identity({ ...input, timingContext: { ...input.timingContext!, now: input.timingContext!.now! + 1 } }),
     () => identity(input, { ...spec, maxRevisions: 2 }),
+    () => identity(input, { ...spec, creativeFeedback: false }),
     () => identity(input, { ...spec, models: { ...spec.models, draft: "gpt-6-luna" } }),
     () => identity(input, spec, "source-b"),
     () => identity(input, spec, "source-a", "engine-b"),
