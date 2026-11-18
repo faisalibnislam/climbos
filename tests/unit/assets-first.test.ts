@@ -127,6 +127,13 @@ describe("never data-only: plays (bench Run 5, Folevi)", () => {
 });
 
 describe("never data-only: plan (bench Run 5, Folevi)", () => {
+  it("counts concrete dated phase tasks without treating a phase title as evidence of action", () => {
+    const phase = { name: "Test the existing flow", days: "3-6", focus: "Run the published plan flow and log pass or fail", firstAction: "An authorized owner builds the private sample and logs the result.", tasks: ["With owner approval and existing authorized access, run one test-mode payment and verify that the answers arrive."] };
+    expect(lintActionPlan({ phases: [phase] }, 14)).toEqual([]);
+    expect(lintActionPlan({ phases: [{ ...phase, tasks: ["Record current analytics in the private worksheet."] }] }, 14)).toContainEqual(expect.objectContaining({ rule: "data_only", path: "phases" }));
+    expect(lintActionPlan({ phases: [{ ...phase, days: "15-20" }] }, 14)).toContainEqual(expect.objectContaining({ rule: "data_only", path: "phases" }));
+    expect(lintActionPlan({ phases: [{ ...phase, days: "After access exists" }] }, 14)).toContainEqual(expect.objectContaining({ rule: "data_only", path: "phases" }));
+  });
   it("'keep plays paused', export-only experiments and no dated action all fail", () => {
     const issues = lintActionPlan(FOLEVI_PLAN, 90);
     expect(issues.every((i) => i.rule === "data_only" && i.severity === "error")).toBe(true);

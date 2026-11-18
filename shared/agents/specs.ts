@@ -338,7 +338,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.197-preserve-review-findings";
+export const ENGINE_VERSION = "v3.198-dated-phase-task-actions";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -1070,7 +1070,7 @@ export function phaseEndDay(days: string): number | undefined {
 }
 
 /** The plan side of Bench Run 5 (Folevi): never a data-only plan; one concrete test on an existing asset runs inside the horizon. */
-export function lintActionPlan(out: { summary?: string; phases?: { name: string; days: string; focus: string; firstAction?: string }[]; weekOneChecklist?: string[]; experiments?: { method: string; durationDays: number; stoppingRule: string }[] }, horizonDays?: number): LintIssue[] {
+export function lintActionPlan(out: { summary?: string; phases?: { name: string; days: string; focus: string; firstAction?: string; tasks?: string[] }[]; weekOneChecklist?: string[]; experiments?: { method: string; durationDays: number; stoppingRule: string }[] }, horizonDays?: number): LintIssue[] {
   const h = horizonDays || 90;
   const issues: LintIssue[] = [];
   const parallel = "Collecting data can run in parallel, but at least one concrete test on an existing asset (a page, listing or flow the research confirmed) must run inside the horizon.";
@@ -1078,7 +1078,7 @@ export function lintActionPlan(out: { summary?: string; phases?: { name: string;
   if (paused) issues.push({ severity: "error", rule: "data_only", message: `"${paused[1].match(DATA_ONLY)![0]}" makes the plan data-only. ${parallel}`, path: paused[0] });
   const exps = out.experiments ?? [];
   if (exps.length && !exps.some((e) => e.method !== "export_instructions" && e.durationDays > 0 && e.durationDays <= h)) issues.push({ severity: "error", rule: "data_only", message: `No experiment is a live test within ${h} days. Add one A/B, holdout or before/after test on an existing asset. ${parallel}`, path: "experiments" });
-  const acts = (out.phases ?? []).some((p) => PLAN_ACTION.test(`${p.focus} ${p.firstAction ?? ""}`) && (phaseEndDay(p.days) ?? Infinity) <= h) || (out.weekOneChecklist ?? []).some((t) => PLAN_ACTION.test(t));
+  const acts = (out.phases ?? []).some((p) => PLAN_ACTION.test([p.focus, p.firstAction ?? "", ...(p.tasks ?? [])].join(" ")) && (phaseEndDay(p.days) ?? Infinity) <= h) || (out.weekOneChecklist ?? []).some((t) => PLAN_ACTION.test(t));
   if (!acts) issues.push({ severity: "error", rule: "data_only", message: `No phase (with days) or week-one item changes or tests anything. ${parallel} Name it in a dated phase and the week-one checklist.`, path: "phases" });
   return issues;
 }

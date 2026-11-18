@@ -1,5 +1,36 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.198 — recognize dated tasks; preserve the latest failed result and new source evidence
+
+Comparison-pack V5 (`launch-comparison-v5-20261118`, engine `v3.197-preserve-review-findings`, source hash `2b07dccd154a0005e03a0b86734032a49b83bc1ddc3d6c9193642dd9757108f4`) completed eight calls for **$1.650352**. Reviews scored 3.25, 3.31 and **3.81/5**. All responses completed without a schema-invalid repair. The last bold idea, confirm-or-correct intake, earned F7=4; diagnosis/segment selection, owner workload and overall judgment remained at 3.5. This run did not return to its two earlier rejected mechanisms, but one run does not establish reliable originality or reliable reviewer judgment. The saved result remains failed.
+
+The final deterministic `data_only` finding was a false positive: the dated phase included a concrete test-mode payment task, but the checker only read the phase focus and first action. V3.198 also inspects the existing phase task list, while retaining the date/horizon requirement, explicit paused/export-only refusals and the existing action pattern. A phase title alone is insufficient. The new regression failed before the correction and now checks valid tasks, title-only wording, dates outside the horizon and undated work. This is a recommendation check, not permission to run the task.
+
+A zero-cost replay through `lintAgentOutput`, with the unchanged saved draft, its original research and original critique, removes that false finding. The average is still **3.81 and ship is still false**. No model was asked to rescore it, and the historical result was not rewritten. The valid local replay is `bench/cache/anthropic-real-2026-11-09/livoform-comparison-v5-runtime-lint-replay-v198.json`. An earlier direct-spec replay omitted research and is not valid runtime-comparison evidence.
+
+A separate-context comparison used the same model and frozen evidence, with **A=V5, B=V4**, and cost **$0.086841**. It preferred V5 for its paid-value explanation, distribution fallback and more distinct portfolio. Scores A/B across the six held-out questions were 4/4, 4/3, 4/3, 4/4, 4/3 and 5/4. It still wanted a specific successful own-account first-use event, explicit separation of hosted-sample participation from activation, and no assumption that a competitor's test-card gap is actual buyer pain. Its assessment of V4's originality differed from the original critic. This is favorable but inconsistent AI evidence, not independent human review, buyer validation or a growth result.
+
+### New evidence prepared for the next test
+
+The official [agency use-case page](https://livoform.com/use-cases/agencies) was read successfully at `2026-11-18T06:11:52.571897Z`; publication/update time is unknown. Response SHA-256: `9a8a72f004d0a24a89b8ec91e33bd906514a50b090cc0203969721c9a94e2471`. The new opt-in `public-agencies-20261118` pack adds this source to the existing comparison pack, making 16 source URLs. Historical packs, owner reports and task constraints remain unchanged; comparisons across different evidence packs are rejected.
+
+The page claims that a customer's own logo can appear on any plan. That alone is not an evidenced paid benefit: distinguish it from removing vendor branding, custom domains and the separate Stripe-hosted checkout appearance. It describes companies per client, Core estimates/deposits, Pro replies and six agency templates. These are source claims, not tested isolation, working assets, customer demand, willingness to pay or performance. Linked template and kit destinations remain uninspected. Tester access, founder time and operating costs remain unknown. The new pack has **not** been submitted for paid evaluation; its eventual result cannot be called a code-only gain over V5.
+
+### Verification and remaining boundary
+
+**175 tests in eight files passed (13.91 seconds)**:
+
+```sh
+pnpm exec vitest run tests/unit/assets-first.test.ts tests/unit/focused-plan.test.ts tests/unit/livoform-launch-input.test.ts tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+pnpm exec eslint shared/agents/specs.ts tests/unit/assets-first.test.ts bench/strategy-quality/livoformAlternatives.ts bench/strategy-quality/livoformLaunch.ts tests/unit/livoform-launch-input.test.ts
+git diff --check
+```
+
+App/Convex typechecks, changed-file ESLint and diff checks passed. The changed code paths are `shared/agents/specs.ts` (existing plan validator), `bench/strategy-quality/livoformAlternatives.ts` and `livoformLaunch.ts` (versioned evaluation evidence), and the two corresponding unit test files. Documentation updates cover this audit, Verification, implementation ledger and Capabilities. No runtime model, route, provider, acceptance threshold, campaign-timing prompt, generated file or external action changed. The unrelated owner `.gitignore` edit is excluded.
+
+Combined charged/held across both ledgers is **$98.372714 / $100**, leaving **$1.627286**. That cannot reserve the existing **$2.14** worst-case complete repair/review pair. The next evaluation can attempt an initial draft and review only while each call fits its existing reservation guard; a failed result will remain failed because further repairs cannot be reserved. No cap, reservation or attempt allowance is relaxed. Historical uncertain holds stay counted. Segment comparison, actual first-use definition, prepared sample completeness and conditional owner workload still need fresh semantic evaluation with the new evidence; they are not declared solved by this batch. No customer contact, real product test, payment, acquisition or growth outcome occurred.
+
 ## V3.197 — prevent revisions from forgetting earlier findings
 
 Comparison-pack V4 (`15efad68235f75cfb2740deb5cf68699bf83afb001b465751a4d656acc1fa9de`) made seven paid calls for **$1.328423**. Its first review scored 3.25 with two unsupported claims; the next reviewed version was clean but still failed at **3.63/5**, with F7=2. The final attempted patch exceeded the 500-character bold-test-method bound and was not reviewed or accepted. The failed attempt is now checkpointed and inspectable; no further attempt was allowed after the two-revision ceiling. Combined charged/held: **$96.635521 / $100**.

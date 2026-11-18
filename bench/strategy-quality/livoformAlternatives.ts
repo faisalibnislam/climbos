@@ -66,3 +66,16 @@ export const LIVOFORM_COMPARISON_SOURCES = [
 export function livoformComparisonResearch() {
   return `Evidence-pack addendum public-comparison-20261118. The earlier limitation about unchecked competing plan terms is superseded only for the dated public claims below. Product behavior, actual buyer need, account access and owner time remain unverified; no action is authorized.\n\n${LIVOFORM_COMPARISON_SOURCES.map(source => `${source.url}\nRetrieved ${source.retrievedAt}; publisher update date unknown; response SHA-256 ${source.responseSha256}. Source-reported claims:\n${source.claims}`).join("\n\n")}`;
 }
+
+/** First-party use-case evidence, not proof of demand or tested product behavior. */
+export const LIVOFORM_AGENCY_SOURCES = [{
+  url: "https://livoform.com/use-cases/agencies",
+  title: "Livoform forms for agencies and freelancers",
+  retrievedAt: "2026-11-18T06:11:52.571897Z",
+  responseSha256: "9a8a72f004d0a24a89b8ec91e33bd906514a50b090cc0203969721c9a94e2471",
+  claims: "The agency page describes a company per client, with separate forms, members and plan, and switching between companies. This is a product claim, not tested isolation, ownership transfer or client demand. It explicitly says a client's own logo can be put on a form on any plan, including two logos for joint work. Adding a customer logo is therefore not by itself an evidenced paid upgrade: distinguish it from removing Livoform branding, a custom domain and the appearance of a Stripe-hosted checkout. The page describes Core calculations for estimates and payments for deposits, with Pro AI replies from a supplied price list. It lists client onboarding, creative brief, quote request, website questionnaire, project handover and project feedback templates and links an onboarding kit. The template and kit destinations were not opened or tested here. Published completion times, 'complete briefs' and 'quote faster' language are not measured outcomes. No customer names, customer results or existing assets belonging to the owner are inferred from the illustrated sample. Willingness to pay, account access, founder time and operating costs remain unknown.",
+}] as const;
+
+export function livoformAgencyResearch() {
+  return `Evidence-pack addendum public-agencies-20261118. The earlier limitation that the agency use-case page was uninspected is superseded only by this dated public read. Other linked pages, product behavior and buyer demand remain unverified.\n\n${LIVOFORM_AGENCY_SOURCES.map(source => `${source.url}\nRetrieved ${source.retrievedAt}; publisher update date unknown; response SHA-256 ${source.responseSha256}. Source-reported claims:\n${source.claims}`).join("\n\n")}`;
+}

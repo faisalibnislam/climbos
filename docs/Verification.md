@@ -1,3 +1,7 @@
+## 18 November — dated task validation and latest Livoform evidence
+
+V3.198 fixes a reproduced false `data_only` rejection by inspecting concrete tasks within dated phases. A replay removes that finding but preserves V5's failing **3.81/5** result. **175 focused/budget/permission tests in eight files passed**. A separate same-model comparison preferred V5 over V4, with unresolved first-use and reviewer-consistency limitations. A new agency-page evidence pack distinguishes free customer-logo placement from paid branding removal; it has not yet been evaluated. Combined charged/held **$98.372714 / $100**, insufficient to reserve another complete $2.14 repair/review pair. Tester access and founder time remain unknown; runtime model and approval rules are unchanged. [Audit, commands and remaining gaps](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November — keep earlier findings available to revisions
 
 V4 retained a clean but failing **3.63/5** plan. Its final schema-invalid repair returned to a previously rejected idea and claim. V3.197 gives the writer bounded earlier findings without turning them into facts or banning ideas; final review stays independent. **188 tests in 11 files passed**. The QA input envelope is further restricted to 300,000, funding a complete worst-case repair pair with $2.14 headroom while preserving the $100 cap. Combined charged/held **$96.635521 / $100**. [Audit](growth-engine/focused-evidence-review-audit.md).
