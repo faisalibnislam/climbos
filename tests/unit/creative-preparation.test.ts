@@ -23,7 +23,7 @@ const review = {
   gates: [{ id: "G1", pass: true, note: "Unknown preserved." }],
   scores: ["F1", "XV"].map(id => ({ id, score: 5, note: "Synthetic review only.", fix: "none" })),
   strengths: [], fixes: [],
-  evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map(category => ({ category, planChecks: [], basis: "Synthetic output retains uncertainty.", claims: [] })),
+  evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map(category => ({ category, measurementChecks: [], planChecks: [], basis: "Synthetic output retains uncertainty.", claims: [] })),
 };
 const spec = () => ({ ...focusedStrategySpec({ maxRevisions: 0 }), schema: z.object({ summary: z.string() }), lint: undefined,
   rubric: { id: "focused-growth-strategy", title: "Synthetic", gates: [{ id: "G1", text: "Truth" }], criteria: [{ id: "F1", name: "Useful", anchors: { 1: "weak", 3: "partial", 5: "ready" } }], shipRule: { minEach: 4, minAverage: 4 } },

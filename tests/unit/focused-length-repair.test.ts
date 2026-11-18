@@ -19,7 +19,7 @@ function review(stage: "original" | "revised" | "repaired", improve = true, trut
       note: "Synthetic strategy and length tradeoff", fix: "Retain strategic improvement and shorten the draft." })),
     strengths: ["Retain the improved mechanism."], fixes: ["Shorten preparedWork[0].draft without deleting its substance."],
     originalityAudit: focusedOriginalityFixture,
-    evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map(category => ({ category, planChecks: [], basis: "Synthetic fixture", claims: [] })),
+    evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map(category => ({ category, measurementChecks: [], planChecks: [], basis: "Synthetic fixture", claims: [] })),
   };
 }
 async function run(options: { rule?: string; improve?: boolean; budget?: boolean; finalPass?: boolean; truth?: boolean; sectionRevisions?: boolean; reviewFailure?: "initial" | "optional" | "timeout" } = {}) {

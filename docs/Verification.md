@@ -1,3 +1,7 @@
+## 18 November — keep demonstrations, product use and payment distinct
+
+V3.208 binds measurement-review annotations to the actual proposed activity and outcome. Contradictory learning labels fail, while weaker useful tests remain eligible. **258 tests**, an affected **98-test rerun**, types and lint passed, including repair feedback and approval/start denial. These checks enforce review consistency, not autonomous understanding or a fresh Livoform quality pass. Paid tests remain paused; runtime models are unchanged. [Audit and commands](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November — check product-plan eligibility across required features
 
 V3.207 checks the review's source-labelled plan eligibility against each required capability in the actual task or draft. Incompatible bundles, unsupported asserted eligibility and unbound annotations fail; incomplete evidence stays unknown and future product hypotheses remain eligible. **240 tests**, a subsequent **15-test eligibility rerun**, types and lint passed, including approval/start denial. These tests validate supplied annotations, not autonomous source interpretation or a new Livoform quality pass. Paid tests remain paused; runtime models are unchanged. [Audit and commands](growth-engine/focused-evidence-review-audit.md).

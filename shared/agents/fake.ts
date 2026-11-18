@@ -119,7 +119,7 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
       strengths: ["clear"],
       fixes: pass ? [] : ["Make it specific"],
       escalation: { reason: "none", evidence: "" },
-      ...(system.includes("FOCUSED EVIDENCE AUDIT:") ? { evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map(category => ({ category, planChecks: [], basis: "Synthetic review fixture only; no real semantic verification.", claims: [] })) } : {}),
+      ...(system.includes("FOCUSED EVIDENCE AUDIT:") ? { evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map(category => ({ category, measurementChecks: [], planChecks: [], basis: "Synthetic review fixture only; no real semantic verification.", claims: [] })) } : {}),
       ...(system.includes("FOCUSED ORIGINALITY AUDIT:") ? { originalityAudit: {
         mechanismQuote: reviewedWork?.strategyExploration?.bold?.businessMechanism ?? "No bold mechanism supplied for this synthetic review.",
         closestFamiliarAlternative: "Synthetic conventional alternative; not an actual strategy judgment.",

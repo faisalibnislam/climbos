@@ -12,7 +12,7 @@ function review(): CritiqueResult {
     gates: rubric.gates.map(gate => ({ id: gate.id, pass: true, note: "Synthetic gate" })),
     scores: [...rubric.criteria.map(criterion => criterion.id), "XV"].map(id => ({ id, score: 4, note: "Synthetic score", fix: "none" })),
     strengths: [], fixes: [], escalation: { reason: "none", evidence: "" },
-    evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map(category => ({ category, planChecks: [], basis: "Synthetic review only", claims: [] })) as CritiqueResult["evidenceAudit"],
+    evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map(category => ({ category, measurementChecks: [], planChecks: [], basis: "Synthetic review only", claims: [] })) as CritiqueResult["evidenceAudit"],
     originalityAudit: { ...focusedOriginalityFixture },
   };
 }

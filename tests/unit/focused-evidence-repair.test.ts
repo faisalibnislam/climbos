@@ -19,7 +19,7 @@ function review(summary: string, errors: number, score: number, failedGate?: str
     strengths: ["Keep the improved reasoning."], fixes: ["Correct the remaining claim."],
     originalityAudit: focusedOriginalityFixture,
     evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map((category, index) => ({
-      category, planChecks: [], basis: "Synthetic evidence", claims: index === 0 ? Array.from({ length: errors }, (_, i) => ({
+      category, measurementChecks: [], planChecks: [], basis: "Synthetic evidence", claims: index === 0 ? Array.from({ length: errors }, (_, i) => ({
         path: malformed ? "missingField" : "summary", quote: summary, verdict: "unsupported", basis: `Missing evidence ${i}.`, correction: "Qualify the claim.",
       })) : [],
     })),

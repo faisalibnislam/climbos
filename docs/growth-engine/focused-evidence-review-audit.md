@@ -1,5 +1,23 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.208 — keep proposed learning within the observed activity's scope
+
+The saved `livoform-launch-docs-v2-20261118-focused-14.json` passed its AI review while calling a buyer's test-mode submission on the owner's sample form product activation. It did not show that the buyer could use the product for their own job. Earlier guidance addressed that mistake, but the review contract could still endorse its own mismatched observation/outcome labels. **Twelve local regressions failed before this fix.**
+
+The existing capabilities/results audit now carries bounded measurement checks. Each binds the current outcome claim and proposed observation verbatim, classifies the activity and intended learning, and identifies whether the actor matches the customer role. Deterministic checks reject contradictory annotations: demonstrations cannot establish product adoption or payment, checkout starts cannot establish payment, promises to return cannot establish repeat use, and another actor's use cannot establish the target customer's use. A legitimate comprehension/job-fit test, conditional customer-job observation and confirmed payment remain separate valid possibilities. No event is inferred to have occurred. Missing access stays unknown; payment may legitimately precede use without becoming evidence of use.
+
+The writer and reviewer also receive shared guidance to define observation and decision rules before exposure, leave missing thresholds unknown, and treat later metric changes as a new test. This instruction is not a deterministic detection of every possible post-hoc rule. The review schema and engine version changed; runtime models, call/output limits, acceptance thresholds and authorization did not. Old reviews are retained, not upgraded to the new contract.
+
+**258 tests in 14 files passed (12.47 seconds)**, followed by the **98 affected measurement/application tests** after making failure messages plain-language. App/Convex typechecks, changed-file ESLint and diff checks passed. Production-path tests use mocked provider output, persist failed quality despite 5/5 scores, deliver the specific defect to the existing repair, deny approval/start, and create no action receipts.
+
+```sh
+pnpm exec vitest run tests/unit/focused-measurement-review.test.ts tests/unit/focused-plan-eligibility.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/focused-evidence-repair.test.ts tests/unit/focused-originality-review.test.ts tests/unit/creative-preparation.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-length-repair.test.ts tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts tests/unit/strategy-prompt-cost.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm exec vitest run tests/unit/focused-measurement-review.test.ts tests/convex/focused-plan.test.ts
+pnpm typecheck
+```
+
+**Limit:** the annotations are still model judgments; the code checks quotation binding and internal consistency, not the meaning of arbitrary prose or whether the reviewer omitted a claim. Local fixtures include the exact saved bad metric and synthetic counterexamples; they are not fresh model judgments or real customer observations. Paid API calls remain paused at $99.063401 used/held, with the runtime model unchanged. Live originality, product reasoning and usefulness remain unverified.
+
 ## V3.207 — check required capabilities against the same product plan
 
 The saved Livoform draft grouped Core and Pro as alternatives for AI drafting from a brief, despite supplied notes explicitly excluding Core from AI and placing brief-based creation on Pro/Business. The existing semantic audit caught that example, but there was no structured eligibility map or deterministic check preventing a review from approving its own contradictory plan recommendation. Eight failing local regressions reproduced that gap before the fix.

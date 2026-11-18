@@ -16,7 +16,7 @@ const check = (): PlanCheck => ({ path: "task", quote: output.task, claimedPlans
   requirements: [{ capabilityQuote: "AI drafting from a brief", eligiblePlans: ["Pro", "Business"], excludedPlans: ["Core"], basis: "source_reported", evidenceRef: url, sourceQuote: `${aiQuote}\n${briefQuote}` }] });
 function review(planCheck?: PlanCheck): CritiqueResult {
   return { gates: [{ id: "G1", pass: true, note: "Synthetic passing review" }], scores: ["F2", "XV"].map(id => ({ id, score: 5, note: "Synthetic", fix: "none" })), strengths: [], fixes: [],
-    evidenceAudit: (["business_state", "comparative_claims", "capabilities_and_results"] as const).map(category => ({ category, basis: "Local review annotation, not independently verified entitlement.", claims: [], planChecks: category === "capabilities_and_results" && planCheck !== undefined ? [planCheck] : [] })) };
+    evidenceAudit: (["business_state", "comparative_claims", "capabilities_and_results"] as const).map(category => ({ category, basis: "Local review annotation, not independently verified entitlement.", claims: [], measurementChecks: [], planChecks: category === "capabilities_and_results" && planCheck !== undefined ? [planCheck] : [] })) };
 }
 
 describe("source-bound product-plan reasoning", () => {

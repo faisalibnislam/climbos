@@ -1,4 +1,5 @@
 import { MECHANISM_COMPARISON_GUIDANCE, PRODUCT_PLAN_REASONING } from "./focusedReview";
+import { FOCUSED_MEASUREMENT_GUIDANCE } from "./focusedMeasurement";
 import { z } from "zod";
 import type { StrategyOutput } from "../ai/tasks";
 import type { AgentInput, LintIssue } from "./types";
@@ -112,6 +113,7 @@ export function focusedPlanTask(horizonDays?: number, creativeRange: "balanced" 
 ${focusedExplorationTask(creativeRange)}
 ${MECHANISM_COMPARISON_GUIDANCE}
 ${PRODUCT_PLAN_REASONING}
+${FOCUSED_MEASUREMENT_GUIDANCE}
 Present phases as an ordered timeline with short action-led names. Include tasks in every phase: the first has exactly one task, copied from focusedMove.firstAction; later phases have 1–4 coherent, business-specific steps, only as needed. The first milestone covers the selected review or decision; later milestones retain necessary product verification, access, execution and learning, conditional on their actual prerequisites. Unknown audience access or owner time stays unknown: later work is a proposal, not a commitment or an instruction to recruit now. This is a presentation maximum, not a capacity estimate or a quota to fill. Group related work into a step without bundling unrelated chores; defer optional work conditionally, and keep necessary verification and approval steps. Each task states an observable action, not an unsupported result. Avoid repeating the same task across steps. Preparing or opening a draft is separate from publishing or sending it. The owner tracks task completion; no generated task is already completed.
 Choose one business-specific customer situation and one primary test. A supporting channel is allowed only when it serves that same test. Explain the strategic choice and the strongest alternative in ordinary words. Think like an experienced operator: check who pays, what they get beyond a free alternative, the actual buying situation, the distribution mechanism and what could change the decision. Unknown paid value is an important question, not permission to invent an upgrade benefit.
 Before settling on the move, compare it with one concrete alternative customer job or growth mechanism against the same goal. A broad launch is not a useful straw alternative to a narrow segment. Use focusedMove.why and notDoing to explain why this is the first hypothesis to test, the tradeoff, and the observation that would reverse it. Where evidence cannot rank the choices, say the choice is provisional; do not invent buyer demand or call a route fastest, cheapest or best.
