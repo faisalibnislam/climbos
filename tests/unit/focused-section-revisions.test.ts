@@ -41,10 +41,14 @@ describe("bounded focused section repairs", () => {
     const creativeSchema = schema.extend({ strategyExploration: z.object({ bold: z.string() }) });
     const first = { ...original, strategyExploration: { bold: "A familiar synthetic trial mechanism" } };
     const patch = { strategyExploration: { bold: "A changed synthetic participant exchange" } };
-    const creativeReview = (score: number) => ({ ...review(score), scores: ["F7", "XV"].map(id => ({ id, score, note: "Synthetic originality assessment", fix: score < 4 ? "Replace the familiar bold mechanism." : "none" })) });
+    const realRubric = focusedStrategySpec().rubric;
+    const creativeReview = (score: number) => ({ ...review(score),
+      gates: realRubric.gates.map(gate => ({ id: gate.id, pass: true, note: "Synthetic gate" })),
+      scores: [...realRubric.criteria.map(criterion => criterion.id), "XV"].map(id => ({ id, score: id === "F7" ? score : 4, note: "Synthetic originality assessment", fix: id === "F7" && score < 4 ? "Replace the familiar bold mechanism." : "none" })),
+    });
     const responses = [first, creativeReview(3), patch, creativeReview(5)], requests: TurnRequest[] = [];
     let reservations = 0;
-    const result = await runAgent({ ...spec, schema: creativeSchema, rubric: { ...spec.rubric, criteria: [{ ...spec.rubric.criteria[0], id: "F7" }] } }, { brief: "Synthetic, access and time unknown", task: "Explore distinct mechanisms", facts: [] }, {
+    const result = await runAgent({ ...spec, schema: creativeSchema, rubric: realRubric }, { brief: "Synthetic, access and time unknown", task: "Explore distinct mechanisms", facts: [] }, {
       beforeRevision: async () => { reservations++; return true; },
       phase: async (_key, _label, fn) => (await fn()).value,
       turn: async req => { requests.push(req); const output = responses.shift(); return { ok: true, output, text: JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" }; },

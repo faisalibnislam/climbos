@@ -30,11 +30,18 @@ export const FOCUSED_ORIGINALITY_REVIEW = `FOCUSED ORIGINALITY AUDIT: Independen
 /** Preserve actionable criterion feedback that the review's short fixes list may omit. */
 export function focusedRevisionCriteria(critique: CritiqueResult, rubric: Rubric): string {
   if (rubric.id !== FOCUSED_REVIEW_ID) return "";
+  // Meeting an individual floor does not mean a criterion passed the overall review.
+  // Include its deficit when a complete review is below the rubric's average target.
+  const requiredScores = rubric.criteria.map(criterion => critique.scores.filter(score => score.id === criterion.id));
+  const complete = requiredScores.every(scores => scores.length === 1 && Number.isFinite(scores[0].score) && scores[0].score >= 1 && scores[0].score <= 5);
+  const belowAverage = complete && requiredScores.length > 0
+    && requiredScores.reduce((sum, scores) => sum + scores[0].score, 0) / requiredScores.length < rubric.shipRule.minAverage;
+  const repairTarget = belowAverage ? Math.max(rubric.shipRule.minEach, rubric.shipRule.minAverage) : rubric.shipRule.minEach;
   return rubric.criteria.flatMap(criterion => {
     const matches = critique.scores.filter(score => score.id === criterion.id);
     if (matches.length !== 1) return [];
     const score = matches[0];
-    if (!Number.isFinite(score.score) || score.score < 1 || score.score >= rubric.shipRule.minEach || !score.fix.trim() || score.fix.trim().toLowerCase() === "none") return [];
+    if (!Number.isFinite(score.score) || score.score < 1 || score.score > 5 || score.score >= repairTarget || !score.fix.trim() || score.fix.trim().toLowerCase() === "none") return [];
     const creativeRepair = criterion.id === "F7" ? "\nCREATIVE REPAIR SCOPE: Preserve passing work, not a rejected mechanism. If the weakness is a familiar bold mechanism, replace that option with a different value exchange, participant role, source of distribution or ownable behavior tied to this business. Do not spend the repair renaming it, adding a celebratory moment, or improving the test for the same conventional idea. You may discard every preliminary candidate; they are not an approved shortlist. If the mechanism is already distinctive and only its evidence labelling or test is weak, repair that specific weakness instead. Keep grounded/adjacent work unless a diversity or consistency correction is needed. State the closest familiar alternative, the consequential difference and a reversible comparison that could show the difference matters. New capabilities remain proposals, with honest unknowns; no precedent, high confidence or immediate feasibility is required, and no execution is authorized." : "";
     return [{ score: score.score, text: `- ${criterion.id} (${criterion.name}, ${score.score}/5): ${score.note.slice(0, 800)} Fix: ${score.fix.slice(0, 1200)}${creativeRepair}` }];
   }).sort((a, b) => a.score - b.score).map(row => row.text).join("\n");

@@ -1,6 +1,19 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — inspect the bold mechanism before scoring originality
+## Current status — repair the actual average deficit
+
+V3.180 fixes a confirmed feedback-selection bug behind incomplete revisions. The real focused rubric uses **minimum each = 3, minimum average = 4**. The feedback helper previously forwarded only scores below 3. A 3 or 3.5 originality score could therefore keep the whole review below 4 while its criterion-specific fix and mechanism-replacement instructions were omitted. V3.176's request regression used a simplified minimum of 4 and did not represent this production case; its semantic effect had remained unproven. This limitation is now corrected explicitly rather than treating that earlier test as proof.
+
+For a complete, valid review below its average requirement, the helper now includes criteria below the average target as well as any individual-floor failure. Passing overall reviews do not gain optional rewrites; invalid or duplicate scores cannot establish an average. The actual runtime-request regression now uses the repository's real rubric and verifies that a 3/5 F7 result among 4/5 criteria delivers the replacement guidance, preserves other work and receives a fresh full review. Neither threshold nor maximum revisions, provider, runtime model, source evidence or permission changes. The separate recovery-review command also receives the new originality-audit instructions alongside its required schema.
+
+**188 tests in 12 files passed (21.27 seconds)**, including the actual scoring configuration, fractional deficits, completed-review validation, revision limits, evidence checks, budget identity, generation and approval boundaries. App/Convex types, changed-file ESLint and diff checks passed. The active docs V4 paid run loaded v3.178 before these edits; only a fresh run can measure V3.179/V3.180.
+
+```sh
+pnpm exec vitest run tests/unit/focused-evidence-review.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-originality-review.test.ts tests/unit/focused-evidence-repair.test.ts tests/unit/focused-length-repair.test.ts tests/unit/creative-preparation.test.ts tests/unit/agent-escalation.test.ts tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+## V3.179 — inspect the bold mechanism before scoring originality
 
 V3.179 closes the review inconsistency observed in docs V3: its critic called the bold approval gate familiar but still gave originality a passing score, partly crediting the adjacent option. The existing critic call now returns a structured comparison of the **bold** mechanism with its closest familiar practice: consequential difference, mechanism classification and a test of that difference. A passing F7 score paired with `familiar_mechanism` or `unclear_difference` is a review-integrity failure; scores and original provider responses are never rewritten. Missing or malformed required comparisons also fail. Existing numeric rubric thresholds, model, call/revision limits and spending controls are unchanged.
 

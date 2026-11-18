@@ -1,3 +1,7 @@
+## 18 November — preserve average-deficit review instructions
+
+V3.180 fixes feedback omitted at scores of 3–3.5 under the actual 3-minimum / 4-average rubric. The earlier simplified request test did not cover that case; the updated regression now uses the production rubric. 188 tests in 12 files, types/lint passed. No acceptance threshold, runtime model or authorization change. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — structured bold-mechanism comparison
 
 V3.179 requires the existing reviewer to compare the bold mechanism with its closest familiar practice and rejects a passing score paired with a familiar/unexplained verdict. Uncertainty and missing precedent do not disqualify novelty. 176 focused tests passed; after adding the actual approval-rejection regression, 97 application/permission tests passed. Types/lint passed. Same runtime model and numeric thresholds; semantic effect awaits a fresh paid run. [Audit](focused-evidence-review-audit.md).

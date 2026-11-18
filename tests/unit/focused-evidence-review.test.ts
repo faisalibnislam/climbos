@@ -4,6 +4,7 @@ import { assess, runAgent, type AgentDeps } from "../../shared/agents/runtime";
 import type { AgentSpec, CritiqueResult, Rubric } from "../../shared/agents/types";
 import { ZERO_USAGE } from "../../shared/ai/types";
 import { focusedRevisionCriteria } from "../../shared/agents/focusedReview";
+import { focusedStrategySpec } from "../../shared/agents/specs";
 
 const rubric: Rubric = { id: "focused-growth-strategy", title: "Focused test", gates: [{ id: "G1", text: "Truth" }], criteria: [{ id: "F1", name: "Useful", anchors: { 1: "weak", 3: "partial", 5: "ready" } }], shipRule: { minEach: 4, minAverage: 4 } };
 const output = { summary: "Audience availability is unknown. A private example may help test the job." };
@@ -15,6 +16,21 @@ const audit = () => [
 const review = (evidenceAudit: unknown = audit()): CritiqueResult => ({ gates: [{ id: "G1", pass: true, note: "ok" }], scores: ["F1", "XV"].map(id => ({ id, score: 5, note: "Ready", fix: "none" })), strengths: [], fixes: [], evidenceAudit } as CritiqueResult);
 
 describe("focused review evidence integrity", () => {
+  it("delivers average-deficit feedback at the real focused rubric's individual floor", () => {
+    const realRubric = focusedStrategySpec().rubric;
+    expect(realRubric.shipRule).toEqual({ minEach: 3, minAverage: 4 });
+    const c = review();
+    c.scores = realRubric.criteria.map(criterion => ({ id: criterion.id, score: criterion.id === "F7" ? 3 : 4, note: "Synthetic criterion", fix: criterion.id === "F7" ? "Replace the familiar bold mechanism." : "Optional polish" }));
+    expect(focusedRevisionCriteria(c, realRubric)).toContain("CREATIVE REPAIR SCOPE");
+    expect(focusedRevisionCriteria(c, realRubric)).not.toContain("Optional polish");
+    c.scores.find(score => score.id === "F7")!.score = 3.5;
+    expect(focusedRevisionCriteria(c, realRubric)).toContain("Replace the familiar bold mechanism.");
+    c.scores.filter(score => score.id !== "F7").forEach(score => { score.score = 5; });
+    expect(focusedRevisionCriteria(c, realRubric)).toBe(""); // no average deficit: no optional rewrites
+    c.scores.filter(score => score.id !== "F7").forEach(score => { score.score = 4; });
+    c.scores.push({ ...c.scores[0] });
+    expect(focusedRevisionCriteria(c, realRubric)).toBe(""); // an incomplete/duplicate review cannot justify an average
+  });
   it("normalizes explicit dot-number array paths only when the exact indexed quote matches", () => {
     const draft = { preparedWork: [{ draft: "Audience availability is unknown." }, { draft: "Audience availability is unknown." }] };
     const rows = audit(); rows[0].claims[0].path = "preparedWork.1.draft";
