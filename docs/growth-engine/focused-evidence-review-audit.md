@@ -1,6 +1,23 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — completed reviews survive optional review failures
+## Current status — original-case pass and separately dated product evidence
+
+V18 (`launch-quality-v18-20261118`, engine v3.173, source hash `f13ed39d518b80f4928eb6b154405db756446ca8be4c51746f7306f13d750ec9`) completed five paid calls for **$0.865650**. Its revised result passes the unchanged rubric at **4/5 throughout**, with all gates passing and no hard findings. The original frozen two-page evidence pack was unchanged. The plan separates merchant receipts from Livoform subscription revenue, keeps access/time unknown, and proposes a subtract-with-reasons form concept with a manual-deletion comparison. Product tests and real growth outcomes remain unperformed.
+
+A fresh comparison against the earlier passing V14 costs **$0.066410** and prefers V14: higher on distribution fallback and immediately usable preparation, tied on the other four questions. The new pass therefore does **not** establish superiority or consistency. The comparison describes the two alternative mechanism labels imprecisely; its scores remain model judgments, not facts. Manual review also retains metric wording differences and payment-test setup uncertainty. Combined charged/held after both runs is **$76.677288 / $100**.
+
+Six public Livoform documentation pages were then read directly on November 18 (HTTP 200; search-tool opens had failed). They document Core's AI exclusion, Pro including Core, Stripe test keys, natural-language form creation, subscription billing and assistant permissions. The new **explicitly selected** `public-docs-20261118` evaluation pack preserves each URL, exact retrieval time and available publisher update date. It labels every capability as source-reported, never product-tested. Homepage/pricing retain their November 17 basis; the successful assistant-page read supersedes that specific earlier failed retrieval, while agency/template pages remain uninspected. No account, connector, payment or publish action was performed.
+
+This is a benchmark evidence expansion, not a new runtime research integration or a code-only quality improvement. The original pack remains byte-identical and default. Comparisons reject mixed evidence packs. Owner reports, unknown tester access/founder time, test horizon, model and budget controls remain unchanged. `--launch-evidence public-docs-20261118` is accepted only by the launch-acceptance stage; unknown packs and other stages fail before a paid call.
+
+**51 tests in seven files passed (6.10 seconds)**, including frozen source identity, per-page provenance, unknown resources, incompatible-pack comparisons, paid-budget guards and tenant/approval boundaries. App/Convex typechecks, changed-file ESLint and diff checks passed. Documentation-enriched paid quality is still pending.
+
+```sh
+pnpm exec vitest run tests/unit/livoform-launch-input.test.ts tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts tests/unit/evaluation-budget.test.ts tests/unit/ai-qa-budget.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+## V3.173 — completed reviews survive optional review failures
 
 V3.173 preserves the best fully reviewed focused draft when a later, optional reviewer returns malformed/truncated output. It records the failure and never accepts the unreviewed revision. An initial review failure, transport error, budget failure or permission failure still propagates normally. This addresses V17's lost final result without reclassifying it as a pass.
 

@@ -1,3 +1,7 @@
+## 18 November — dated product-documentation acceptance pack
+
+An opt-in Livoform documentation pack adds six directly read public sources without rewriting historical evidence or owner unknowns. Mixed-pack comparisons and silently ignored options fail. No runtime model/integration change. 51 tests, types/lint pass. Original-case V18 passes internally but loses the separate comparison to V14 on two criteria; no consistency claim. Combined charged/held $76.677288 / $100. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — optional-review recovery and exact locator interoperability
 
 `v3.173-reviewed-fallback`: retain completed focused review on malformed optional review, reserve 16,000 full-review tokens, and normalize verified dot-number array locators. Initial and transport/budget failures still propagate; no unreviewed acceptance. 182 tests, types/lint and read-only V17 replay passed. Same runtime model and $100 cumulative evaluation cap. [Audit](focused-evidence-review-audit.md).

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { livoformLaunchInput, livoformLaunchComparison, LIVOFORM_LAUNCH_QUESTIONS, normalizeLaunchComparison } from "../../bench/strategy-quality/livoformLaunch";
+import { createHash } from "node:crypto";
+import { livoformLaunchInput, livoformLaunchComparison, LIVOFORM_LAUNCH_QUESTIONS, normalizeLaunchComparison, parseLaunchEvidencePack } from "../../bench/strategy-quality/livoformLaunch";
+import { LIVOFORM_PUBLIC_DOCS } from "../../bench/strategy-quality/livoformPublicDocs";
 import { referenceEvidenceBasis } from "../../shared/agents/evidenceKind";
 
 // Synthetic reports exercise provenance; these are not claims about the real business.
@@ -23,6 +25,43 @@ describe("owner-selected Livoform launch acceptance", () => {
     expect(input.precomputedResearch?.notes).toContain("Retrieval failed");
     expect(input.precomputedResearch?.notes).toContain("annual billing, not monthly charges");
     expect(input.ownerSuppliedUrls).toEqual(["https://livoform.com/"]);
+    expect(createHash("sha256").update(input.precomputedResearch!.notes).digest("hex")).toBe("106af423ecf856840b05c52204be1bd5a6984b10639c67d77d03a974e2c5a8c6");
+  });
+  it("adds dated public documentation only when explicitly selected, without inventing owner resources", () => {
+    const original = livoformLaunchInput(owner, now);
+    const enriched = livoformLaunchInput(owner, now, "public-docs-20261118");
+    expect(enriched.facts).toEqual(original.facts);
+    expect(enriched.constraints).toEqual(original.constraints);
+    expect(enriched.brief).toEqual(original.brief);
+    expect(enriched.task).toEqual(original.task);
+    expect(enriched.creativeRetrievalQuery).toEqual(original.creativeRetrievalQuery);
+    expect(enriched.ownerSuppliedUrls).toEqual(original.ownerSuppliedUrls);
+    expect(enriched.availableSourceUrls).toHaveLength(8);
+    expect(new Set(enriched.availableSourceUrls).size).toBe(8);
+    expect(enriched.precomputedResearch).not.toHaveProperty("retrievedAt");
+    const notes = enriched.precomputedResearch!.notes;
+    for (const source of LIVOFORM_PUBLIC_DOCS) {
+      expect(enriched.availableSourceUrls).toContain(source.url);
+      expect(referenceEvidenceBasis(source.url, enriched.constraints?.factEvidenceBases, enriched.availableSourceUrls!)).toBe("source_reported");
+      expect(notes).toContain(source.retrievedAt);
+      expect(notes).toContain(`publisher update date ${source.updatedAt ?? "unknown"}`);
+    }
+    expect(notes).toContain("earlier failed read of /integrations/chatgpt-claude is superseded");
+    expect(notes).toContain("/templates pages remain uninspected");
+    expect(notes).not.toContain("Retrieval failed for these three URLs");
+    expect(notes).toContain("no built-in Livoform AI");
+    expect(notes).toContain("explicitly includes everything in Core");
+    expect(notes).toContain("rk_test_");
+    expect(notes).toContain("not proof that collected answers become a client-ready deliverable");
+    expect(notes).toContain("No product or payment behavior was tested");
+    expect(notes).toContain("No connector has been connected or tested");
+    expect(notes).toContain("do not grant ClimbOS access or execution authority");
+  });
+  it("rejects unknown packs and refuses to silently ignore pack selection on another stage", () => {
+    expect(parseLaunchEvidencePack("launch-acceptance")).toBe("original");
+    expect(parseLaunchEvidencePack("launch-acceptance", "public-docs-20261118")).toBe("public-docs-20261118");
+    expect(() => parseLaunchEvidencePack("launch-acceptance", "guessed-pack")).toThrow();
+    for (const stage of ["launch-judge", "plans", "industries"]) expect(() => parseLaunchEvidencePack(stage, "original")).toThrow("only accepted");
   });
   it("uses the shared focused task with an evaluation clock, no source of execution authority", () => {
     const input = livoformLaunchInput(owner, now);
@@ -78,5 +117,12 @@ describe("held-out launch comparison", () => {
     expect(() => livoformLaunchComparison(a, { ...a, schemaPassed: false })).toThrow();
     expect(() => livoformLaunchComparison(a, { ...a, caseId: "different" })).toThrow();
     expect(() => livoformLaunchComparison(a, { ...a, result: undefined })).toThrow();
+  });
+  it("cannot attribute different source packs to a code-only improvement", () => {
+    const a = record(), b = record();
+    b.input = livoformLaunchInput(owner, now, "public-docs-20261118");
+    expect(() => livoformLaunchComparison(a, b)).toThrow("identical business evidence");
+    a.input = livoformLaunchInput(owner, now, "public-docs-20261118");
+    expect(livoformLaunchComparison(a, b).research).toEqual(a.input.precomputedResearch);
   });
 });
