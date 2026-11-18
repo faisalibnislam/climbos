@@ -122,6 +122,20 @@ describe("a focused plan does useful work without invented forecasts", () => {
     const plan = focusedPlanFixture(); plan.preparedWork[0].draft = sample;
     expect(focusedStrategySpec().lint?.(plan, { ...input, constraints: { horizonDays: 14 } }).filter(issue => issue.rule === "invented_fact")).toEqual([]);
   });
+  it("binds a mid-sentence fictional label to its own value without exempting other numbers", () => {
+    const input = { task: "Prepare a private example", brief: "Prices and results unknown", facts: [] };
+    const sample = "Ask the participant to pay $12 (illustrative test amount) with a test card, never a real card.";
+    expect(lintPreparedDrafts([{ kind: "test_brief", draft: sample }], input).filter(issue => issue.rule === "invented_fact")).toEqual([]);
+    for (const text of [sample, "Use £47 (fictional sample fee) in the private mock-up.", "Enter 48% (synthetic test percentage) into the private example."]) {
+      expect(lintPreparedDrafts([{ kind: "test_brief", draft: text }], input).filter(issue => issue.rule === "invented_fact")).toEqual([]);
+      expect(lintPreparedDrafts([{ kind: "social_post", draft: text }], input)).toContainEqual(expect.objectContaining({ rule: "invented_fact" }));
+    }
+    const mixed = "Our real plan costs $97, and the example uses $12 (illustrative test amount).";
+    const errors = lintPreparedDrafts([{ kind: "test_brief", draft: mixed }], input).filter(issue => issue.rule === "invented_fact");
+    expect(errors).toContainEqual(expect.objectContaining({ message: expect.stringContaining("$97") }));
+    expect(errors.every(issue => !issue.message.includes("$12"))).toBe(true);
+    expect(lintPreparedDrafts([{ kind: "test_brief", draft: "$97 (not a fictional test amount) is our real price." }], input)).toContainEqual(expect.objectContaining({ rule: "invented_fact" }));
+  });
   it("carries useful draft work into an update without turning old forecasts or approvals into context",()=>{
     const value=JSON.parse(focusedRefreshContext({...focusedPlanFixture(),approved:true,permission:"publish",facts:["Unverified old claim"],economics:{forecast:10000},plays:[{name:"An old proposal",oneLiner:"Useful idea to recheck",model:{conversion:0.2},approved:true}]}));
     expect(value.strategyExploration.bold.businessMechanism).toBe(focusedPlanFixture().strategyExploration.bold.businessMechanism);

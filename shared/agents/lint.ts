@@ -207,9 +207,11 @@ export interface CopyLintOptions {
  * Public-copy checks never enable this exemption; a heading cannot qualify later sentences. */
 const LABELLED = /\b(assum\w*|estimat\w*|targets?|goals?|aim\w*|forecast\w*|project(?:ed|ions?)|expect\w*|cap(?:ped)?|budget\w*|up to|at most|at least|max(?:imum)?|min(?:imum)?|kill|scale|stop|threshold\w*|limit\w*)\b/i;
 
-/** Numbers in the output that don't appear anywhere in the evidence. */
-const FICTIONAL_TEST_LABEL = /^(?:[-*]\s*)?(?:fictional|synthetic|illustrative|invented)\s+(?:test|sample|example|demo)\b|\((?:fictional|synthetic|illustrative|invented)\s+(?:test|sample|example|demo)[^)]*\)\s*[.!]?$/i;
+const FICTIONAL_TEST_LABEL = /^(?:[-*]\s*)?(?:fictional|synthetic|illustrative|invented)\s+(?:test|sample|example|demo)\b/i;
+/** An adjacent parenthetical labels its value, not every other number in the sentence. */
+const INLINE_FICTIONAL_TEST_VALUE = /[$£€]?\d[\d,.]*(?:\s?%|(?:k|m|x)(?![a-z])|×)?\s*\((?:fictional|synthetic|illustrative|invented)\s+(?:test|sample|example|demo)\b[^)\n]*\)/gi;
 
+/** Numbers in the output that don't appear anywhere in the evidence. */
 export function untracedNumbers(text: string, evidence: string, opts: { labelled?: boolean } = {}): string[] {
   // Stable corpus identifiers are references, not business quantities. Citation membership is checked separately.
   text = text.replace(/\bCP-\d{3}\b/g, "");
@@ -222,6 +224,7 @@ export function untracedNumbers(text: string, evidence: string, opts: { labelled
     ? text
         .split(/(?<=[.;!?])\s+|\n+/)
         .filter((c) => !LABELLED.test(c) && !FICTIONAL_TEST_LABEL.test(c.trim()))
+        .map(c => c.replace(INLINE_FICTIONAL_TEST_VALUE, "[labelled test value]"))
         .join("\n")
         .replace(/\b(?:days?|weeks?|months?)\s+\d+\b|\b\d+(?:\s*[-–]\s*\d+)?\s*(?:days?|weeks?|months?)\b/gi, " ")
     : text;

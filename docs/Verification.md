@@ -1,3 +1,7 @@
+## 18 November 2026 — adjacent fictional values retain their scope
+
+V3.184 fixes a reproduced false rejection of a locally labelled private test amount and prevents that label from exempting unrelated numbers. 192 tests in 11 files, types/lint passed. A read-only V6 replay removes only that error; the incomplete review and 3.69 quality failure remain. Seven paid calls cost $1.432857, cumulative $84.649842 / $100. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November 2026 — separate instructions from product-operation capability
 
 V3.183 clarifies that third-party connector documentation and owner approval do not create ClimbOS account access or a working integration. The writer/reviewer distinguish preparing a checklist from running its product test. 172 tests in nine files, types/lint passed. Docs V5 changed the bold mechanism but still failed factual and test-quality checks at 3.63; seven calls cost $1.431628, combined $83.216985 / $100. [Audit](growth-engine/focused-evidence-review-audit.md).

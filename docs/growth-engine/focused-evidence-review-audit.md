@@ -1,6 +1,19 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — keep the actor and actual capability explicit
+## Current status — bind fictional labels to their actual numeric values
+
+`launch-docs-v6-20261118` used v3.182, source hash `8c4c80eca55a875367b6d9a29be8237275d8e14121eca9160dbd11e8729f7bcf`. Seven calls cost **$1.432857**; combined charged/held is **$84.649842 / $100**. History: **3.31 / three hard errors → 3.63 / two → 3.69 / two, ship false**. Its bold respondent-controlled answer wallet was classified as materially different; the critic still found a weak test of real sharing behavior and customer acquisition. It caught and repaired a respondent-demo versus organizer-use measurement error before acceptance. Customer rationale improved but owner workload and test design remained below the bar.
+
+One final hard error was a genuine validator defect: `$12 (illustrative test amount)` was rejected solely because the sentence continued after the parenthesis. V3.184 recognizes an adjacent fictional/synthetic/illustrative test label anywhere in the private sentence and exempts **only its own value**. It no longer lets a trailing parenthesis exempt unrelated real prices in the same sentence. Heading-only labels, negated labels and public copy still receive factual numeric checks. No business number, forecast or source claim is fabricated or accepted as a result.
+
+The targeted regression failed before the fix. **192 tests in 11 files passed (19.33 seconds)** afterward, including currencies, percentages, a mixed real/fictional sentence, public-copy rejection, offer terms and authorization. App/Convex types, changed-file lint and diff checks passed. A read-only replay of the unchanged V6 result removes only the false numeric error: the malformed verbatim evidence quotation remains rejected, the average stays 3.69 and ship remains false. No historical result or score was overwritten. Docs V7 is a fresh retest on V3.184 with the same evidence, unknown tester access/founder time, unchanged runtime model and original cap.
+
+```sh
+pnpm exec vitest run tests/unit/focused-plan.test.ts tests/unit/agent-lint.test.ts tests/unit/claims-uplift.test.ts tests/unit/prepared-work.test.tsx tests/unit/prepared-offer-terms.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/focused-originality-review.test.ts tests/unit/focused-section-revisions.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+## V3.183 — keep the actor and actual capability explicit
 
 `launch-docs-v5-20261118` used v3.180, source hash `ec972c1cb31b9f9f83e1e9af18e7787b18467323359e0ab69c2a9d322a87d991`, and unchanged documentation evidence. Seven calls cost **$1.431628**; combined charged/held reached **$83.216985 / $100**. History: **3.50 / one hard error → 3.38 / two → 3.63 / two; ship false**. The new originality comparison rejected the ordinary connector and AI reply gate. The final respondent-owned portable-brief proposal was classified as a material difference, but its stated-preference test remained weak. No real-world originality, demand or commercial result is claimed.
 
