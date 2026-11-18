@@ -1,3 +1,7 @@
+## 18 November — finish the bounded exploration response
+
+The new comparison-pack run stopped before drafting at its 12,000-token exploration limit (8,619 thinking tokens); it has no quality score. Cost $0.151246; cumulative charged/held **$94.158734 / $100**. V3.194 uses a shared, quoted 16,000-token exploration allowance and still rejects incomplete output without a hidden retry. **124 tests in six files**, types/lint/diff checks passed. Runtime model, call count, acceptance rules and $100 cap unchanged. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November — retain mixed quality evidence and complete the public comparison
 
 The explicit no-feedback run was clean but still failed at **3.88/5**. A separate-context comparison preferred the earlier with-feedback plan for usable activation work, despite more distinct alternatives in the newer one. Production retains its existing workflow and runtime model. Combined charged/held **$94.007488 / $100**. A separately selected, dated public-comparison pack adds official plan/billing claims while preserving unresolved billing intervals, unknown access/time and all older packs. **31 provenance/identity/budget tests**, types/lint/diff checks passed. [Audit](growth-engine/focused-evidence-review-audit.md).

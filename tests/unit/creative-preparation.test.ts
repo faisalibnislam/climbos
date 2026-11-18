@@ -211,6 +211,22 @@ describe("creative preparation within the existing focused run", () => {
     expect(calls).toBe(1);
   });
 
+  it("rejects truncated exploration before feedback or drafting, with its full allowance quoted", async () => {
+    const requests: TurnRequest[] = [];
+    await expect(runAgent(spec(), { brief: "Synthetic", task: "Prepare possibilities", facts: [] }, {
+      phase: async (_key, _label, fn) => (await fn()).value,
+      turn: async req => {
+        requests.push(req);
+        return { ok: false, kind: "invalid_output", message: "The answer was cut off at the length limit.", text: '{"directions":[', appended: [], usage: ZERO_USAGE, costMicros: 0 };
+      },
+    })).rejects.toMatchObject({ kind: "invalid_output" });
+    expect(requests).toHaveLength(1);
+    expect(requests[0]).toMatchObject({ maxTokens: 16000, modelKey: spec().models.draft });
+    expect(agentSteps({ ...focusedStrategySpec(), lint: undefined })[0].outputBudget).toBe(requests[0].maxTokens);
+    expect(requests[0].customTools).toBeUndefined();
+    expect(requests[0].webSearch).toBeUndefined();
+  });
+
   it("never expands a truncated candidate review or retries it without another budgeted call", async () => {
     const requests: TurnRequest[] = [];
     await expect(runAgent(spec(), { brief: "Synthetic", task: "Prepare possibilities", facts: [] }, {

@@ -2,7 +2,8 @@ import { z } from "zod";
 import { FocusedOriginalityAuditSchema } from "./focusedReview";
 
 /** A bounded preparation step in the same strategy run, never facts or action authority. */
-export const CREATIVE_PREPARATION_TOKENS = 12_000;
+// Includes adaptive reasoning plus all three or four complete candidate records.
+export const CREATIVE_PREPARATION_TOKENS = 16_000;
 // Includes adaptive reasoning and the complete per-candidate audits plus developed direction.
 export const CREATIVE_FEEDBACK_TOKENS = 8_000;
 const CreativeMethodSchema = z.enum(["convention_inversion", "distant_transfer", "asset_recombination", "ownable_behavior"]);

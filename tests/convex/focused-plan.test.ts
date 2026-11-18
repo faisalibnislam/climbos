@@ -448,7 +448,7 @@ it("runs the real focused path with a matching quote, reuses bound research and 
   expect(await t.run(ctx => ctx.db.query("approvals").collect())).toMatchObject([{ status: "pending", actionKind: "approve_plan" }]);
   expect(saved.plan.expert?.quality?.state).not.toBe("failed"); expect(saved.plan.expert?.plays).toHaveLength(0);
   expect(state.requests).toHaveLength(4); expect(state.requests.every(r => !r.webSearch && !r.webFetch && !r.customTools)).toBe(true);
-  expect(state.requests[0].maxTokens).toBe(12000);
+  expect(state.requests[0].maxTokens).toBe(16000);
   expect(state.requests[0].modelKey).toBe(state.requests[2].modelKey);
   expect(state.requests[1]).toMatchObject({ maxTokens: 8000, effort: "high", modelKey: state.requests[3].modelKey });
   expect(state.requests[2].maxTokens).toBe(32000);

@@ -1,5 +1,13 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.194 — complete creative exploration before drafting
+
+The first new public-comparison run (`launch-comparison-v1-20261118`, source hash `0fe639ebe851f2f54eaefb7667e841aded6a7cb288962af3a5f848cbb4f61dc8`) stopped in exploration. The provider used all 12,000 output tokens, including 8,619 thinking tokens. The incomplete response was rejected before candidate feedback, drafting or scoring. The one completed paid request cost **$0.151246**; combined charged/held is **$94.158734 / $100**. There is no quality score for this failed run.
+
+The exploration allowance is now **16,000 output tokens**, shared by the actual call and upfront quote. It leaves room for reasoning and three or four complete candidate records. Model, effort, number of calls, two-revision ceiling and quality bar remain unchanged. Truncated preparation still fails immediately without expanding partial ideas or silently retrying. The $100 cumulative guard includes the larger per-call reservation and all prior receipts/holds. This repairs response completeness; it does not establish strategic quality.
+
+Verification: **124 tests in six files passed (17.65 seconds)**, covering the real focused workflow, quoted allowance, early truncation refusal, cumulative budget and tenant/approval boundaries. The first run caught the real-workflow test's old 12,000-token expectation; it was updated to 16,000 before this rerun. App/Convex types, changed-file lint and diff checks passed. Commands: `pnpm exec vitest run tests/unit/creative-preparation.test.ts tests/unit/anthropic-budget.test.ts tests/unit/evaluation-identity.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts`; `pnpm typecheck`.
+
 ## 18 November — keep the workflow after a mixed comparison; complete public billing evidence
 
 The no-candidate-feedback run (`launch-alt-no-feedback-v1-20261118`, source hash `6e3ac768b3afd2f3c33865d992b254e456f719035cd085c761926b218d34ca7f`) made seven calls for **$1.365078**. Reviews were 3.38, 3.38 and **3.88/5**; the saved last draft has no hard errors but still fails the unchanged quality average. It mixes checkout interest with paid-setting changes, leaves its bold test at mock-up preference, and does not adequately separate successful product use. Removing the advisory stage did not fix first-draft originality (F7 remained 2).
