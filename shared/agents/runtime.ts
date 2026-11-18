@@ -523,7 +523,16 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
   const reviews = spec.maxRevisions >= 0 ? spec.maxRevisions + 1 : 0;
   for (let round = 0; round < reviews; round++) {
     const lint = round === 0 && firstReview ? firstReview.lint : lintOf(current);
-    const c = round === 0 && firstReview ? firstReview.c : await critique(round, current, lint);
+    let c: CritiqueResult;
+    try {
+      c = round === 0 && firstReview ? firstReview.c : await critique(round, current, lint);
+    } catch (error) {
+      // A malformed optional review cannot erase the prior fully reviewed work or approve
+      // the unreviewed revision. Initial reviews and transport/budget failures still fail.
+      if (round === 0 || spec.rubric.id !== FOCUSED_REVIEW_ID || !(error instanceof AgentFailure) || error.kind !== "invalid_output" || !best.assessment) throw error;
+      revisionFailure = { kind: error.kind, message: `Optional review failed: ${error.message}`.slice(0, 300) };
+      break;
+    }
     const a = assess(c, lint, spec.rubric, current);
     history.push({ round, average: a.average, gatesPassed: a.gatesPassed, lintErrors: a.lint.filter((l) => l.severity === "error").length });
     if (!best.assessment || rank(a) > rank(best.assessment)) best = { output: current, assessment: a, round };

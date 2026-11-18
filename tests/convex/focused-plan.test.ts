@@ -448,7 +448,7 @@ it("runs the real focused path with a matching quote, reuses bound research and 
   expect(state.requests[0].maxTokens).toBe(12000);
   expect(state.requests[0].modelKey).toBe(state.requests[1].modelKey);
   expect(state.requests[1].maxTokens).toBe(32000);
-  expect(state.requests[2]).toMatchObject({ maxTokens: 12000, effort: "high" });
+  expect(state.requests[2]).toMatchObject({ maxTokens: 16000, effort: "high" });
   expect(JSON.stringify(state.requests[1].messages)).toContain("creative preparation proposals");
   expect(JSON.stringify(state.requests[2].messages)).not.toContain("Synthetic direction 1");
   const preparationSteps = await t.run(ctx => ctx.db.query("workflowSteps").withIndex("by_run", q => q.eq("runId", runId)).collect());

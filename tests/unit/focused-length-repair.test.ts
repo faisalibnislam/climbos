@@ -19,7 +19,7 @@ function review(stage: "original" | "revised" | "repaired", improve = true, trut
     evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map(category => ({ category, basis: "Synthetic fixture", claims: [] })),
   };
 }
-async function run(options: { rule?: string; improve?: boolean; budget?: boolean; finalPass?: boolean; truth?: boolean; sectionRevisions?: boolean } = {}) {
+async function run(options: { rule?: string; improve?: boolean; budget?: boolean; finalPass?: boolean; truth?: boolean; sectionRevisions?: boolean; reviewFailure?: "initial" | "optional" | "timeout" } = {}) {
   const requests: TurnRequest[] = [], reservations: number[] = [];
   const responses = [original, review("original"), revised, review("revised", options.improve, options.truth), repaired, review(options.finalPass === false ? "original" : "repaired")];
   const spec = { ...base, creativePreparation: false, sectionRevisions: options.sectionRevisions ?? true, schema,
@@ -28,13 +28,28 @@ async function run(options: { rule?: string; improve?: boolean; budget?: boolean
   const deps: AgentDeps = {
     beforeRevision: async round => { reservations.push(round); return round === 1 || options.budget !== false; },
     phase: async (_key, _label, fn) => (await fn()).value,
-    turn: async req => { requests.push(req); const output = responses.shift(); return { ok: true, output, text: JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "synthetic", stopReason: "end_turn" }; },
+    turn: async req => {
+      requests.push(req);
+      if (options.reviewFailure && requests.length === (options.reviewFailure === "initial" ? 2 : 4)) return { ok: false, kind: options.reviewFailure === "timeout" ? "timeout" : "invalid_output", message: "Synthetic incomplete review", appended: [], usage: ZERO_USAGE, costMicros: 0 };
+      const output = responses.shift(); return { ok: true, output, text: JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "synthetic", stopReason: "end_turn" };
+    },
   };
   const result = await runAgent(spec, { task: "Improve the strategy without changing known inputs.", brief: "Synthetic regression", facts: [] }, deps);
   return { result, requests, reservations };
 }
 
 describe("a bounded repair after a strategically improved but overlong focused revision", () => {
+  it("preserves the fully reviewed failed draft when an optional review is truncated", async () => {
+    const { result, requests } = await run({ reviewFailure: "optional" });
+    expect(requests).toHaveLength(4);
+    expect(result.output).toEqual(original);
+    expect(result.assessment?.ship).toBe(false);
+    expect(result.quality?.revisionFailure).toEqual({ kind: "invalid_output", message: "Optional review failed: Synthetic incomplete review" });
+    expect(result.history).toHaveLength(1);
+  });
+  it.each(["initial", "timeout"] as const)("does not turn an %s review failure into an accepted result", async reviewFailure => {
+    await expect(run({ reviewFailure })).rejects.toMatchObject({ kind: reviewFailure === "timeout" ? "timeout" : "invalid_output" });
+  });
   it("uses the remaining reserved revision and re-reviews the full corrected output", async () => {
     const { result, requests, reservations } = await run();
     expect(requests).toHaveLength(6);

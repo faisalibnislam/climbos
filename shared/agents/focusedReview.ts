@@ -37,6 +37,12 @@ export function resolveFocusedEvidencePaths(critique: CritiqueResult, output: un
   const corrections: NonNullable<CritiqueResult["evidencePathCorrections"]> = [];
   const evidenceAudit = parsed.data.map(row => ({ ...row, claims: row.claims.map(claim => {
     if (!claim.quote.trim() || fields.some(field => field.path === claim.path && field.text.includes(claim.quote))) return claim;
+    // Dot-number array notation denotes the same exact index, not a search for another claim.
+    const bracketPath = claim.path.replace(/\.(\d+)(?=\.|\[|$)/g, "[$1]");
+    if (bracketPath !== claim.path && fields.some(field => field.path === bracketPath && field.text.includes(claim.quote))) {
+      corrections.push({ reportedPath: claim.path, resolvedPath: bracketPath, quote: claim.quote });
+      return { ...claim, path: bracketPath };
+    }
     // An explicit array path supplies the missing scope even when the same citation occurs elsewhere.
     const inArray = fields.filter(field => field.path.startsWith(`${claim.path}[`) && field.text.includes(claim.quote));
     const matches = inArray.length ? inArray : fields.filter(field => field.text.includes(claim.quote));

@@ -1,6 +1,21 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — V17 truncated review and fictional-example correction
+## Current status — completed reviews survive optional review failures
+
+V3.173 preserves the best fully reviewed focused draft when a later, optional reviewer returns malformed/truncated output. It records the failure and never accepts the unreviewed revision. An initial review failure, transport error, budget failure or permission failure still propagates normally. This addresses V17's lost final result without reclassifying it as a pass.
+
+The full focused reviewer now has **16,000 output tokens**, based on V17's observed 12,000-token truncation. Initial and optional-revision cost quotes derive the identical ceiling from the existing spec; the starter remains at 4,000. The model stays unchanged. Budget/permission checks and the maximum two optional revisions remain enforced.
+
+V17 also exposed exact review quotations using dot-number paths (`preparedWork.1.draft`). These now normalize to bracket indices only when that exact indexed field contains the verbatim quote. Out-of-range indices, mismatched quotes and unsupported underlying claims remain errors; original locators are preserved. Read-only replay resolves both observed locators without changing the review scores or historical files.
+
+**182 tests in 13 files passed (14.38 seconds)**, including malformed optional/initial reviews, transport propagation, quote/reservation equality, fallback retention, exact array-path correction and existing tenant/approval/budget boundaries. App/Convex typechecks, changed-file ESLint and diff checks passed. An offline replay using V17's saved responses and its observed truncation retains a reviewed failed result rather than throwing away the completed reviews; it makes no provider calls and is not a new paid acceptance result. Combined charged/held remains **$75.745228 / $100**, before the next paid run. Tester access and founder time stay unknown.
+
+```sh
+pnpm exec vitest run tests/unit/focused-length-repair.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-plan.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/agent-escalation.test.ts tests/unit/creative-preparation.test.ts tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts tests/unit/evaluation-budget.test.ts tests/unit/ai-qa-budget.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+## V3.172 — V17 truncated review and fictional-example correction
 
 V17 (`launch-quality-v17-20261118`, v3.170, source hash `e2aad4138815d4ba8a41b7eb94f6fbfe2383f1a803f32fd61bfcfb9b4a17be6f`) did not produce a completed final assessment. Its last reviewer used the full **12,000-output-token limit**, including 7,872 thinking tokens, and returned truncated output. Seven paid calls cost **$1.347709**. Combined charged/held is **$75.745228 / $100**. No pass is claimed from the partial review. Completed intermediate reviews and revisions remain available locally. Milestone separation initially scored simplicity 4, but later workload, originality and economic-depth edits remained; this is partial improvement, not stable acceptance.
 

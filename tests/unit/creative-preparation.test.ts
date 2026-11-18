@@ -65,7 +65,7 @@ describe("creative preparation within the existing focused run", () => {
     expect(steps[0]).toMatchObject({ modelKey: full.models.draft, outputBudget: CREATIVE_PREPARATION_TOKENS, inputBudget: 40_000 });
     expect(steps).toHaveLength(3);
     expect(full.effort.critic).toBe("high");
-    expect(steps[2]).toMatchObject({ modelKey: full.models.critic, outputBudget: 12000 });
+    expect(steps[2]).toMatchObject({ modelKey: full.models.critic, outputBudget: full.maxTokens.critic });
     expect(focusedStrategySpec({ effort: { critic: "medium" } }).effort.critic).toBe("medium");
     expect(starter.creativePreparation).toBe(false);
     expect(agentSteps({ ...starter, lint: undefined })).toHaveLength(2);

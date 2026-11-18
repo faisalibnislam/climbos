@@ -1,3 +1,7 @@
+## 18 November — optional-review recovery and exact locator interoperability
+
+`v3.173-reviewed-fallback`: retain completed focused review on malformed optional review, reserve 16,000 full-review tokens, and normalize verified dot-number array locators. Initial and transport/budget failures still propagate; no unreviewed acceptance. 182 tests, types/lint and read-only V17 replay passed. Same runtime model and $100 cumulative evaluation cap. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — private example labels and canonical review context
 
 `v3.172-labelled-test-examples`: preserve complete fictional test data with local labels, maintaining public-copy numeric checks; explain canonical next-step UI aliases to the reviewer. 170 tests and lint pass. V17 ended with a truncated final review, not acceptance; combined charged/held $75.745228 / $100. [Audit](focused-evidence-review-audit.md).

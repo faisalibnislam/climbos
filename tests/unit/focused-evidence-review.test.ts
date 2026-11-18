@@ -15,6 +15,20 @@ const audit = () => [
 const review = (evidenceAudit: unknown = audit()): CritiqueResult => ({ gates: [{ id: "G1", pass: true, note: "ok" }], scores: ["F1", "XV"].map(id => ({ id, score: 5, note: "Ready", fix: "none" })), strengths: [], fixes: [], evidenceAudit } as CritiqueResult);
 
 describe("focused review evidence integrity", () => {
+  it("normalizes explicit dot-number array paths only when the exact indexed quote matches", () => {
+    const draft = { preparedWork: [{ draft: "Audience availability is unknown." }, { draft: "Audience availability is unknown." }] };
+    const rows = audit(); rows[0].claims[0].path = "preparedWork.1.draft";
+    const raw = review(rows), result = assess(raw, [], rubric, draft);
+    expect(result.ship).toBe(true);
+    expect(result.critique.evidencePathCorrections).toEqual([{ reportedPath: "preparedWork.1.draft", resolvedPath: "preparedWork[1].draft", quote: "Audience availability is unknown." }]);
+    expect(raw.evidenceAudit?.[0].claims[0].path).toBe("preparedWork.1.draft");
+    rows[0].claims[0].verdict = "unsupported"; rows[0].claims[0].correction = "Correct this unsupported claim.";
+    expect(assess(review(rows), [], rubric, draft).lint).toContainEqual(expect.objectContaining({ rule: "invented_fact", path: "preparedWork[1].draft" }));
+    rows[0].claims[0].path = "preparedWork.9.draft";
+    expect(assess(review(rows), [], rubric, draft).lint).toContainEqual(expect.objectContaining({ rule: "review_scores" }));
+    rows[0].claims[0].path = "preparedWork.1.draft"; rows[0].claims[0].quote = "An invented quotation";
+    expect(assess(review(rows), [], rubric, draft).lint).toContainEqual(expect.objectContaining({ rule: "review_scores" }));
+  });
   it("uses an explicitly named array to disambiguate an omitted index without waiving the claim", () => {
     const rows = audit(); rows[0].claims[0] = { ...rows[0].claims[0], path: "choice.evidenceRefs", quote: "fact:2", verdict: "unsupported", correction: "This source does not support the offered price." };
     const draft = { choice: { evidenceRefs: ["fact:1", "fact:2"] }, otherChoice: { evidenceRefs: ["fact:2"] } };

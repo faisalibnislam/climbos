@@ -1,3 +1,7 @@
+## 18 November 2026 — keep reviewed work when an optional review truncates
+
+V3.173 retains the fully reviewed failed fallback, never the unreviewed revision. Full focused review headroom rises to 16,000 with matching reservations; starter/model unchanged. Explicit dot-number locators normalize only against exact indexed quotations. **182 tests passed**, types/lint passed; zero-cost replay confirms recovery and locator handling. Combined used/held $75.745228 / $100 before the next test. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November 2026 — complete fictional examples without inventing business facts
 
 V3.172 recognizes locally labelled fictional numbers in private planning examples; public copy, unlabelled values and real-business claims remain checked. Canonical UI aliases are explained to the reviewer. **170 focused/permission tests passed**, lint passed. V17 final review truncated at 12,000 output tokens; no final pass claimed. Seven calls cost $1.347709, combined charged/held **$75.745228 / $100**. [Audit](growth-engine/focused-evidence-review-audit.md).

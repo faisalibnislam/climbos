@@ -49,6 +49,9 @@ describe("a focused plan does useful work without invented forecasts", () => {
     const spec = focusedStrategySpec(), plan = planJob("strategy", { planStyle: "focused" });
     // A real revision used 13,740 thinking tokens plus its structured portfolio and hit 24,000.
     expect(spec.maxTokens.draft).toBeGreaterThan(24000);
+    expect(spec.maxTokens.critic).toBe(16000);
+    expect(plan.steps).toContainEqual(expect.objectContaining({ modelKey: spec.models.critic, outputBudget: 16000 }));
+    expect(plan.revisionSteps).toContainEqual(expect.objectContaining({ modelKey: spec.models.critic, outputBudget: 16000 }));
     expect(plan.steps).toContainEqual(expect.objectContaining({ kind: "model", modelKey: spec.models.draft, outputBudget: spec.maxTokens.draft }));
     expect(plan.revisionSteps).toContainEqual(expect.objectContaining({ kind: "model", outputBudget: spec.maxTokens.draft }));
     expect(spec.maxRevisions).toBe(2);
