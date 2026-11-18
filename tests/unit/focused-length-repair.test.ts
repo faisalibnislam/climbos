@@ -6,9 +6,10 @@ import { focusedStrategySpec } from "../../shared/agents/specs";
 import { ZERO_USAGE, type TurnRequest } from "../../shared/ai/types";
 import type { LintIssue } from "../../shared/agents/types";
 
-const schema = z.object({ summary: z.string(), preparedWork: z.array(z.object({ draft: z.string() })) });
-const original = { summary: "Original", preparedWork: [{ draft: "Short original work." }] };
-const revised = { summary: "Improved strategic mechanism", preparedWork: [{ draft: "x".repeat(2432) }] };
+const exploration = { bold: { businessMechanism: focusedOriginalityFixture.mechanismQuote } };
+const schema = z.object({ strategyExploration: z.object({ bold: z.object({ businessMechanism: z.string() }) }), summary: z.string(), preparedWork: z.array(z.object({ draft: z.string() })) });
+const original = { strategyExploration: exploration, summary: "Original", preparedWork: [{ draft: "Short original work." }] };
+const revised = { strategyExploration: exploration, summary: "Improved strategic mechanism", preparedWork: [{ draft: "x".repeat(2432) }] };
 const repaired = { ...revised, preparedWork: [{ draft: "Concise revised work." }] };
 const base = focusedStrategySpec();
 function review(stage: "original" | "revised" | "repaired", improve = true, truth = true) {

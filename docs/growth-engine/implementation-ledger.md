@@ -1,3 +1,7 @@
+## 18 November — bind originality judgments to their actual mechanisms
+
+V3.200 closes reproduced review-integrity gaps in candidate feedback, final review and checkpoint resume. A wrong-idea or stale quotation cannot validate the current bold option, even with passing scores. Existing speculative options remain eligible. **216 focused/permission tests**, then **30 affected tests**, types and lint passed. Paid tests remain paused, runtime model unchanged, and no semantic quality gain is claimed. [Audit and commands](focused-evidence-review-audit.md).
+
 ## 18 November — last bounded agency test and private-example instructions
 
 The new agency-evidence test completed four calls for **$0.690687**, scoring **3.5/5, failed**. It corrected free-logo reasoning but retained a familiar bold mechanism, wrong AI-plan eligibility and a private sample misclassified as public copy. Runtime retained the errors despite passing general AI gates; the budget guard allowed no repair. V3.199 clarifies artifact classification and local numeric labels without relaxing validation. **162 focused/permission tests**, app/Convex types and lint passed; the final fingerprint change passed **16 identity/budget tests** and lint. This follow-up is not paid-evaluated. Combined charged/held **$99.063401 / $100**; model, owner unknowns and authorization boundaries unchanged. [Audit and limitations](focused-evidence-review-audit.md).

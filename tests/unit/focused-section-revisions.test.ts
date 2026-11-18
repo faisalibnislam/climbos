@@ -42,9 +42,9 @@ describe("bounded focused section repairs", () => {
     const first = { ...original, summary: "Payers carry all the outcome risk.", strategyExploration: { bold: { title: "Original refund proposal", businessMechanism: "A familiar paid inbox and refund guarantee." } } };
     const middle = { summary: "Payment and customer risk remain unknown.", strategyExploration: { bold: { title: "Replacement wallet proposal", businessMechanism: "A familiar portable answer profile." } } };
     const final = { strategyExploration: { bold: { title: "A changed exchange to review", businessMechanism: "A different synthetic value exchange with honest unknowns." } } };
-    const earlierReview = { ...review(3), originalityAudit: { ...focusedOriginalityFixture, mechanismVerdict: "familiar_mechanism", closestFamiliarAlternative: "Earlier paid-inbox comparison", consequentialDifference: "Refunds alone do not change the exchange." } };
+    const earlierReview = { ...review(3), originalityAudit: { ...focusedOriginalityFixture, mechanismQuote: first.strategyExploration.bold.businessMechanism, mechanismVerdict: "familiar_mechanism", closestFamiliarAlternative: "Earlier paid-inbox comparison", consequentialDifference: "Refunds alone do not change the exchange." } };
     earlierReview.evidenceAudit[0].claims = [{ path: "summary", quote: first.summary, verdict: "unsupported", basis: "No supplied source establishes which party bears all risk.", correction: "Keep the actual risk allocation unknown." }] as never;
-    const laterReview = { ...review(3), originalityAudit: { ...focusedOriginalityFixture, mechanismVerdict: "familiar_mechanism", closestFamiliarAlternative: "Current profile-wallet comparison" } };
+    const laterReview = { ...review(3), originalityAudit: { ...focusedOriginalityFixture, mechanismQuote: middle.strategyExploration.bold.businessMechanism, mechanismVerdict: "familiar_mechanism", closestFamiliarAlternative: "Current profile-wallet comparison" } };
     const responses = [first, earlierReview, middle, laterReview, final, review(5)], requests: TurnRequest[] = [];
     const result = await runAgent({ ...spec, schema: creativeSchema, maxRevisions: 2 }, { task: "Synthetic creative repair", brief: "No risk allocation measured", facts: [] }, {
       beforeRevision: async () => true,
@@ -127,15 +127,16 @@ describe("bounded focused section repairs", () => {
     expect(result.output).toEqual(original); expect(result.assessment?.ship).toBe(false);
   });
   it("delivers mechanism-replacement guidance in the existing reserved repair, then reviews the complete result", async () => {
-    const creativeSchema = schema.extend({ strategyExploration: z.object({ bold: z.string() }) });
-    const first = { ...original, strategyExploration: { bold: "A familiar synthetic trial mechanism" } };
-    const patch = { strategyExploration: { bold: "A changed synthetic participant exchange" } };
+    const creativeSchema = schema.extend({ strategyExploration: z.object({ bold: z.object({ businessMechanism: z.string() }) }) });
+    const first = { ...original, strategyExploration: { bold: { businessMechanism: "A familiar synthetic trial mechanism" } } };
+    const patch = { strategyExploration: { bold: { businessMechanism: "A changed synthetic participant exchange" } } };
     const realRubric = focusedStrategySpec().rubric;
-    const creativeReview = (score: number) => ({ ...review(score),
+    const creativeReview = (score: number, mechanism: string) => ({ ...review(score),
+      originalityAudit: { ...focusedOriginalityFixture, mechanismQuote: mechanism },
       gates: realRubric.gates.map(gate => ({ id: gate.id, pass: true, note: "Synthetic gate" })),
       scores: [...realRubric.criteria.map(criterion => criterion.id), "XV"].map(id => ({ id, score: id === "F7" ? score : 4, note: "Synthetic originality assessment", fix: id === "F7" && score < 4 ? "Replace the familiar bold mechanism." : "none" })),
     });
-    const responses = [first, creativeReview(3), patch, creativeReview(5)], requests: TurnRequest[] = [];
+    const responses = [first, creativeReview(3, first.strategyExploration.bold.businessMechanism), patch, creativeReview(5, patch.strategyExploration.bold.businessMechanism)], requests: TurnRequest[] = [];
     let reservations = 0;
     const result = await runAgent({ ...spec, schema: creativeSchema, rubric: realRubric }, { brief: "Synthetic, access and time unknown", task: "Explore distinct mechanisms", facts: [] }, {
       beforeRevision: async () => { reservations++; return true; },
@@ -146,7 +147,7 @@ describe("bounded focused section repairs", () => {
     expect(JSON.stringify(requests[2].messages)).toContain("CREATIVE REPAIR SCOPE");
     expect(JSON.stringify(requests[2].messages)).toContain("You may discard every preliminary candidate");
     expect(requests.every(req => req.customTools === undefined && req.webSearch === undefined)).toBe(true);
-    expect(JSON.stringify(requests[3].messages)).toContain(patch.strategyExploration.bold);
+    expect(JSON.stringify(requests[3].messages)).toContain(patch.strategyExploration.bold.businessMechanism);
     expect(JSON.stringify(requests[3].messages)).toContain(first.preparedWork[0].draft);
     expect(result.output).toEqual({ ...first, ...patch });
     expect(result.assessment?.ship).toBe(true); // synthetic review, not an originality claim

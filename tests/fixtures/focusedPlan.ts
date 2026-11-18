@@ -1,6 +1,7 @@
 import { evergreenTimingFixture } from "./campaignTiming";
 import { FocusedStrategySchema } from "../../shared/agents/specs";
 import { milestoneWindows } from "../../shared/agents/planningCycles";
+import { focusedOriginalityFixture } from "./focusedOriginality";
 export function focusedPlanFixture(days = 14) {
   const option = (title: string, businessMechanism: string, businessAction: string) => ({
     title, businessMechanism, businessAction,
@@ -31,7 +32,7 @@ export function focusedPlanFixture(days = 14) {
     strategyExploration: {
       grounded: option("Review one past handoff", "Compare a real past request with the proposed intake questions to expose missing decisions.", "Prepare an intake example for private owner review."),
       adjacent: option("Borrow a production call sheet", "Transfer a film crew's shared call-sheet mechanism to clarify agency handoff responsibilities.", "Prototype a scoping sheet that names the decision, accountable role and handoff condition."),
-      bold: option("Become known for the brief you decline", "Invert collecting every lead: make mutually agreed reasons to decline a project the distinctive service.", "Privately prototype a reversible decline-or-redesign conversation before changing the public offer."),
+      bold: option("Become known for the brief you decline", focusedOriginalityFixture.mechanismQuote, "Privately prototype a reversible decline-or-redesign conversation before changing the public offer."),
     },
     timing: { preparation: { minDays: 2, maxDays: 3 }, firstReview: { minDays: Math.max(4, days - 3), maxDays: days }, reason: "The example needs preparation and time for a reviewer to try the actual handoff.", assumptions: ["Reviewer availability and business capacity remain unknown."], reviewTrigger: "Review when useful feedback arrives, or at the end of the proposed test window.", outcomeLag: "This tests usefulness; it does not promise paying customers within this period." },
     preparedWork: [{ title: "Proposed intake example", kind: "test_brief", target: "To build: one agency intake workflow", draft: "Use a recent client request to check which details are needed before scoping. Mark missing details, then compare the proposed intake questions with the actual request. This is a proposed test, not a tested capability or a customer result.", evidenceRefs: [], checksBeforeUse: ["Check the actual workflow before sharing."], status: "draft" }],

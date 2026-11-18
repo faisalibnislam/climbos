@@ -1,5 +1,23 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.200 — bind originality reviews to the mechanism actually reviewed
+
+Local reproductions found that a passing originality review could quote another idea while still passing the score/verdict consistency check. Candidate feedback likewise checked method and title but not the operating mechanism. Two new regressions failed before the fix.
+
+The existing originality audit now requires the complete mechanism quotation. Final assessment binds it to the current `strategyExploration.bold.businessMechanism`; adjacent ideas, stale versions, partial excerpts and missing work fail review integrity without rewriting scores or suppressing speculative ideas. Candidate feedback binds each quotation to its exact candidate, including when resuming a saved checkpoint. Unbound earlier findings are excluded from repair history. Existing saved plans and raw reviews are not rewritten; an old review without this binding cannot be accepted as a current review if reassessed.
+
+The synthetic provider now quotes its actual input, and the focused fixtures carry the real mechanism shape. The actual mocked Convex flow verifies persistence of a wrong-idea review failure, denial of approval/start, and no action receipts. No provider, runtime model, call allowance, threshold or action permission changed. Quote binding establishes what the judgment is about; it does not establish that the judgment is correct or the idea original.
+
+Verification: **216 tests in 13 files passed (15.71 seconds)**, followed by **30 affected preparation/repair tests (1.47 seconds)** after tightening historical binding and correcting a generic test-checkpoint type. App/Convex typechecks, changed-file ESLint and diff checks passed. The first broad run caught an old synthetic bold-string fixture; it was updated to the actual structured mechanism before the passing run.
+
+```sh
+pnpm exec vitest run tests/unit/focused-originality-review.test.ts tests/unit/creative-preparation.test.ts tests/unit/focused-length-repair.test.ts tests/unit/focused-evidence-repair.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/agent-runtime.test.ts tests/unit/agent-escalation.test.ts tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm exec vitest run tests/unit/creative-preparation.test.ts tests/unit/focused-section-revisions.test.ts
+pnpm typecheck
+```
+
+Paid tests remain paused at the owner's request, within the unchanged $100 cap. No live semantic improvement, real-world originality, plan eligibility or commercial result is claimed by these local tests. Tester access and founder time remain unknown. The remaining audit continues to distinguish generation weaknesses from code paths that can be reproduced and repaired locally.
+
 ## V3.199 — clarify the private-example contract after the last bounded test
 
 The `public-agencies-20261118` run (`launch-agencies-v1-20261118`, engine V3.198, source hash `f8169ff6db66caec7cc29b573b4a7eb49671fbc6c7a353a68fb80edb737506f2`) completed exploration, candidate feedback, drafting and review for **$0.690687**. The single reviewed draft failed at **3.5/5**, with F7=2 and XV=3. It used the new agency source and correctly distinguished adding a customer logo on any plan from paid features. Its first review was not followed by a repair because the existing cumulative reservation guard refused the required headroom. No request failed, no response was truncated and no hidden retry occurred. This is a first-draft result with different evidence, not a controlled comparison with the repaired V5 result.

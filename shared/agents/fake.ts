@@ -98,8 +98,9 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
   if (!req.schema) {
     output = "FAKE RESEARCH NOTES\n- Competitor A: example.com\n- Existing comparison page: https://example.com/compare\nSources: https://example.com";
   } else if (req.schema === CreativeFeedbackSchema) {
-    output = { developedDirection: sample(z.toJSONSchema(CreativeDirectionSchema) as JsonSchema, "Synthetic development for workflow checks only, not a real strategy."), directions: ["convention_inversion", "distant_transfer", "asset_recombination"].map((creativeMethod, index) => ({
-      creativeMethod, candidateTitle: `Synthetic direction ${index + 1}`,
+    const candidates = CreativePreparationSchema.parse(JSON.parse(lastUser.split('<untrusted_content source="candidate proposals to compare">\n').at(-1)!.split("\n</untrusted_content>")[0]));
+    output = { developedDirection: sample(z.toJSONSchema(CreativeDirectionSchema) as JsonSchema, "Synthetic development for workflow checks only, not a real strategy."), directions: candidates.directions.map(candidate => ({
+      creativeMethod: candidate.creativeMethod, candidateTitle: candidate.title, mechanismQuote: candidate.mechanism,
       closestFamiliarAlternative: "Synthetic alternative; not a real strategy judgment.",
       consequentialDifference: "Synthetic difference for workflow checks only.",
       mechanismVerdict: "unclear_difference",
@@ -109,6 +110,9 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
     const { gates, criteria } = rubricIds(system);
     const reviewingFirstDraft = lastUser.includes("fake-v1");
     const pass = mode === "ship" || !reviewingFirstDraft;
+    const reviewedWork = system.includes("FOCUSED ORIGINALITY AUDIT:")
+      ? JSON.parse(lastUser.split("THE WORK TO REVIEW (JSON):\n").at(-1)!.split("\n\n")[0]) as { strategyExploration?: { bold?: { businessMechanism?: string } } }
+      : null;
     output = {
       gates: gates.map((id) => ({ id, pass: pass, note: pass ? "ok" : "fails" })),
       scores: criteria.map((id) => ({ id, score: pass ? 5 : 2, note: "", fix: pass ? "none" : "Make it specific" })),
@@ -117,6 +121,7 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
       escalation: { reason: "none", evidence: "" },
       ...(system.includes("FOCUSED EVIDENCE AUDIT:") ? { evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map(category => ({ category, basis: "Synthetic review fixture only; no real semantic verification.", claims: [] })) } : {}),
       ...(system.includes("FOCUSED ORIGINALITY AUDIT:") ? { originalityAudit: {
+        mechanismQuote: reviewedWork?.strategyExploration?.bold?.businessMechanism ?? "No bold mechanism supplied for this synthetic review.",
         closestFamiliarAlternative: "Synthetic conventional alternative; not an actual strategy judgment.",
         consequentialDifference: "Synthetic changed exchange; not evidence of real originality.",
         mechanismVerdict: "material_difference",

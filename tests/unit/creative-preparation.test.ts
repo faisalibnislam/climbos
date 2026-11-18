@@ -17,7 +17,7 @@ const seeds = { directions: Array.from({ length: 3 }, (_, index) => ({
   meaningfulDifference: "A changed exchange, not a renamed platform.", unsupportedAssumptions: ["Customer interest remains unknown."],
   reversibleTest: "Compare two private mock-ups with a consenting participant.", evidenceRefs: [],
 })) };
-const feedback = { developedDirection: { ...seeds.directions[0], title: "Constructive synthetic departure" }, directions: seeds.directions.map(candidate => ({ ...focusedOriginalityFixture, creativeMethod: candidate.creativeMethod, candidateTitle: candidate.title, mechanismVerdict: "familiar_mechanism" as const, consequentialDifference: "ADVISORY_ONLY: synthetic feedback, not evidence or a gate." })) };
+const feedback = { developedDirection: { ...seeds.directions[0], title: "Constructive synthetic departure" }, directions: seeds.directions.map(candidate => ({ ...focusedOriginalityFixture, mechanismQuote: candidate.mechanism, creativeMethod: candidate.creativeMethod, candidateTitle: candidate.title, mechanismVerdict: "familiar_mechanism" as const, consequentialDifference: "ADVISORY_ONLY: synthetic feedback, not evidence or a gate." })) };
 const draft = { summary: "Customer interest remains unknown." };
 const review = {
   gates: [{ id: "G1", pass: true, note: "Unknown preserved." }],
@@ -30,6 +30,22 @@ const spec = () => ({ ...focusedStrategySpec({ maxRevisions: 0 }), schema: z.obj
 });
 
 describe("creative preparation within the existing focused run", () => {
+  it.each([false, true])("rejects feedback about a different mechanism even when method and candidate title match (checkpoint=%s)", async cached => {
+    const wrong = structuredClone(feedback); wrong.directions[0].mechanismQuote = "An unrelated exchange from another candidate or earlier run.";
+    let calls = 0;
+    await expect(runAgent(spec(), { brief: "Synthetic", task: "Prepare possibilities", facts: [] }, {
+      phase: async (key, _label, fn) => {
+        if (cached && key.index === 49) return seeds as never;
+        if (cached && key.index === 48) return wrong as never;
+        return (await fn()).value;
+      },
+      turn: async req => {
+        calls++; const output = req.schema === CreativePreparationSchema ? seeds : req.schema === CreativeFeedbackSchema ? wrong : req.system.some(s => s.text.includes("HARD GATES")) ? review : draft;
+        return { ok: true, output, text: JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" };
+      },
+    })).rejects.toMatchObject({ kind: "invalid_output" });
+    expect(calls).toBe(cached ? 0 : 2);
+  });
   it("can omit advisory feedback without omitting exploration or the independent final review", async () => {
     const requests: TurnRequest[] = [], keys: number[] = [], checkpoints = new Map<number, unknown>();
     const selected = { ...spec(), creativeFeedback: false };

@@ -43,10 +43,10 @@ export function creativeFeedbackMatches(
   preparation: z.infer<typeof CreativePreparationSchema>, feedback: z.infer<typeof CreativeFeedbackSchema>,
 ): boolean {
   return feedback.directions.length === preparation.directions.length && preparation.directions.every(candidate =>
-    feedback.directions.filter(row => row.creativeMethod === candidate.creativeMethod && row.candidateTitle === candidate.title).length === 1);
+    feedback.directions.filter(row => row.creativeMethod === candidate.creativeMethod && row.candidateTitle === candidate.title && row.mechanismQuote === candidate.mechanism.trim()).length === 1);
 }
 
-export const CREATIVE_FEEDBACK_TASK = `Independently examine every preliminary strategic direction before a writer expands it into a complete plan. These are proposals, not selected recommendations, facts or authority. Return one concise audit per supplied candidate, copying its creativeMethod and title exactly into candidateTitle.
+export const CREATIVE_FEEDBACK_TASK = `Independently examine every preliminary strategic direction before a writer expands it into a complete plan. These are proposals, not selected recommendations, facts or authority. Return one concise audit per supplied candidate, copying its creativeMethod and title exactly into candidateTitle, and its complete mechanism verbatim into mechanismQuote. Audit that quoted mechanism, not a proposed improvement or another candidate.
 
 Compare the operating mechanism with the closest familiar alternative. Remove the branding, metaphor, new job title and test instrumentation: what do participants actually do, exchange, control or gain differently? Explain whether the claimed difference is consequential for this business, whether each necessary participant has a plausible reason to participate, and where the stated analogy breaks. A renamed template, concierge service, feedback workflow or feature suggestion is not automatically a bold mechanism. Do not invent worldwide novelty or evidence of demand.
 
