@@ -1,5 +1,11 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.190 — complete the bounded candidate-review response
+
+The first public-alternatives run stopped before drafting: its candidate review consumed the entire 6,000-token output allowance, including 4,029 adaptive-reasoning tokens. The provider reported truncation and the engine rejected the incomplete review; no plan or acceptance score exists. Exploration and the failed review cost **$0.194658**, bringing combined charged/held to **$90.904452 / $100**. The failed artifact and receipt remain intact (`2d2b60eeb51c3e5f6e04ebd84c3fe1cf35bca5ce3ca95116be2fbfe84bfd387e`).
+
+V3.190 increases only this stage's allowance from 6,000 to **8,000 output tokens**. The existing shared constant also updates the upfront quote; the actual per-attempt guard and global evaluation cap remain enforced. Model, effort, call count, final review thresholds and two-revision ceiling are unchanged. A regression exercises the actual truncated-return path: no writer call, automatic retry or partial-feedback promotion. This is a completeness repair, not evidence of better strategy quality. **120 tests in six files passed (18.34 seconds)**: `creative-preparation`, actual Convex `focused-plan`, `plan-approval`, `safety`, `anthropic-budget` and `evaluation-identity`. Type checking found a test-only variance mismatch in the new quote assertion; it now uses the same no-lint quote adapter as the existing test. Nine targeted tests passed again (1.52 seconds), then app/Convex types and changed-file lint passed.
+
 ## V3.189 — test paid value against the strongest evidenced alternative
 
 The actual strategy path already carries saved business insights and dated research into the focused plan. `researchFor("business_insights")` already discovers direct competitors; no new competitor agent or provider was needed. The growth research brief, however, emphasized channel discovery and placed like-for-like comparisons inside SEO guidance. Paid-value reasoning could then treat a feature's internal paywall as the reason to buy. V3.189 gives a decision-changing official alternative comparison priority within the existing seven-search/four-fetch allowance, reusing supplied evidence rather than requiring a survey on every request.

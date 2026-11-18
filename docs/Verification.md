@@ -1,3 +1,7 @@
+## 18 November — retain truncation failure and repair the quoted response allowance
+
+The first alternative-evidence test stopped at an incomplete candidate review, before any plan. The two calls cost $0.194658; combined charged/held is **$90.904452 / $100**. V3.190 raises that review's allowance to 8,000 tokens and updates its shared upfront quote. Same model, call count and acceptance bar; no partial answer is accepted. **120 tests in six files passed (18.34 seconds)**. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November — challenge paid-value assumptions with current alternatives
 
 V3.189 prioritizes decision-changing official alternative evidence within existing research bounds, distinguishes internal paywalls from buyer value, and aligns test actors/access across the brief, invitation and metric. Speculative strategies remain available. A separate public-alternatives pack retains dated first-party sources without rewriting historical packs or owner unknowns. **173 focused/regression/permission tests passed**; paid quality effect pending. Docs V10 retained a clean but failing **3.88/5** draft. Combined used/held **$90.709794 / $100**. [Audit](growth-engine/focused-evidence-review-audit.md).

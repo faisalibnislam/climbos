@@ -181,6 +181,21 @@ describe("creative preparation within the existing focused run", () => {
     expect(calls).toBe(1);
   });
 
+  it("never expands a truncated candidate review or retries it without another budgeted call", async () => {
+    const requests: TurnRequest[] = [];
+    await expect(runAgent(spec(), { brief: "Synthetic", task: "Prepare possibilities", facts: [] }, {
+      phase: async (_key, _label, fn) => (await fn()).value,
+      turn: async req => {
+        requests.push(req);
+        if (req.schema === CreativeFeedbackSchema) return { ok: false, kind: "invalid_output", message: "The answer was cut off at the length limit.", text: '{"directions":[', appended: [], usage: ZERO_USAGE, costMicros: 0 };
+        return { ok: true, output: seeds, text: JSON.stringify(seeds), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" };
+      },
+    })).rejects.toMatchObject({ kind: "invalid_output" });
+    expect(requests).toHaveLength(2);
+    expect(requests[1]).toMatchObject({ maxTokens: 8000, modelKey: spec().models.critic, effort: "high" });
+    expect(agentSteps({ ...focusedStrategySpec(), lint: undefined })[1].outputBudget).toBe(requests[1].maxTokens);
+  });
+
   it("requires one audit for each exact candidate without requiring approval of the idea", () => {
     const parsedSeeds = CreativePreparationSchema.parse(seeds), parsedFeedback = CreativeFeedbackSchema.parse(feedback);
     expect(creativeFeedbackMatches(parsedSeeds, parsedFeedback)).toBe(true);
