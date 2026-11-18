@@ -1,3 +1,7 @@
+## 18 November 2026 — preserve collected page detail in strategy generation
+
+V3.175 fixes saved page excerpts disappearing when cached AI research exists. A new production-request regression failed first, then **128 tests in eight files passed**, including the writer/critic input, source dates, context ceiling, tenant/cache isolation and permissions. App/Convex types and changed-file lint passed. Paid acceptance uses precomputed sources and does not exercise this Convex handoff. [Audit and commands](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November 2026 — research prerequisites and keep unknown-access work useful
 
 V3.174 adds product/setup priorities to the existing bounded research call and a concrete deferred access-research branch to focused writing/review. Owner tester access and time stay unknown; no new action, provider or research allowance. **183 tests in 11 files passed**, app/Convex types and changed-file lint passed. Paid effect pending. [Audit and limits](growth-engine/focused-evidence-review-audit.md).

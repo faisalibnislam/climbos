@@ -1,6 +1,19 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — product-prerequisite research and unknown-access fallback
+## Current status — retain source-page detail through production planning
+
+A focused Convex regression reproduced a real evidence-loss bug: when a recent same-business research summary existed, `jobContext` kept current first-party page URLs but omitted all their saved excerpts. The writer and reviewer could therefore miss product eligibility/setup details that the repository had already collected. V3.175 includes both scoped, unexpired successful page excerpts and cached notes, with separate retrieval dates and explicit source/summary classes. Conflicting claims remain visible; no claim is silently upgraded to tested behavior.
+
+The existing 30,000-character research-context ceiling remains. Page excerpts have a bounded share, cached notes use the remaining room, and omissions are visible and logged. Missing text/dates stay missing; timestamps are not publication dates. Existing same-business, same-host, expiry, blocked-read and tenant controls remain in the caller. No extra fetch, paid call, connection, model, action or permission is introduced. Supplied intake/step-work evidence keeps its existing precedence and limits.
+
+The new actual-generation test failed before the fix because the saved entitlement text was absent. After the fix, **128 tests in eight files passed (14.10 seconds)**, verifying text/date delivery to both writer and critic, cache reuse/isolation, blocked/expired/offsite exclusion, bounded context, preparation memory and approval boundaries. No action receipts were created. App/Convex typechecks, changed-file ESLint and diff checks passed. The paid launch harness supplies its own evidence and does not exercise Convex context assembly; those paid scores cannot establish this fix's effect. The actual Convex request regression is its evidence.
+
+```sh
+pnpm exec vitest run tests/convex/focused-plan.test.ts tests/convex/research-context.test.ts tests/convex/research-cache.test.ts tests/convex/preparation-memory.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts tests/unit/focused-research-notes.test.ts tests/unit/research-cache.test.ts
+pnpm typecheck
+```
+
+## V3.174 — product-prerequisite research and unknown-access fallback
 
 V3.174 closes two confirmed instruction gaps in the existing path. `researchFor("growth_strategy")` previously emphasized channel discovery without explicitly prioritizing the help/setup evidence needed to validate a customer task. The same research call now checks decision-changing product prerequisites before route research, avoids rereading supplied facts, and preserves per-claim dates, failures and unknowns. Its existing seven-search/four-fetch ceiling, six-hour cache, provider and model are unchanged. Cached/precomputed research is still reused; this does not add automatic supplemental retrieval to those paths. Campaign-timing instructions remain intact.
 

@@ -1,3 +1,7 @@
+## 18 November — preserve page excerpts alongside research summaries
+
+`v3.175-preserved-page-context`: the existing planning context now retains current same-business page text even when cached AI notes are present, with per-record dates and visible bounded omissions. One red generation regression; then 128 tests, types/lint passed. No new calls, provider, model or permissions. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — product prerequisites and deferred access research
 
 `v3.174-access-research`: resolve material product instructions within the existing research call; retain a concrete conditional research path when tester access is unknown, without repeating deferred questions or inventing reach. First-checklist wording matches its existing validator. 183 tests, types/lint passed. Documentation baseline loaded the previous engine; semantic effect is pending. [Audit](focused-evidence-review-audit.md).
