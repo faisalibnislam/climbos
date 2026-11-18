@@ -1,3 +1,7 @@
+## 18 November — preserve thousands and millions in numeric evidence
+
+V3.205 fixes reproduced k/m magnitude errors: 10 customers cannot support a 10k claim, while 10k and 10,000 correctly match. Decimal-string arithmetic preserves precision. **266 focused/permission tests**, types and lint passed. Numeric matching remains a necessary check, not semantic verification. Paid testing stays paused, runtime model unchanged. [Audit and commands](focused-evidence-review-audit.md).
+
 ## 18 November — preserve research restrictions and source integrity
 
 V3.204 removes the silent 30,000-character cut from research retained up to 40,000 characters. All strategy stages and deterministic checks use the same bounded notes. Source-index records remain whole, with visible omissions instead of shortened URLs, dates or policy quotes. **166 tests**, types and lint passed. Saved Livoform outputs were replayed locally, with no new semantic pass claimed. Paid ledgers remain $99.063401 used/held; paid tests stay paused and runtime models stay unchanged. [Audit, replay and commands](focused-evidence-review-audit.md).

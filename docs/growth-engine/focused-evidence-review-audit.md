@@ -1,5 +1,19 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.205 — preserve abbreviated numeric magnitudes
+
+A follow-up to the numeric-presence audit reproduced six failures around `k`/`m` quantities: a source reporting 10 customers could support a 10k claim, and equivalent written-out quantities could fail. The same validator now expands those abbreviations using decimal-string arithmetic, without rounding or floating-point conversion. Thus 10k matches 10,000, not 10 or 10m; decimal quantities and distinct integers beyond JavaScript's safe-integer range retain their identity. This does not infer currencies, periods, causal effects or semantic claim support.
+
+**266 tests in 13 files passed (10.66 seconds)**; app/Convex typechecks, changed-file ESLint and diff checks passed. The focused/approval suites still block failed generated claims from execution. No provider call, runtime model, budget, approval threshold or action scope changed.
+
+```sh
+pnpm exec vitest run tests/unit/agent-lint.test.ts tests/unit/context-fit.test.ts tests/unit/capture-policy.test.ts tests/unit/copy-angles.test.ts tests/unit/focused-plan.test.ts tests/unit/prepared-work.test.tsx tests/unit/focused-offer-assessment.test.ts tests/unit/claims-uplift.test.ts tests/unit/plan-grounding.test.ts tests/unit/focused-evidence-review.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+pnpm exec eslint shared/agents/lint.ts shared/agents/specs.ts tests/unit/agent-lint.test.ts
+```
+
+This closes the numeric matching and research-delivery defects reproduced in this local audit. Originality, correct product-plan interpretation and useful first-use experiments still need future semantic acceptance work. Paid tests remain paused under the unchanged $100 cap; the saved failed Livoform reviews are not relabelled as passing.
+
 ## V3.204 — preserve research restrictions and complete source records
 
 Five local regressions reproduced further evidence-delivery gaps. Saved research allowed 40,000 characters, but every downstream model phase silently cut it at 30,000. A later product-plan restriction disappeared in fresh, supplied and checkpointed runs. Oversized supplied notes were also available to deterministic validation after being hidden from the writer/reviewer. Separately, the generic source-index fitter shortened policy evidence inside a retained source while discarding a later, smaller source without an owner/model-visible omission notice.

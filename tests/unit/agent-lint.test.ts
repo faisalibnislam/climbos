@@ -45,6 +45,19 @@ describe("copy lint", () => {
     expect(untracedNumbers("Costs $29.99", "Published price $29.991")).toEqual(["$29.99"]);
   });
 
+  it.each([
+    ["Serves 10k customers", "Owner reports 10 customers", ["10k"]],
+    ["Serves 10m customers", "Owner reports 10k customers", ["10m"]],
+    ["Serves 10k customers", "Owner reports 10000 customers", []],
+    ["Serves 10,000 customers", "Owner reports 10k customers", []],
+    ["Serves 1.25m customers", "Owner reports 1,250,000 customers", []],
+    ["Costs $1.23456k", "Published price $1234.56", []],
+    ["Costs $1.23456k", "Published price $1234.567", ["$1.23456k"]],
+    ["Costs $9007199254740993", "Published price $9007199254740992", ["$9007199254740993"]],
+  ])("preserves numeric magnitude and decimal precision: %s", (copy, evidence, missing) => {
+    expect(untracedNumbers(copy, evidence)).toEqual(missing);
+  });
+
   it("checks limits and the fold", () => {
     expect(maxLength("x".repeat(31), 30, "h[0]", "Headline")[0].rule).toBe("length");
     expect(hookBeforeFold("a".repeat(200) + "\nrest", 140, "body")[0].rule).toBe("fold");

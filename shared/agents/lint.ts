@@ -215,10 +215,12 @@ const NUMERIC_TOKEN = /[$£€]?\d[\d,.]*(?:\s?%|(?:k|m|x)(?![a-z])|×)?/gi;
 const withoutPrecedentIds = (value: string) => value.replace(/\bCP-\d{3}\b/g, "");
 /** Exact decimal identity, without floating-point rounding or joining separate values. */
 function numericValue(raw: string): string | null {
-  const digits = raw.replace(/[,\s$£€%kmx×]/gi, "").replace(/\.$/, "");
-  const parts = /^(\d+)(?:\.(\d+))?$/.exec(digits);
+  const digits = raw.replace(/[,\s$£€%x×]/gi, "").replace(/\.$/, "");
+  const parts = /^(\d+)(?:\.(\d+))?([km])?$/i.exec(digits);
   if (!parts) return null;
-  const whole = parts[1].replace(/^0+(?=\d)/, ""), fraction = (parts[2] ?? "").replace(/0+$/, "");
+  const scale = parts[3]?.toLowerCase() === "k" ? 3 : parts[3] ? 6 : 0;
+  const expanded = parts[1] + (parts[2] ?? "").padEnd(scale, "0"), point = parts[1].length + scale;
+  const whole = expanded.slice(0, point).replace(/^0+(?=\d)/, ""), fraction = expanded.slice(point).replace(/0+$/, "");
   return `${whole}${fraction ? `.${fraction}` : ""}`;
 }
 
