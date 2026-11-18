@@ -16,11 +16,12 @@ export interface EmailAudienceSnapshot {
   observedAt: number;
 }
 
-export function emailAudienceBrief(a: EmailAudienceSnapshot | undefined, workflow?: { startedAt: number }): string {
+export function emailAudienceBrief(a: EmailAudienceSnapshot | undefined, workflow?: { startedAt: number } | { cacheKey: true }): string {
   if (!a) return "";
   // Resumable checks reread current records; a fresh query timestamp alone must not change their prompt identity.
   // The workflow timestamp is a reference for the check, never a claim that these were the records at its start.
-  const timing = workflow ? `records refreshed for the workflow started ${new Date(workflow.startedAt).toISOString()}` : `records at ${new Date(a.observedAt).toISOString()}`;
+  const timing = workflow && "cacheKey" in workflow ? "current records (query clock excluded from cache identity)"
+    : workflow ? `records refreshed for the workflow started ${new Date(workflow.startedAt).toISOString()}` : `records at ${new Date(a.observedAt).toISOString()}`;
   const scope = `EMAIL AUDIENCE (calculated from ClimbOS ${timing}):`;
   const contacts = a.contacts === null ? `${a.observedContacts} active contacts observed in a bounded sample; total unknown` : `${a.contacts} active contact${a.contacts === 1 ? "" : "s"} recorded`;
   const eligible = a.consented === null ? "Eligible audience unknown because coverage is incomplete" : `${a.consented} contact${a.consented === 1 ? " has" : "s have"} recorded current marketing consent, a stored address and no recorded suppression`;

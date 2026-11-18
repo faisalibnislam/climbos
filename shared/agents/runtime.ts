@@ -310,9 +310,9 @@ function researchSourceIndex(sources: Source[], label: string): string {
 }
 
 /** The same visible source context for runtime and offline/review-only checks. */
-export function lintAgentOutput<T>(spec:AgentSpec<T>,input:AgentInput,output:T,research=input.precomputedResearch):LintIssue[]{
+export function lintAgentOutput<T>(spec:AgentSpec<T>,input:AgentInput,output:T,research=input.precomputedResearch,now=Date.now()):LintIssue[]{
   research = research ? boundedResearch(research) : undefined;
-  return spec.lint?.(output,{...input,...(input.timingContext ? { timingContext: { ...input.timingContext, now: Date.now() } } : {}),precomputedResearch:research??input.precomputedResearch,untrustedContext:[input.untrustedContext??"",research?.notes??"",...(research?.sources??[]).map(source=>source.url)].join("\n"),availableSourceUrls:[...new Set([...(input.availableSourceUrls??[]),...(research?.sources??[]).map(source=>source.url)])]})??[];
+  return spec.lint?.(output,{...input,...(input.timingContext ? { timingContext: { ...input.timingContext, now } } : {}),precomputedResearch:research??input.precomputedResearch,untrustedContext:[input.untrustedContext??"",research?.notes??"",...(research?.sources??[]).map(source=>source.url)].join("\n"),availableSourceUrls:[...new Set([...(input.availableSourceUrls??[]),...(research?.sources??[]).map(source=>source.url)])]})??[];
 }
 
 function inputBlock(input: AgentInput, researchNotes: string | null, knowledge = "", sources: Source[] = []): string {

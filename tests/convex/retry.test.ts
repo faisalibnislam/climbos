@@ -60,10 +60,12 @@ describe("Retry from checkpoints", () => {
     expect(steps.some((s) => s.attempt > 1)).toBe(true);
     const period = await periodOf(t, w.orgId);
     expect(period.walletReservedMicros).toBe(0);
-    // Total spend equals the jobs' total cost (the plan plus its first-win drafts): the first attempt isn't charged twice.
+    // Total spend equals the jobs' total cost: the first attempt isn't charged twice.
     const allRuns = await t.run(async (ctx) => (await ctx.db.query("workflowRuns").collect()).filter((r) => r.orgId === w.orgId));
     expect(period.walletSpentMicros).toBe(allRuns.reduce((s, r) => s + r.actualMicros, 0));
-    expect(allRuns.filter((r) => r.kind !== "strategy").length).toBe(2); // first win: posts + email
+    // This fixture selects neither social nor email. Retrying a plan must not
+    // create unrelated first-win work merely because those tools are available.
+    expect(allRuns.filter((r) => r.kind !== "strategy")).toEqual([]);
     expect(period.walletSpentMicros).toBeGreaterThanOrEqual(spentBefore);
     expect(checkInvariants(ledgerOf(period))).toEqual([]);
     // A finished run can't be retried.

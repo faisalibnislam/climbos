@@ -94,8 +94,8 @@ export const CREDIT_EXAMPLES: readonly { kind: string; label: string; basic: num
   {
     "kind": "strategy",
     "label": "Growth plan",
-    "basic": 122,
-    "expert": 122
+    "basic": 130,
+    "expert": 130
   },
   {
     "kind": "content_social",

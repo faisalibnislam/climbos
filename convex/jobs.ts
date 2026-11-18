@@ -776,7 +776,7 @@ function aiReferralSignalsLine(signal: JobCtx["aiReferralSignals"]): string {
   return `GA4 AI-ASSISTANT REFERRALS (${signal.from} through ${signal.to}; source-reported observations): ${rows.join("; ")}. This covers five recognized assistant source families and medium=referral only. Key events depend on owner GA4 settings. Sessions and events are not proof of qualified customers, revenue, or causation. Google Search AI visibility is measured separately in Search Console when that report is available.`;
 }
 
-function businessBrief(job: JobCtx, includeSpecialist = true): string {
+function businessBrief(job: JobCtx, includeSpecialist = true, forChannelCache = false): string {
   const b = job.business;
   const truth = [
     job.factsLimited ? "FACT COVERAGE: bounded sample, not complete business evidence. At most 200 recent records per active review state were read and 40 current plus 40 review-needed facts supplied. Omitted facts may change a conclusion or reveal a conflict; recheck material terms before dependent recommendations. Execution requires a separate current evidence check." : "",
@@ -807,7 +807,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
       ? `OWNER CHANNEL FEEDBACK (owner-reported preferences, not measured performance, customer demand or action permission):\n${untrusted("saved channel preferences", JSON.stringify(b.acquisition.channelPreferences.map(({ channelId, preference, rationale, evidenceDate }) => ({ channelId, channel: CHANNEL_BY_ID[channelId]?.name ?? channelId, preference, rationale, evidenceDate }))), 16_000)}\nDo not select dismissed or irrelevant channels for the immediate execution portfolio unless the owner clears that preference. Avoid, prefer and already_using are soft context, not proof of fit or permission. Preserve grounded, adjacent and bold exploration; a speculative alternative may explain what would justify reconsideration without selecting or executing the dismissed channel.`
       : "",
     customerProgressBrief(job.audience?.customerProgress),
-    emailAudienceBrief(job.audience, job.run.kind === "business_model_check" ? { startedAt: job.run.createdAt } : undefined),
+    emailAudienceBrief(job.audience, forChannelCache ? { cacheKey: true } : job.run.kind === "business_model_check" ? { startedAt: job.run.createdAt } : undefined),
     emailReadinessBrief(job.emailSenderReadiness),
     trustPostureContext(job.facts.map((f) => f.evidenceKind)),
     conflictsLine(job),
@@ -1547,7 +1547,9 @@ export const buildStrategy = internalAction({
       const channelBrief = businessBrief({ ...job, resultsText: job.channelResultsText });
       const channelInputHash = await sha256Hex(JSON.stringify({
         engine: ENGINE_VERSION,
-        brief: channelBrief,
+        // A query timestamp is not changed evidence. Keep the dated brief for the
+        // scorer; hash current counts, coverage and limitations without its clock.
+        brief: businessBrief({ ...job, resultsText: job.channelResultsText }, true, true),
         goalTarget: job.goal?.target ?? null,
         ownerTypes: job.business?.acquisition?.typesSource === "owner" ? job.business.acquisition.types : null,
         ownerDimensions: Object.entries((job.business?.acquisition?.dims ?? {}) as Record<string, { value: string; source: string }>).filter(([, value]) => value?.source === "owner"),

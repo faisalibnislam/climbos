@@ -74,7 +74,15 @@ export function hardCheck(output: unknown, lc: LintCase, ev: HardEvidence = {}):
   const out = (output ?? {}) as PlanOut;
   if (!Array.isArray(out.plays)) return { findings: [], rules: {}, skipped: "no plays (not a plays-based plan)" };
   const { plays: _plays, portfolioNote, economics, decision, researchSources, ...plan } = out;
-  const playsOut = { portfolioNote: portfolioNote ?? "", plays: out.plays, economics: economics ?? { revenuePerCustomerMonthUsd: 0, grossMargin: 0, monthlyChurn: 0, basis: "" }, ...(decision ? { decision } : {}) };
+  // Saved plans include calculator annotations added after model validation.
+  // Recheck the authored play, not labels such as the calculator's "12m" metric.
+  // This is not verification of saved calculations; those must be recomputed.
+  const authoredPlays = out.plays.map(play => {
+    if (!play || typeof play !== "object") return play;
+    const { sensitivity: _sensitivity, forecastUncertainty: _uncertainty, financialEvidence: _evidence, ...authored } = play as Record<string, unknown>;
+    return authored;
+  });
+  const playsOut = { portfolioNote: portfolioNote ?? "", plays: authoredPlays, economics: economics ?? { revenuePerCustomerMonthUsd: 0, grossMargin: 0, monthlyChurn: 0, basis: "" }, ...(decision ? { decision } : {}) };
   const sources = [...new Set([...(researchSources ?? []), ...(ev.sources ?? [])])];
   const scoreRows = isScoreRows(plan.channels) ? plan.channels : null;
   // An older saved output has no scorecard: the deterministic one plus the rows it kept (their scores).

@@ -43,12 +43,12 @@ describe("Haiku/Sonnet default policy", () => {
   });
   it("reserves room for the protected strategy portfolio and its reasoning in drafts and revisions", () => {
     const full = focusedStrategySpec();
-    expect(full.maxTokens.draft).toBe(24000);
+    expect(full.maxTokens.draft).toBe(32000);
     const quote = planJob("strategy", { planStyle: "focused" });
-    expect(quote.steps).toContainEqual(expect.objectContaining({ kind: "model", outputBudget: 24000 }));
-    expect(agentRevisionSteps({ ...full, lint: undefined })[0]).toMatchObject({ kind: "model", outputBudget: 24000 });
-    expect(full.maxTokens.critic).toBe(6000);
-    expect(full.maxRevisions).toBe(1);
+    expect(quote.steps).toContainEqual(expect.objectContaining({ kind: "model", outputBudget: 32000 }));
+    expect(agentRevisionSteps({ ...full, lint: undefined })[0]).toMatchObject({ kind: "model", outputBudget: 32000 });
+    expect(full.maxTokens.critic).toBe(16000);
+    expect(full.maxRevisions).toBe(2);
     const starter = starterStrategySpec();
     expect(starter.maxTokens.draft).toBe(11000);
     expect(starter.thinkingOff?.draft).toBe(true);

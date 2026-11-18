@@ -66,12 +66,13 @@ describe("channel evidence reuse", () => {
     expect(third.plan.acquisition?.inputHash).toBe(second.plan.acquisition?.inputHash);
   });
 
-  it.each(["economics", "preference", "feedback", "research", "expiry"] as const)("re-scores changed %s", async change => {
+  it.each(["economics", "preference", "feedback", "research", "audience", "expiry"] as const)("re-scores changed %s", async change => {
     const f = await seed(); const first = await f.generate();
     if (change === "economics") await f.t.run(async ctx => { const b = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", f.orgId)).first())!; await ctx.db.patch(b._id, { unitEconomics: { ...b.unitEconomics, grossMargin: 0, updatedAt: Date.now() } }); });
     if (change === "preference") await f.owner.client.mutation(api.acquisition.setChannelPreference, { slug: f.slug, channelId: "M10", preference: "irrelevant", rationale: "Our customers do not use this launch community." });
     if (change === "feedback") await f.t.run(ctx => ctx.db.insert("ownerFeedback", { orgId: f.orgId, strategyId: first.plan._id, subjectKind: "channel", subjectKey: "M10", subjectLabel: "Launch community", reason: "not_relevant", note: "Our audience is elsewhere", createdBy: f.owner.userId, createdAt: Date.now() }));
     if (change === "research") observed.researchSuffix = "New source observation: audience use is uncertain; validate first.";
+    if (change === "audience") await f.t.run(ctx => ctx.db.insert("contacts", { orgId: f.orgId, emailHash: "cache-audience-fixture", emailDomain: "example.com", source: "csv_import", segments: [], createdAt: Date.now() }));
     if (change === "expiry") { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(Date.now() + 7 * 3600000); }
     const next = await f.generate();
     expect(next.scoring.length).toBeGreaterThan(0);

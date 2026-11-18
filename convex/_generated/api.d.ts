@@ -105,6 +105,7 @@ import type * as lib_emailReadiness from "../lib/emailReadiness.js";
 import type * as lib_emailTemplates from "../lib/emailTemplates.js";
 import type * as lib_estimate from "../lib/estimate.js";
 import type * as lib_experimentMeasurement from "../lib/experimentMeasurement.js";
+import type * as lib_focusedResearch from "../lib/focusedResearch.js";
 import type * as lib_goals from "../lib/goals.js";
 import type * as lib_jobPlans from "../lib/jobPlans.js";
 import type * as lib_landingVersions from "../lib/landingVersions.js";
@@ -284,6 +285,7 @@ declare const fullApi: ApiFromModules<{
   "lib/emailTemplates": typeof lib_emailTemplates;
   "lib/estimate": typeof lib_estimate;
   "lib/experimentMeasurement": typeof lib_experimentMeasurement;
+  "lib/focusedResearch": typeof lib_focusedResearch;
   "lib/goals": typeof lib_goals;
   "lib/jobPlans": typeof lib_jobPlans;
   "lib/landingVersions": typeof lib_landingVersions;

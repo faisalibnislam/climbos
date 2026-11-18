@@ -1,5 +1,9 @@
 ## 18 November — retain only bound evidence in later repairs
 
+## 18 November 2026 — offline strategy replay and full-suite findings
+
+[Audit and exact commands](growth-engine/offline-acceptance-audit-2026-11-18.md): 47 focused regression tests and 366 strategy/permission checks passed (overlap is not added). App/Convex typechecks, changed-file ESLint and diff checks passed. Replayed 84 saved records without paid calls: 8 current contract passes, 16 lint failures, 22 obsolete-schema failures, 38 missing-context records. None establishes fresh model quality. Fixed audience-clock cache misses, an outdated owner credit estimate and benchmark treatment of calculator annotations. Desktop/mobile checks and complete requirements reconciliation continue separately. Runtime model and paid-test pause are unchanged.
+
 V3.210 preserves earlier validated product-plan and measurement findings while excluding misquoted or source-unbound review claims from repair history. Earlier judgments remain fallible context; final review stays independent. **264 tests**, types and lint passed. This closes the locally reproduced defects in this pass, without claiming fresh Livoform strategy acceptance. Paid calls remain paused and runtime models unchanged. [Audit and commands](growth-engine/focused-evidence-review-audit.md).
 
 ## 18 November — deliver worked strategy reasoning contrasts
