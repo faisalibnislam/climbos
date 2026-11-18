@@ -1,3 +1,4 @@
+import { focusedOriginalityFixture } from "../fixtures/focusedOriginality";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { runAgent, type AgentDeps } from "../../shared/agents/runtime";
@@ -15,6 +16,7 @@ function review(summary: string, errors: number, score: number, failedGate?: str
     gates: base.rubric.gates.map(gate => ({ id: gate.id, pass: gate.id !== failedGate, note: "Synthetic review" })),
     scores: [...base.rubric.criteria.map(criterion => criterion.id), "XV"].map(id => ({ id, score, note: "Synthetic quality", fix: "Correct the unsupported claim." })),
     strengths: ["Keep the improved reasoning."], fixes: ["Correct the remaining claim."],
+    originalityAudit: focusedOriginalityFixture,
     evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map((category, index) => ({
       category, basis: "Synthetic evidence", claims: index === 0 ? Array.from({ length: errors }, (_, i) => ({
         path: malformed ? "missingField" : "summary", quote: summary, verdict: "unsupported", basis: `Missing evidence ${i}.`, correction: "Qualify the claim.",

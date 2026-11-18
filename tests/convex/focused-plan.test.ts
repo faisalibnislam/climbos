@@ -7,7 +7,7 @@ import { offerAssessmentFixture, offerFact } from "../fixtures/offerAssessment";
 import { approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import type { TurnRequest } from "../../shared/ai/types";
 import type { RateVersion } from "../../shared/economics/rates";
-const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], reviewScores: "", failTruth: false, unsupportedStateClaim: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", explorationReference: "", dismissedChannel: false, emailMode: "", competingFirstActions: false, competingChecklist: false }));
+const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], reviewScores: "", familiarBold: false, failTruth: false, unsupportedStateClaim: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", explorationReference: "", dismissedChannel: false, emailMode: "", competingFirstActions: false, competingChecklist: false }));
 vi.mock("../../shared/ai/turn", async original => ({
   ...await original<typeof import("../../shared/ai/turn")>(),
   modelTurn: async (req: TurnRequest, rates: RateVersion) => {
@@ -71,6 +71,9 @@ vi.mock("../../shared/ai/turn", async original => ({
       const audit = (result.output as import("../../shared/agents/types").CritiqueResult).evidenceAudit!;
       audit.find(row => row.category === "business_state")!.claims = [{ path: "strategicDirection.whyThisBusiness", quote: "The business has no audience.", verdict: "unsupported", basis: "A traffic report does not establish absence of contacts or followers.", correction: "Keep audience availability unknown." }];
     }
+    if (result.ok && state.familiarBold && typeof result.output === "object" && result.output && "originalityAudit" in result.output) {
+      (result.output as import("../../shared/agents/types").CritiqueResult).originalityAudit!.mechanismVerdict = "familiar_mechanism";
+    }
     if (result.ok && state.reviewScores && typeof result.output === "object" && result.output && "scores" in result.output) {
       const review = result.output as { scores: { id: string; score: number; note: string; fix: string }[] };
       review.scores.forEach(score => { score.score = 3.5; });
@@ -79,7 +82,7 @@ vi.mock("../../shared/ai/turn", async original => ({
     return result;
   },
 }));
-afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.reviewScores = ""; state.failTruth = false; state.unsupportedStateClaim = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.explorationReference = ""; state.dismissedChannel = false; state.emailMode = ""; state.competingFirstActions = false; state.competingChecklist = false; });
+afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.reviewScores = ""; state.familiarBold = false; state.failTruth = false; state.unsupportedStateClaim = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.explorationReference = ""; state.dismissedChannel = false; state.emailMode = ""; state.competingFirstActions = false; state.competingChecklist = false; });
 
 async function workspace() {
   const t = setup(); delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE;
@@ -720,6 +723,22 @@ it("persists semantic evidence failures and blocks approval and action even when
   expect(plan.expert?.quality?.fixes).toContainEqual(expect.objectContaining({ rule: "invented_fact", path: "strategicDirection.whyThisBusiness" }));
   const revision = state.requests.find(req => JSON.stringify(req.messages).includes("A senior reviewer assessed your draft"));
   expect(JSON.stringify(revision?.messages)).toContain("Keep audience availability unknown.");
+  await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
+  await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: plan._id, playId: "focused" })).rejects.toThrow();
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
+
+
+it("persists a contradictory originality review and blocks approval without lowering its reported scores", async () => {
+  const { t, owner, slug, orgId } = await workspace(); state.familiarBold = true;
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(plan.expert?.quality?.state).toBe("failed");
+  expect(plan.expert?.quality?.agents[0].average).toBe(5);
+  expect(plan.expert?.quality?.fixes).toContainEqual(expect.objectContaining({ rule: "review_scores", path: "review.originalityAudit" }));
+  const revision = state.requests.find(req => JSON.stringify(req.messages).includes("A senior reviewer assessed your draft"));
+  expect(JSON.stringify(revision?.messages)).toContain("A better test or presentation cannot make an unchanged familiar mechanism original");
   await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
   await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: plan._id, playId: "focused" })).rejects.toThrow();
   expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);

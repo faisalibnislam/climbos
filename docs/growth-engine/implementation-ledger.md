@@ -1,3 +1,7 @@
+## 18 November — structured bold-mechanism comparison
+
+V3.179 requires the existing reviewer to compare the bold mechanism with its closest familiar practice and rejects a passing score paired with a familiar/unexplained verdict. Uncertainty and missing precedent do not disqualify novelty. 176 focused tests passed; after adding the actual approval-rejection regression, 97 application/permission tests passed. Types/lint passed. Same runtime model and numeric thresholds; semantic effect awaits a fresh paid run. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — retain the bounded repair when factual errors decrease
 
 `v3.178-bounded-evidence-repair`: allow productive factual repair under intact non-truth gates and unchanged revision/reservation limits; never accept failed work. 161 tests, types/lint passed. Docs V3 failed honestly; cumulative $80.343311 / $100. [Audit](focused-evidence-review-audit.md).

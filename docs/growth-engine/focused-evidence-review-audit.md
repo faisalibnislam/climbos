@@ -1,6 +1,20 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — preserve productive bounded evidence repair
+## Current status — inspect the bold mechanism before scoring originality
+
+V3.179 closes the review inconsistency observed in docs V3: its critic called the bold approval gate familiar but still gave originality a passing score, partly crediting the adjacent option. The existing critic call now returns a structured comparison of the **bold** mechanism with its closest familiar practice: consequential difference, mechanism classification and a test of that difference. A passing F7 score paired with `familiar_mechanism` or `unclear_difference` is a review-integrity failure; scores and original provider responses are never rewritten. Missing or malformed required comparisons also fail. Existing numeric rubric thresholds, model, call/revision limits and spending controls are unchanged.
+
+The comparison explicitly separates novelty from evidence, fit, feasibility, risk and upside. An unprecedented, unbuilt or uncertain mechanism can be classified as materially different without a case study or immediate implementation plan. Improving a test cannot make an unchanged conventional mechanism original, and a distinctive adjacent idea cannot substitute for the protected bold option. This is model judgment with deterministic consistency checks, not verified worldwide originality or proof the strategy will work.
+
+The actual application regression stores a failed plan even when every reported score is 5, delivers the correction to the existing repair, and rejects plan approval/start without creating an action receipt. Historical reviews remain untouched; new reviews must supply the new comparison. Synthetic provider fixtures are explicitly labelled as fixtures, not semantic validation. **176 tests in 11 files passed (16.96 seconds)** before adding that application regression; **97 tests in three permission/application files then passed (16.44 seconds)** including the new rejection path. App/Convex types and changed-file lint passed. The separate docs V4 paid run already loaded v3.178 and cannot measure this new contract.
+
+```sh
+pnpm exec vitest run tests/unit/focused-originality-review.test.ts tests/unit/focused-evidence-repair.test.ts tests/unit/focused-length-repair.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/creative-preparation.test.ts tests/unit/agent-escalation.test.ts tests/unit/anthropic-budget.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm exec vitest run tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+## V3.178 — preserve productive bounded evidence repair
 
 `launch-docs-v3-20261118` (v3.177, source hash `49a7d69bebbb5ae0bc90fcb29d02c5ba247d9adfe16a77a32441a970d30169f1`) cost **$1.011812 across five calls**. Reviews progressed **3.38 / two factual errors → 3.75 / one factual error**. The second reviewer correctly kept paid access and actual product use distinct, and the revised private brief contained a concrete conditional access-research route. But it still contradicted plan eligibility by saying Livoform earns *only* when the buyer picks Core, despite Pro/Business including Core. The bold approval-gate idea also remained familiar; a 4/5 originality score is not accepted as proof of originality. Combined charged/held is **$80.343311 / $100**. Tester access, founder time, costs and real outcomes remain unknown.
 

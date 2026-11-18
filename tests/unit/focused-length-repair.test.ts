@@ -1,3 +1,4 @@
+import { focusedOriginalityFixture } from "../fixtures/focusedOriginality";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { runAgent, type AgentDeps } from "../../shared/agents/runtime";
@@ -16,6 +17,7 @@ function review(stage: "original" | "revised" | "repaired", improve = true, trut
       score: stage === "repaired" ? 4 : id === "F7" ? stage === "original" || !improve ? 3 : 4 : id === "F3" ? stage === "revised" && improve ? 3 : 4 : 4,
       note: "Synthetic strategy and length tradeoff", fix: "Retain strategic improvement and shorten the draft." })),
     strengths: ["Retain the improved mechanism."], fixes: ["Shorten preparedWork[0].draft without deleting its substance."],
+    originalityAudit: focusedOriginalityFixture,
     evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map(category => ({ category, basis: "Synthetic fixture", claims: [] })),
   };
 }

@@ -2,7 +2,7 @@ import { boundedPageReads } from "./provenance";
 import { diagnosisBrief } from "./diagnosis";
 import { CreativePreparationSchema, CREATIVE_PREPARATION_TASK, CREATIVE_PREPARATION_TOKENS } from "./creativePreparation";
 import { focusedSectionRevisionSchema, mergeFocusedSections, projectFocusedFirstStep } from "./focusedPlan";
-import { FOCUSED_REVIEW_ID, FOCUSED_EVIDENCE_REVIEW, FOCUSED_DECISION_REVIEW, FocusedEvidenceAuditSchema, lintFocusedEvidenceAudit, focusedRevisionCriteria, resolveFocusedEvidencePaths } from "./focusedReview";
+import { FOCUSED_REVIEW_ID, FOCUSED_EVIDENCE_REVIEW, FOCUSED_DECISION_REVIEW, FOCUSED_ORIGINALITY_REVIEW, FocusedEvidenceAuditSchema, FocusedOriginalityAuditSchema, lintFocusedEvidenceAudit, lintFocusedOriginalityAudit, focusedRevisionCriteria, resolveFocusedEvidencePaths } from "./focusedReview";
 import { OWNER_LANGUAGE_RULES } from "./ownerLanguage";
 import { fitJson, fitText, reportDropped } from "./context";
 import { z } from "zod";
@@ -126,7 +126,7 @@ export const CritiqueSchema = z.object({
   }),
 });
 
-export const FocusedCritiqueSchema = CritiqueSchema.extend({ evidenceAudit: FocusedEvidenceAuditSchema });
+export const FocusedCritiqueSchema = CritiqueSchema.extend({ evidenceAudit: FocusedEvidenceAuditSchema, originalityAudit: FocusedOriginalityAuditSchema });
 
 export const CRITIC_RULES = `You are a demanding senior reviewer (the kind agencies hire to say no). You judge marketing work for a small business against a rubric. You did not write it and you don't soften scores.
 
@@ -181,7 +181,7 @@ function withVerdict(r: Rubric): Rubric {
 export function assess(critique: CritiqueResult, lint: LintIssue[], baseRubric: Rubric, output?: unknown): Assessment {
   if (baseRubric.id === FOCUSED_REVIEW_ID) critique = resolveFocusedEvidencePaths(critique, output);
   const rubric = withVerdict(baseRubric);
-  const reviewIssues: LintIssue[] = baseRubric.id === FOCUSED_REVIEW_ID ? lintFocusedEvidenceAudit(critique.evidenceAudit, output) : [];
+  const reviewIssues: LintIssue[] = baseRubric.id === FOCUSED_REVIEW_ID ? [...lintFocusedEvidenceAudit(critique.evidenceAudit, output), ...lintFocusedOriginalityAudit(critique, baseRubric)] : [];
   const scores = rubric.criteria.map((criterion) => {
     const entries = critique.scores.filter((entry) => entry.id === criterion.id);
     if (entries.length !== 1 || !Number.isFinite(entries[0].score) || entries[0].score < 1 || entries[0].score > 5) {
@@ -468,7 +468,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
       const rubricExtra = (spec.criticSkills ?? spec.skills).map((id) => skillRubricText(id)).filter(Boolean).join("\n\n");
       const result = await deps.turn({
         modelKey: spec.models.critic,
-        system: [{ text: CRITIC_RULES }, { text: `${rubricText(withVerdict(spec.rubric))}${spec.rubric.id === FOCUSED_REVIEW_ID ? `\n\n${FOCUSED_EVIDENCE_REVIEW}\n\n${FOCUSED_DECISION_REVIEW}` : ""}${rubricExtra ? `\n\nSPECIALIST CHECKLISTS:\n${rubricExtra}` : ""}`, cache: true }],
+        system: [{ text: CRITIC_RULES }, { text: `${rubricText(withVerdict(spec.rubric))}${spec.rubric.id === FOCUSED_REVIEW_ID ? `\n\n${FOCUSED_EVIDENCE_REVIEW}\n\n${FOCUSED_DECISION_REVIEW}\n\n${FOCUSED_ORIGINALITY_REVIEW}` : ""}${rubricExtra ? `\n\nSPECIALIST CHECKLISTS:\n${rubricExtra}` : ""}`, cache: true }],
         messages: [
           {
             role: "user",

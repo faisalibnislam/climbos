@@ -1,3 +1,4 @@
+import { focusedOriginalityFixture } from "../fixtures/focusedOriginality";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { runAgent, type AgentDeps, type PhaseRecord } from "../../shared/agents/runtime";
@@ -11,6 +12,7 @@ const review = (score: number) => ({
   gates: [{ id: "truth", pass: true, note: "Synthetic judgment only" }],
   scores: ["useful", "XV"].map(id => ({ id, score, note: "Correct the summary, preserve the example.", fix: score < 4 ? "Keep audience availability unknown." : "none" })),
   strengths: ["Keep the complete prepared example."], fixes: score < 4 ? ["Correct the summary only."] : [],
+  originalityAudit: focusedOriginalityFixture,
   evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map(category => ({ category, basis: "Synthetic fixture, no real business evidence", claims: [] })),
 });
 const spec = { ...focusedStrategySpec({ maxRevisions: 1 }), creativePreparation: false, sectionRevisions: true, schema, lint: undefined,

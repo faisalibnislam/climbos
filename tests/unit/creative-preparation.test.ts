@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { focusedOriginalityFixture } from "../fixtures/focusedOriginality";
 import { z } from "zod";
 import { CreativePreparationSchema, CREATIVE_PREPARATION_TOKENS } from "../../shared/agents/creativePreparation";
 import { runAgent, type AgentDeps, type PhaseKey } from "../../shared/agents/runtime";
@@ -52,6 +53,12 @@ describe("creative preparation within the existing focused run", () => {
     expect(critic).toContain("Payment can legitimately precede activation");
     expect(critic).toContain("A sample walkthrough supports comprehension or job-fit learning only");
     expect(critic).toContain("Preserve prepared assets and useful alternative mechanisms");
+    expect(critic).toContain("FOCUSED ORIGINALITY AUDIT:");
+    expect(critic).toContain("A distinctive adjacent option does not compensate for a conventional bold one");
+    expect(critic).toContain("not whether it is proven");
+    const completeReview = { ...review, escalation: { reason: "none", evidence: "" }, originalityAudit: focusedOriginalityFixture };
+    expect(requests[2].schema?.safeParse(completeReview).success).toBe(true);
+    expect(requests[2].schema?.safeParse({ ...completeReview, originalityAudit: undefined }).success).toBe(false);
   });
   it("reviews and checkpoints one canonical next step without changing the raw response or later work", async () => {
     const original = focusedPlanFixture();

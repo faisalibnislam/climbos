@@ -1,3 +1,7 @@
+## 18 November 2026 — reject contradictory originality reviews
+
+V3.179 requires the existing reviewer to compare the bold mechanism with its closest familiar practice and rejects a passing score paired with a familiar/unexplained verdict. Uncertainty and missing precedent do not disqualify novelty. 176 focused tests passed; after adding the actual approval-rejection regression, 97 application/permission tests passed. Types/lint passed. Same runtime model and numeric thresholds; semantic effect awaits a fresh paid run. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November 2026 — bounded repair of decreasing factual errors
 
 V3.178 separates fallback selection from whether one remaining reserved repair can help. 161 tests in nine files, app/Convex types, lint and diff checks passed. Docs V3 still failed: factual errors decreased but one plan-eligibility contradiction remained; its originality score was also overly generous. Combined charged/held **$80.343311 / $100**. [Audit](growth-engine/focused-evidence-review-audit.md).

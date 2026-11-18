@@ -108,6 +108,12 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
       fixes: pass ? [] : ["Make it specific"],
       escalation: { reason: "none", evidence: "" },
       ...(system.includes("FOCUSED EVIDENCE AUDIT:") ? { evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map(category => ({ category, basis: "Synthetic review fixture only; no real semantic verification.", claims: [] })) } : {}),
+      ...(system.includes("FOCUSED ORIGINALITY AUDIT:") ? { originalityAudit: {
+        closestFamiliarAlternative: "Synthetic conventional alternative; not an actual strategy judgment.",
+        consequentialDifference: "Synthetic changed exchange; not evidence of real originality.",
+        mechanismVerdict: "material_difference",
+        testOfDifference: "Synthetic comparison only; no real experiment has run.",
+      } } : {}),
     };
   } else {
     const marker = lastUser.includes("A senior reviewer assessed your draft") ? "fake-v2" : "fake-v1";
