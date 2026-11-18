@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { focusedOriginalityFixture } from "../fixtures/focusedOriginality";
 import { z } from "zod";
 import { CreativePreparationSchema, CREATIVE_PREPARATION_TOKENS, CreativeFeedbackSchema, CREATIVE_FEEDBACK_TOKENS, creativeFeedbackMatches } from "../../shared/agents/creativePreparation";
-import { runAgent, type AgentDeps, type PhaseKey } from "../../shared/agents/runtime";
+import { runAgent, lintAgentOutput, type AgentDeps, type PhaseKey } from "../../shared/agents/runtime";
 import { focusedStrategySpec, starterStrategySpec } from "../../shared/agents/specs";
 import { agentSteps } from "../../convex/lib/jobPlans";
 import { ZERO_USAGE, type TurnRequest } from "../../shared/ai/types";
@@ -30,6 +30,90 @@ const spec = () => ({ ...focusedStrategySpec({ maxRevisions: 0 }), schema: z.obj
 });
 
 describe("creative preparation within the existing focused run", () => {
+  it.each(["supplied", "fresh", "checkpoint"])("retains saved research restrictions through every creative phase (%s)", async mode => {
+    const restriction = "Source-reported restriction: the Core plan excludes AI brief drafting; Pro eligibility is untested.";
+    const notes = "Source-reported background; no measured demand.\n".repeat(720) + restriction;
+    expect(notes.length).toBeGreaterThan(30_000); expect(notes.length).toBeLessThan(40_000);
+    const research = { notes, sources: [{ url: "https://example.com/plans", title: "Published plan restrictions" }], retrievedAt: Date.now() - 1000 };
+    const requests: TurnRequest[] = [];
+    const result = await runAgent(spec(), { brief: "Synthetic eligibility test", task: "Prepare possibilities", facts: [],
+      ...(mode === "supplied" ? { precomputedResearch: research } : { research: { maxSearches: 1, maxFetches: 1, brief: "Check eligibility" } }),
+    }, {
+      phase: async (key, _label, fn) => mode === "checkpoint" && key.index === 0 ? research as never : (await fn()).value,
+      turn: async req => {
+        requests.push(req);
+        const output = !req.schema ? notes : req.schema === CreativePreparationSchema ? seeds : req.schema === CreativeFeedbackSchema ? feedback : req.system.some(s => s.text.includes("HARD GATES")) ? review : draft;
+        return { ok: true, output, text: typeof output === "string" ? output : JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: research.sources, actualModelId: "fixture", stopReason: "end_turn" };
+      },
+    });
+    const downstream = requests.filter(req => req.schema);
+    expect(downstream).toHaveLength(4);
+    expect(downstream.map(req => req.modelKey)).toEqual([spec().models.draft, spec().models.critic, spec().models.draft, spec().models.critic]);
+    expect(downstream.every(req => !req.customTools && !req.webSearch && !req.webFetch)).toBe(true);
+    for (const req of downstream) expect(JSON.stringify(req.messages)).toContain(restriction);
+    expect(result.research?.notes).toBe(notes);
+    expect(result.research?.sources).toEqual(research.sources);
+    if (mode !== "fresh") expect(result.research?.retrievedAt).toBe(research.retrievedAt);
+  });
+
+  it("uses the same visibly bounded research for drafting, review and deterministic validation", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const notes = "Supplied source excerpt; no commercial outcome.\n".repeat(1000) + "UNSEEN_TAIL: measured 987654 customers.";
+      const research = { notes, sources: [{ url: "https://example.com/plans" }], retrievedAt: Date.now() - 1000 };
+      const requests: TurnRequest[] = [], lintContexts: import("../../shared/agents/types").AgentInput[] = [];
+      const result = await runAgent({ ...spec(), creativePreparation: false, lint: (_out, input) => { lintContexts.push(input); return []; } },
+        { brief: "Synthetic research bound", task: "Prepare a draft", facts: [], precomputedResearch: research }, {
+          phase: async (_key, _label, fn) => (await fn()).value,
+          turn: async req => {
+            requests.push(req); const output = req.system.some(s => s.text.includes("HARD GATES")) ? review : draft;
+            return { ok: true, output, text: JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" };
+          },
+        });
+      expect(result.research?.notes.length).toBeLessThanOrEqual(40_000);
+      expect(result.research?.notes).toContain("more characters not shown");
+      expect(result.research?.notes).not.toContain("UNSEEN_TAIL");
+      for (const req of requests) {
+        expect(JSON.stringify(req.messages)).toContain("more characters not shown");
+        expect(JSON.stringify(req.messages)).not.toContain("UNSEEN_TAIL");
+      }
+      expect(lintContexts.length).toBeGreaterThan(0);
+      lintAgentOutput({ ...spec(), lint: (_out, input) => { lintContexts.push(input); return []; } },
+        { brief: "Same saved evidence", task: "Offline check", facts: [], precomputedResearch: research }, draft);
+      for (const input of lintContexts) {
+        expect(input.precomputedResearch?.notes).toBe(result.research?.notes);
+        expect(input.untrustedContext).not.toContain("UNSEEN_TAIL");
+      }
+      expect(research.notes).toBe(notes);
+      expect(result.research?.retrievedAt).toBe(research.retrievedAt);
+      expect(requests).toHaveLength(2);
+    } finally { warn.mockRestore(); }
+  });
+
+  it("omits oversized source records visibly without shortening their restrictions or losing later sources", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const oversized = { url: "https://example.com/long-policy", title: "Published policy", productPitchPolicy: { status: "refused" as const, evidence: "A complete policy qualification. ".repeat(500) } };
+      const retained = { url: "https://example.com/plans", title: "Plans", pageReportedDates: [{ kind: "updated" as const, date: "2026-11-18", source: "meta" as const }], productPitchPolicy: { status: "refused" as const, evidence: "No product pitches." } };
+      const sources = [oversized, retained], requests: TurnRequest[] = [];
+      await runAgent({ ...spec(), creativePreparation: false }, { brief: "Synthetic", task: "Draft", facts: [], precomputedResearch: { notes: "Source entries are not inspected page evidence.", sources } }, {
+        phase: async (_key, _label, fn) => (await fn()).value,
+        turn: async req => {
+          requests.push(req); const output = req.system.some(s => s.text.includes("HARD GATES")) ? review : draft;
+          return { ok: true, output, text: JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" };
+        },
+      });
+      for (const req of requests) {
+        const body = String(req.messages[0].content);
+        const packet = body.match(/<untrusted_content source="(?:research source index|reviewer source index)">\n([\s\S]*?)\n<\/untrusted_content>/)?.[1];
+        expect(JSON.parse(packet!)).toEqual([retained]);
+        expect(body).toContain("1 complete source record omitted");
+        expect(body).not.toContain(oversized.url);
+      }
+      expect(sources).toEqual([oversized, retained]);
+    } finally { warn.mockRestore(); }
+  });
+
   it.each([false, true])("keeps every bounded candidate and the complete developed direction past the old cutoff (checkpoint=%s)", async cached => {
     const fill = (prefix: string, max: number) => prefix + "x".repeat(max - prefix.length);
     const marker = "END_OF_SYNTHETIC_DEVELOPED_SOURCE";

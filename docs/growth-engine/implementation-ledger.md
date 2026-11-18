@@ -1,3 +1,7 @@
+## 18 November — preserve research restrictions and source integrity
+
+V3.204 removes the silent 30,000-character cut from research retained up to 40,000 characters. All strategy stages and deterministic checks use the same bounded notes. Source-index records remain whole, with visible omissions instead of shortened URLs, dates or policy quotes. **166 tests**, types and lint passed. Saved Livoform outputs were replayed locally, with no new semantic pass claimed. Paid ledgers remain $99.063401 used/held; paid tests stay paused and runtime models stay unchanged. [Audit, replay and commands](focused-evidence-review-audit.md).
+
 ## 18 November — reject numeric fragments as source support
 
 V3.203 fixes reproduced substring matches such as an invented $29 price being accepted against $129. Complete decimal values now match without rounding, and corpus IDs cannot supply quantities. The mocked strategy path persists failure and denies approval/start despite passing AI scores. **258 tests**, types and lint passed. Numeric presence does not establish semantic claim support. Paid tests remain paused and the runtime model is unchanged. [Audit and commands](focused-evidence-review-audit.md).

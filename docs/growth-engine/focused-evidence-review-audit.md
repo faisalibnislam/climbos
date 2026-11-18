@@ -1,5 +1,23 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.204 — preserve research restrictions and complete source records
+
+Five local regressions reproduced further evidence-delivery gaps. Saved research allowed 40,000 characters, but every downstream model phase silently cut it at 30,000. A later product-plan restriction disappeared in fresh, supplied and checkpointed runs. Oversized supplied notes were also available to deterministic validation after being hidden from the writer/reviewer. Separately, the generic source-index fitter shortened policy evidence inside a retained source while discarding a later, smaller source without an owner/model-visible omission notice.
+
+The runtime now uses the existing 40,000-character research ceiling consistently through exploration, candidate feedback, drafting, review and local validation. Longer supplied notes are bounded once with a visible omission marker; original inputs/checkpoints remain unchanged, and retrieval times are preserved rather than refreshed. Source indexes retain complete records within the existing 12,000-character/60-candidate bound. Oversized records are omitted explicitly, later fitting records survive, and retained URLs, policy evidence and publication/update metadata are not shortened. The full saved source set remains available to existing provenance and permission checks; omission is never permission.
+
+**166 tests in 11 files passed (10.92 seconds)**. App/Convex typechecks, changed-file ESLint and diff checks passed. All provider calls in these tests are local doubles. No runtime model, phase count, output allowance, budget guard or authorization control changed. Research between 30,000 and 40,000 characters now uses more input tokens than a silently clipped record; existing reservations and call limits still apply.
+
+```sh
+pnpm exec vitest run tests/unit/creative-preparation.test.ts tests/unit/research-cache.test.ts tests/unit/focused-research-notes.test.ts tests/unit/focused-evidence-repair.test.ts tests/unit/strategy-prompt-cost.test.ts tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts tests/convex/research-cache.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+pnpm exec eslint shared/agents/runtime.ts shared/agents/specs.ts tests/unit/creative-preparation.test.ts
+```
+
+A read-only local replay also checked both saved Livoform outputs with the current schema and `lintAgentOutput`, without loading a provider. Both schemas pass. The agency draft still fails two deterministic numeric-copy checks; the older comparison V5 draft has no current deterministic errors, but its saved 3.81/5 review remains failed. Neither result is a newly generated or newly reviewed strategy. The agency test used only 14,684 research characters, so the long-context defect is **not claimed as the cause** of its wrong plan-eligibility reasoning.
+
+Paid ledgers remain **$99.063401 used/held of $100**. Paid tests remain paused; tester access and founder time remain unknown. The remaining originality, product-tier interpretation, activation-test usefulness and reviewer consistency gaps are semantic and cannot be declared resolved by these local checks. No new real business evidence, deployment, customer contact or live action occurred.
+
 ## V3.203 — reject numeric fragments as evidence
 
 Six local regressions reproduced numeric-presence errors: a public price such as $29 could pass because a source contained $129 or $29.99, percentages/counts could match parts of larger values, and precedent IDs could supply apparent quantities. Equivalent decimal formatting was also rejected. The existing copy validator now compares complete decimal tokens without floating-point rounding; corpus IDs are excluded on both sides. No new model call, route, threshold or authorization is introduced. Existing local fictional-example labels and planning assumptions remain distinct from public factual claims.
