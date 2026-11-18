@@ -1,3 +1,7 @@
+## 18 November — bounded length correction with reviewed fallback
+
+`v3.171-bounded-length-repair`: narrowly allow the already-budgeted second repair when improved strategy introduces only prepared-draft length errors. Preserve clean best output, all safety gates and fresh full review. 167 tests, types/lint and read-only V16 replay passed. Paid effect pending; V17 retains its loaded v3.170 snapshot. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — dependency-sized focused milestones
 
 `v3.170-dependent-milestones`: reuse adaptive chronology checks for a fixed focused review horizon, allowing 2–4 actual dependency stages without moving the deadline. Detailed cycles and campaign-timing prompt unchanged. 151 tests, types/lint pass. V16 retained its honest failed result at 3.63; combined charged/held $74.397519 / $100. [Audit](focused-evidence-review-audit.md).

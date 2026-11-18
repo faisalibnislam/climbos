@@ -207,6 +207,17 @@ function rank(a: Assessment): number {
   return (a.ship ? 10_000 : 0) + (a.gatesPassed ? 1000 : 0) - a.lint.filter((l) => l.severity === "error").length * 50 + a.average * 10 + a.minimum;
 }
 
+/** A better strategic revision can exceed a draft length bound. Keep the clean fallback,
+ * but allow its already-budgeted remaining repair; never waive the bound or the review. */
+function repairableFocusedLengthRegression(current: Assessment, best: Assessment): boolean {
+  const errors = current.lint.filter(issue => issue.severity === "error");
+  return current.gatesPassed && best.gatesPassed && !best.lint.some(issue => issue.severity === "error")
+    && errors.length > 0 && errors.every(issue => issue.rule === "word_cap" && /^preparedWork\[\d+\]\.draft$/.test(issue.path ?? ""))
+    && current.average >= best.average && current.minimum >= best.minimum
+    && current.critique.scores.some(score => ["F1", "F2", "F7"].includes(score.id)
+      && score.score > (best.critique.scores.find(prior => prior.id === score.id)?.score ?? 5));
+}
+
 export function draftSystem<T>(spec: AgentSpec<T>): SystemBlock[] {
   const playbooks = spec.skills.map((id) => skillPlaybook(id)).join("\n\n---\n\n");
   return [
@@ -518,8 +529,9 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     if (!best.assessment || rank(a) > rank(best.assessment)) best = { output: current, assessment: a, round };
     const shipped = spec.shipOn === "gates" ? a.gatesPassed && a.lint.every((l) => l.severity !== "error") : a.ship;
     if (shipped || round === reviews - 1) break;
-    // Stop early if the last revision didn't improve on the best.
-    if (round > 0 && best.round !== round) break;
+    // Preserve early stopping except for a strategically improved focused revision whose
+    // only new hard failure is draft length. The clean best remains the fallback.
+    if (round > 0 && best.round !== round && !(spec.sectionRevisions && spec.rubric.id === FOCUSED_REVIEW_ID && best.assessment && repairableFocusedLengthRegression(a, best.assessment))) break;
     checkDeadline(deps);
     const escalation = c.escalation && c.escalation.reason !== "none" && c.escalation.evidence.trim().length > 0 ? deps.escalationModel : undefined;
     const revisionModel = escalation ?? spec.models.revise ?? spec.models.draft;

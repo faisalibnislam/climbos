@@ -1,3 +1,7 @@
+## 18 November 2026 — recover a narrowly overlong improved revision
+
+V3.171 permits the existing remaining repair for a strategically improved full focused revision whose only hard failure is prepared-draft length. No bound, quality score, model or spending cap is relaxed. **167 tests passed**; types/lint passed. Zero-cost replay of V16 verifies budget refusal preserves the exact clean failed fallback. V17 is still evaluating the prior milestone change. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November 2026 — preserve the deadline, size steps to dependencies
 
 V3.170 permits 2–4 focused milestones within the same review horizon, using the existing chronological validator. **151 focused/permission tests passed**, types/lint passed. V16 stayed failed at 3.63; its five calls cost $0.973594. Combined used/held **$74.397519 / $100**. Tester access and founder time remain unknown by choice. [Audit](growth-engine/focused-evidence-review-audit.md).

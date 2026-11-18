@@ -1,6 +1,19 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — dependency-sized milestones and preserved V16 failure
+## Current status — bounded length repair, V17 still evaluating
+
+V3.171 addresses the second concrete V16 failure: a strategically improved revision exceeded the test-document bound by 32 characters and lost to the earlier failed draft. The runtime may now use its **already allowed and separately reserved remaining revision** only when a full focused-plan revision improves judgment, economics or originality, does not reduce the average/minimum score, passes all gates, and its only hard failures are prepared-draft length bounds. The prior clean draft remains the fallback. Truth, permission, schema, malformed-review and other hard failures do not receive this exception. No length limit, acceptance score, maximum call count, reservation or runtime model changes.
+
+Every repair is still independently reviewed as a complete plan. A refused reservation, failed final review or remaining error cannot become a pass. Seven new behavioral tests cover this narrow continuation, non-length failures, unchanged strategic quality, failed gates, non-section modes, refused budget and failed final review. **167 tests in 12 files passed (14.71 seconds)**; app/Convex typechecks, changed-file ESLint and diff checks passed.
+
+A read-only replay of V16's five saved responses, with no provider calls and a deliberately denied second reservation, confirms that the runtime now considers the remaining repair and still returns the identical clean failed original. Historical V16 records are untouched. V17 loaded v3.170 before this edit; it tests milestone sequencing separately and remains in progress. Paid effectiveness of the length-repair exception is not yet established.
+
+```sh
+pnpm exec vitest run tests/unit/focused-length-repair.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-plan.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/agent-escalation.test.ts tests/unit/creative-preparation.test.ts tests/unit/anthropic-budget.test.ts tests/unit/evaluation-budget.test.ts tests/unit/ai-qa-budget.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+## V3.170 — dependency-sized milestones and preserved V16 failure
 
 V16 (`launch-quality-v16-20261118`, engine v3.169, source hash `d0ba66c199984632db2c3ac941e249e0132dd737ed9877c5e1ed4f89ee96a54c`) finished below acceptance at **3.63/minimum 3**. Five calls cost **$0.973594**, bringing combined charged/held to **$74.397519 / $100**. Both reviews scored 3.63; the revision improved originality, judgment and paid-value scores but introduced a 2,432-character test brief against the existing 2,400-character limit and worsened simplicity. The runtime retained the earlier clean but failed draft and stopped its unproductive repair. This history is not relabelled as success.
 
