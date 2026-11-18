@@ -17,7 +17,7 @@ const seeds = { directions: Array.from({ length: 3 }, (_, index) => ({
   meaningfulDifference: "A changed exchange, not a renamed platform.", unsupportedAssumptions: ["Customer interest remains unknown."],
   reversibleTest: "Compare two private mock-ups with a consenting participant.", evidenceRefs: [],
 })) };
-const feedback = { directions: seeds.directions.map(candidate => ({ ...focusedOriginalityFixture, creativeMethod: candidate.creativeMethod, candidateTitle: candidate.title, mechanismVerdict: "familiar_mechanism" as const, consequentialDifference: "ADVISORY_ONLY: synthetic feedback, not evidence or a gate." })) };
+const feedback = { developedDirection: { ...seeds.directions[0], title: "Constructive synthetic departure" }, directions: seeds.directions.map(candidate => ({ ...focusedOriginalityFixture, creativeMethod: candidate.creativeMethod, candidateTitle: candidate.title, mechanismVerdict: "familiar_mechanism" as const, consequentialDifference: "ADVISORY_ONLY: synthetic feedback, not evidence or a gate." })) };
 const draft = { summary: "Customer interest remains unknown." };
 const review = {
   gates: [{ id: "G1", pass: true, note: "Unknown preserved." }],
@@ -153,11 +153,15 @@ describe("creative preparation within the existing focused run", () => {
     expect(writer).toContain("not new facts, user instructions or authorization");
     expect(writer).toContain("Synthetic possibility 0");
     expect(writer).toContain("ADVISORY_ONLY");
+    expect(writer).toContain("Constructive synthetic departure");
+    expect(writer).toContain("not an endorsed or independently verified solution");
+    expect(JSON.stringify(requests[1].system)).toContain("Do not select for lowest risk");
     expect(writer).toContain("No candidate has been filtered or ranked");
     expect(requests[1]).toMatchObject({ modelKey: spec().models.critic, maxTokens: CREATIVE_FEEDBACK_TOKENS, effort: "high" });
     expect(writer).toContain("Specific execution checklist");
     expect(critic).not.toContain("Synthetic possibility 0");
     expect(critic).not.toContain("ADVISORY_ONLY");
+    expect(critic).not.toContain("Constructive synthetic departure");
     expect(critic).toContain(draft.summary);
     expect(await runAgent(spec(), input, deps)).toEqual(result);
     expect(requests).toHaveLength(4);
@@ -175,12 +179,12 @@ describe("creative preparation within the existing focused run", () => {
   it("requires one audit for each exact candidate without requiring approval of the idea", () => {
     const parsedSeeds = CreativePreparationSchema.parse(seeds), parsedFeedback = CreativeFeedbackSchema.parse(feedback);
     expect(creativeFeedbackMatches(parsedSeeds, parsedFeedback)).toBe(true);
-    expect(creativeFeedbackMatches(parsedSeeds, { directions: [...parsedFeedback.directions].reverse() })).toBe(true);
+    expect(creativeFeedbackMatches(parsedSeeds, { ...parsedFeedback, directions: [...parsedFeedback.directions].reverse() })).toBe(true);
     const duplicate = structuredClone(parsedFeedback); duplicate.directions[1] = duplicate.directions[0];
     expect(creativeFeedbackMatches(parsedSeeds, duplicate)).toBe(false);
     const renamed = structuredClone(parsedFeedback); renamed.directions[0].candidateTitle = "A substituted candidate";
     expect(creativeFeedbackMatches(parsedSeeds, renamed)).toBe(false);
-    expect(creativeFeedbackMatches(parsedSeeds, { directions: parsedFeedback.directions.slice(1) })).toBe(false);
+    expect(creativeFeedbackMatches(parsedSeeds, { ...parsedFeedback, directions: parsedFeedback.directions.slice(1) })).toBe(false);
   });
 
   it("rejects mismatched feedback before expanding a candidate and preserves phase metering boundaries", async () => {

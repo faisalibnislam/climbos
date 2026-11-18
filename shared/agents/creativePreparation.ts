@@ -5,21 +5,22 @@ import { FocusedOriginalityAuditSchema } from "./focusedReview";
 export const CREATIVE_PREPARATION_TOKENS = 12_000;
 export const CREATIVE_FEEDBACK_TOKENS = 6_000;
 const CreativeMethodSchema = z.enum(["convention_inversion", "distant_transfer", "asset_recombination", "ownable_behavior"]);
+export const CreativeDirectionSchema = z.object({
+  creativeMethod: CreativeMethodSchema,
+  methodApplication: z.string().trim().min(20).max(600),
+  title: z.string().trim().min(3).max(120),
+  businessTension: z.string().trim().min(10).max(500),
+  mechanism: z.string().trim().min(10).max(700),
+  changedBehavior: z.string().trim().min(10).max(400),
+  whyParticipantsCare: z.string().trim().min(10).max(500),
+  closestFamiliarAlternative: z.string().trim().min(10).max(300),
+  meaningfulDifference: z.string().trim().min(10).max(500),
+  unsupportedAssumptions: z.array(z.string().trim().min(3).max(220)).max(5),
+  reversibleTest: z.string().trim().min(10).max(500),
+  evidenceRefs: z.array(z.string().trim().min(1).max(500)).max(5),
+});
 export const CreativePreparationSchema = z.object({
-  directions: z.array(z.object({
-    creativeMethod: CreativeMethodSchema,
-    methodApplication: z.string().trim().min(20).max(600),
-    title: z.string().trim().min(3).max(120),
-    businessTension: z.string().trim().min(10).max(500),
-    mechanism: z.string().trim().min(10).max(700),
-    changedBehavior: z.string().trim().min(10).max(400),
-    whyParticipantsCare: z.string().trim().min(10).max(500),
-    closestFamiliarAlternative: z.string().trim().min(10).max(300),
-    meaningfulDifference: z.string().trim().min(10).max(500),
-    unsupportedAssumptions: z.array(z.string().trim().min(3).max(220)).max(5),
-    reversibleTest: z.string().trim().min(10).max(500),
-    evidenceRefs: z.array(z.string().trim().min(1).max(500)).max(5),
-  })).min(3).max(4).superRefine((directions, ctx) => {
+  directions: z.array(CreativeDirectionSchema).min(3).max(4).superRefine((directions, ctx) => {
     const methods = new Set(directions.map(direction => direction.creativeMethod));
     if (methods.size !== directions.length || !methods.has("convention_inversion") || !methods.has("distant_transfer")) {
       ctx.addIssue({ code: "custom", message: "Use distinct creative methods, including a convention inversion and a distant-industry transfer. Method labels alone do not establish originality." });
@@ -33,6 +34,7 @@ export const CreativeFeedbackSchema = z.object({
     creativeMethod: CreativeMethodSchema,
     candidateTitle: z.string().trim().min(3).max(120),
   })).min(3).max(4),
+  developedDirection: CreativeDirectionSchema,
 });
 
 export function creativeFeedbackMatches(
@@ -48,7 +50,9 @@ Compare the operating mechanism with the closest familiar alternative. Remove th
 
 Use material_difference for an explained consequential departure, familiar_mechanism for an ordinary mechanism, and unclear_difference for an unexplained departure. Novelty is separate from evidence strength, business fit, feasibility, risk and upside. A speculative or unbuilt idea without a precedent can have a material difference. Do not reject an idea for missing integrations, customer access, available time, direct precedent or high confidence. Keep those as unknowns and propose a private test of the changed exchange. testOfDifference should isolate that difference from the closest ordinary alternative rather than confound it with better copy, advice or a different audience. Fictional simulations can reveal comprehension or observed choices in that simulation; they cannot prove real demand, trust, willingness to pay or product activation.
 
-This is advisory feedback for the writer, not a filter, ranking, score or approval. Retain an audit for every candidate, including unfamiliar or uncertain ones. Identify a precise weak link and what needs rethinking; do not replace the portfolio with conventional recommendations. The writer may improve or replace any candidate and is not required to agree with this judgment. The final plan receives a separate independent review.`;
+This is advisory feedback for the writer, not a filter, ranking, score or approval. Retain an audit for every candidate, including unfamiliar or uncertain ones. Identify a precise weak link and what needs rethinking; do not replace the portfolio with conventional recommendations. The writer may improve or replace any candidate and is not required to agree with this judgment. The final plan receives a separate independent review.
+
+After those independent comparisons, develop one additional direction in developedDirection. This is a proposed response to a substantive weakness, not a winning recommendation or a claim that your new idea passed review. Use the existing direction structure: business tension, operating mechanism, participant incentives, closest familiar alternative, consequential difference, unknowns and a private test. If a candidate already changes the mechanism, preserve that difference while repairing its weakest incentive or comparison. If the candidates are ordinary, construct a different exchange from their underlying business tension instead of changing labels, adding an approval log or suggesting an advertised feature. Consider a participant who bears a cost without controlling the purchase, and what different allocation of control, work, risk or value would make participation worthwhile. Describe the actual operation and the cost of breaking the convention. Do not select for lowest risk, strongest evidence or existing implementation; an unbuilt speculative direction may be the most useful development. Keep all input candidates and their audits intact. The additional direction is explicitly hypothetical, its refs support factual premises only, and no customer behavior, current capability or commercial outcome is established by proposing it. The writer must reassess it rather than treat your development as an endorsed bold idea.`;
 
 export const CREATIVE_PREPARATION_TASK = `Prepare strategic possibilities for the focused plan, not the plan itself. This is a private ideation step in the same run. The later writer will create the complete grounded, adjacent and bold portfolio, choose one practical move, and prepare its work. Do not write campaign copy, a timeline, a task checklist or forecasts here.
 

@@ -457,6 +457,8 @@ it("runs the real focused path with a matching quote, reuses bound research and 
   expect(JSON.stringify(state.requests[2].messages)).toContain("creative preparation proposals");
   expect(JSON.stringify(state.requests[3].messages)).not.toContain("Synthetic direction 1");
   expect(JSON.stringify(state.requests[3].messages)).not.toContain("Synthetic difference for workflow checks");
+  expect(JSON.stringify(state.requests[2].messages)).toContain("Synthetic development for workflow checks");
+  expect(JSON.stringify(state.requests[3].messages)).not.toContain("Synthetic development for workflow checks");
   const preparationSteps = await t.run(ctx => ctx.db.query("workflowSteps").withIndex("by_run", q => q.eq("runId", runId)).collect());
   expect(preparationSteps.some(step => step.label.includes("explore strategic directions") && step.status === "succeeded")).toBe(true);
   expect(preparationSteps.some(step => step.label.includes("compare candidate mechanisms") && step.status === "succeeded")).toBe(true);

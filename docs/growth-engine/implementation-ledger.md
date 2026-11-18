@@ -1,3 +1,7 @@
+## 18 November — develop one alternative alongside the candidate critique
+
+V3.188 reuses the candidate call and direction contract to develop one explicit hypothesis in response to a substantive weakness. Original candidates remain available; no novelty filter or endorsement. Final review stays independent. Same model, call count and token ceiling. **170 tests in ten files**, types/lint passed; paid quality effect pending. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — retain the better reviewed factual repair
 
 V3.187 fixes a reproduced fallback-selection defect without changing acceptance, models or calls. V8's saved 3.50 draft had two unsupported claims; its last 3.81 revision had one but a failed truth checkbox. Zero-cost replay now retains that improved **still-failed** revision. 178 tests in ten files, then 14 targeted ordering/repair tests, types/lint passed. The separate comparison preferred V6; the extra candidate phase has not demonstrated a quality gain. Combined charged/held **$87.674778 / $100**. [Audit](focused-evidence-review-audit.md).
