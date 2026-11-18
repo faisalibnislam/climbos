@@ -3,6 +3,14 @@ import { focusedPlanTask } from "../../shared/agents/focusedPlan";
 import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePrecedents, retrieveCreativePrecedents } from "../../shared/knowledge/creativePrecedents";
 
 describe("creative strategy precedent retrieval", () => {
+  it("does not turn plan labels or untested-source wording into a creative mechanism", () => {
+    for (const query of ["Core Pro", "source-reported access, not tested", "published unverified access, not independently tested"]) {
+      expect(retrieveCreativePrecedents(query)).toEqual([]);
+      expect(retrieveCreativePrecedents({ task: "Explore boldly", creativeRetrievalQuery: query, brief: "Synthetic new launch with a small budget", facts: [] })).toEqual([]);
+    }
+    const mechanism = "distinctive mascot identity customer recall visual constraints";
+    expect(retrieveCreativePrecedents(`${mechanism}; Core Pro; published, source-reported, untested`).map(row => row.precedent.id)).toEqual(retrieveCreativePrecedents(mechanism).map(row => row.precedent.id));
+  });
   it("keeps the verified corpus honest and each case source-backed", () => {
     expect(CREATIVE_PRECEDENTS).toHaveLength(100);
     expect(new Set(CREATIVE_PRECEDENTS.map((p) => p.id)).size).toBe(100);

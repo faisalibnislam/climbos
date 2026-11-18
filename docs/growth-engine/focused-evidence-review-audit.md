@@ -1,5 +1,17 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.193 — remove false mechanism matches from plan labels and source qualifiers
+
+A zero-cost reproduction found that the Livoform-like query retrieved Fenty Beauty on **"core, pro"** (plan names matching "core buyers" and Pro Filt'r), and Grameen Danone on **"access, tested"** ("not tested" misread as a mechanism). A new regression failed before the correction. Retrieval now excludes those low-information plan labels and verification qualifiers from term overlap. This changes neither the 100-record library nor its evidence labels, source records, result bound or allowance for ideas without a matching precedent. The same example now retrieves on **"response, workflow"**, not the false labels. That is a relevance correction, not proof that the resulting analogies are strategically useful.
+
+**202 tests in seven files passed (17.75 seconds)**, including real cross-industry transfer fixtures, qualified-query invariance, actual focused/creative workflow persistence and tenant/approval controls. App/Convex types and changed-file lint passed. The active no-feedback evaluation loaded the prior retrieval code; its result will not be relabelled as a V3.193 test.
+
+## QA budget — tighter input envelope, same $100 cumulative cap
+
+The revision preflight previously reserved for two hypothetical full-million-token text requests even though these strategy calls are much smaller. Text-only QA calls now have an enforced **400,000-token conservative bound** (serialized UTF-8 bytes plus the existing 65,536 overhead allowance). Larger inputs fail before billing rather than being truncated. Opaque server-search calls retain the original one-million-token reservation. The complete text-only revision/review pair therefore has a provable **$2.64** worst-case bound rather than $5.64. Actual per-attempt holds, two-ledger accounting, retained uncertain charges and the $100 cap remain unchanged. This is a tighter allowed request envelope, not a discounted estimate or expanded spending permission.
+
+**30 tests in three files passed (0.457 seconds)**, including exact-bound success, one-byte and multibyte over-limit refusal, two worst-case calls fitting the reserved pair, cumulative-cap refusal and historical-hold accounting. This permits further useful tests within the existing authorization. The current running process retains its loaded older guard.
+
 ## V3.192 — measure the advisory candidate stage before keeping its cost
 
 The completed public-alternatives V2 run (V3.190, source hash `5e49bba558f7a7155bd420d73280115cebdc2b95b095b2846fddc23aa0ee79c3`) made eight calls for **$1.648549**. Reviews scored 3.19, 3.69 and 3.50; the saved final failure has one unsupported assertion that no reported traffic/revenue means no existing habits. That does not establish absent users or workflows. The initial distinct respondent-wallet candidate was displaced by the advisory stage's familiar declared-reply intake proposal; the final correction became another familiar confirmation mechanism. The candidate stage has not demonstrated a quality gain. Paid-value reasoning acknowledged Tally's free payment/AI parity, but its branding/domain comparison was still missing and operational setup was burdensome. Combined used/held: **$92.553001 / $100**.

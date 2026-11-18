@@ -12,7 +12,7 @@ Offer and approved-copy checks now recognize plural mechanisms such as “discou
 
 Offer checks distinguish narrowly worded rejected alternatives (“safer than a discount”) from proposed promotions and recognize staffing, stock and floor-space unknowns. Affirmative offers and approval controls still apply. [Audit](growth-engine/offer-alternative-classification-audit.md).
 
-Creative precedent mechanisms now come from the saved business goal, summary and facts, separately from generated task instructions. Writers, reviewers, reference checks and saved IDs share that query. No match still allows original grounded, adjacent and bold exploration. [Audit and limits](growth-engine/business-precedent-query-audit.md).
+Creative precedent mechanisms now come from the saved business goal, summary and facts, separately from generated task instructions. Generic plan labels and verification qualifiers no longer create false mechanism matches. Writers, reviewers, reference checks and saved IDs share that query. No match still allows original grounded, adjacent and bold exploration. [Audit and limits](growth-engine/business-precedent-query-audit.md).
 
 The promotion validator now recognizes a declined offer inside a sentence, such as “a demo with no discount gives shoppers a reason to visit,” without exempting a real offer elsewhere. The failed retail evaluation still retains its other evidence and test-quality issues. [Audit](growth-engine/declined-offer-clause-audit.md).
 

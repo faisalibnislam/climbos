@@ -1,3 +1,7 @@
+## 18 November — correct false precedent matches and retain the evaluation cap
+
+V3.193 removes plan labels and verification qualifiers that falsely matched unrelated precedents; **202 tests in seven files passed**, including protected original exploration and permission controls. A separate QA-only change enforces a smaller text-input envelope so complete revision pairs can fit within the remaining authorized budget; **30 budget/identity/source tests passed**. The cumulative cap stays $100, with both ledgers and uncertain holds included. No model or source-library change. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — compare the advisory stage with a simpler workflow
 
 The completed alternative-evidence V2 run failed at **3.50/5** with one unsupported state assertion; combined used/held **$92.553001 / $100**. V3.192 adds an explicit launch-evaluation switch to omit the advisory candidate stage, preserving exploration and independent final review. Runtime defaults and models are unchanged; exact quotes, checkpoints and evaluation identity cover the switch. **153 tests in eight files passed**. The paid comparison is running and has no result yet. [Audit](focused-evidence-review-audit.md).

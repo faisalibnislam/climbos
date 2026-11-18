@@ -1688,6 +1688,8 @@ const STOP = new Set([
   "one", "not", "can", "but", "when", "who", "are", "has", "have", "had", "only", "more", "over", "under", "than", "such", "should", "will", "would", "may", "might", "must", "does", "did", "its", "their", "they", "them", "you", "your", "our", "own", "each", "any", "all", "other", "where", "which", "how", "what", "why", "without", "unknown", "supplied", "provided", "confirmed",
   // Request/provenance boilerplate must not outrank the actual business mechanism.
   "owner", "selected", "use", "used", "using", "first", "source", "sourced", "reported", "report", "evidence", "fact", "facts", "information", "current", "known", "acceptance", "evaluation", "case", "based", "include", "including", "available", "read",
+  // Plan labels and verification qualifiers are not evidence of a transferable mechanism.
+  "core", "pro", "tested", "untested", "verified", "unverified", "published", "independently",
 ]);
 // Category and geography words may help explain transfer fit, but cannot by
 // themselves establish that a case has the same creative/business mechanism.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ANTHROPIC_QA_CAP_MICROS, CLAUDE_QA_REVISION_HEADROOM_MICROS, canStartClaudeQaRevision, claudeQaActualMicros, reserveClaudeQaCall } from "../../bench/strategy-quality/anthropicBudget";
+import { ANTHROPIC_QA_CAP_MICROS, CLAUDE_QA_REVISION_HEADROOM_MICROS, MAX_QA_TEXT_INPUT_BOUND, canStartClaudeQaRevision, claudeQaActualMicros, reserveClaudeQaCall } from "../../bench/strategy-quality/anthropicBudget";
 
 describe("owner-authorized Anthropic QA envelope", () => {
   const body = { model: "claude-sonnet-5-5", max_tokens: 32000, messages: [{ role: "user", content: "Public business research" }] };
@@ -18,7 +18,7 @@ describe("owner-authorized Anthropic QA envelope", () => {
     expect(claudeQaActualMicros("claude-sonnet-5-5", {})).toBeNull();
   });
   it("preflights a whole revision and review against both ledgers, including uncertain holds", () => {
-    expect(CLAUDE_QA_REVISION_HEADROOM_MICROS).toBe(5_640_000);
+    expect(CLAUDE_QA_REVISION_HEADROOM_MICROS).toBe(2_640_000);
     const historical = 1_896_709, main = ANTHROPIC_QA_CAP_MICROS - CLAUDE_QA_REVISION_HEADROOM_MICROS - historical;
     expect(canStartClaudeQaRevision(main + historical)).toBe(true);
     expect(canStartClaudeQaRevision(main + historical + 1)).toBe(false);
@@ -32,5 +32,17 @@ describe("owner-authorized Anthropic QA envelope", () => {
     expect(canStartClaudeQaRevision(before)).toBe(true);
     const requestHold = reserveClaudeQaCall(body, before);
     expect(() => reserveClaudeQaCall(body, ANTHROPIC_QA_CAP_MICROS - requestHold + 1)).toThrow(/BUDGET/);
+  });
+  it("enforces the tighter text envelope that funds a complete revision pair, including multibyte text", () => {
+    const empty = { ...body, messages: [{ role: "user", content: "" }] };
+    const overhead = Buffer.byteLength(JSON.stringify(empty), "utf8") + 65_536;
+    const room = MAX_QA_TEXT_INPUT_BOUND - overhead;
+    const exact = { ...empty, messages: [{ role: "user", content: "x".repeat(room) }] };
+    const bound = reserveClaudeQaCall(exact, 0);
+    expect(bound * 2).toBe(CLAUDE_QA_REVISION_HEADROOM_MICROS);
+    const used = ANTHROPIC_QA_CAP_MICROS - CLAUDE_QA_REVISION_HEADROOM_MICROS;
+    expect(reserveClaudeQaCall(exact, used + bound)).toBe(bound);
+    expect(() => reserveClaudeQaCall({ ...exact, messages: [{ role: "user", content: "x".repeat(room + 1) }] }, 0)).toThrow(/bounded context/);
+    expect(() => reserveClaudeQaCall({ ...exact, messages: [{ role: "user", content: "é".repeat(room) }] }, 0)).toThrow(/bounded context/);
   });
 });
