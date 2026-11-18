@@ -21,14 +21,21 @@ export function lintGoalTiming(timing: GoalTiming | undefined, phases: { days: s
   const issue = (message: string, path = "timing"): LintIssue => ({ severity: "error", rule: "consistency", path, message });
   if (!timing) return [issue("Choose and explain timing for this goal and approach. Return preparation and firstReview ranges, assumptions, reviewTrigger and outcomeLag; do not copy a fixed plan length.")];
   if (timing.preparation.minDays > timing.preparation.maxDays || timing.firstReview.minDays > timing.firstReview.maxDays || timing.firstReview.maxDays < timing.preparation.maxDays) return [issue("Timing ranges must be ordered, and the first review must allow the preparation to finish.")];
+  return lintMilestoneRanges(phases, timing.firstReview);
+}
+
+/** Shared chronological checks for an estimated review range or a supplied review horizon. */
+export function lintMilestoneRanges(phases: { days: string; firstAction?: string; howToCheck?: string; decisionRule?: string }[], review: { minDays: number; maxDays: number }): LintIssue[] {
+  const issue = (message: string, path = "phases"): LintIssue => ({ severity: "error", rule: "consistency", path, message });
+  if (!Number.isInteger(review.minDays) || !Number.isInteger(review.maxDays) || review.minDays < 1 || review.maxDays < review.minDays || review.maxDays > 3650) return [issue("Use a valid whole-day review horizon.")];
   if (phases.length < 2 || phases.length > 4) return [issue("Use 2–4 useful milestones sized for this approach, not preset calendar windows.", "phases")];
   let previousEnd = 0;
   for (const [i, phase] of phases.entries()) {
     const match = /^(?:days?\s*)?(\d+)\s*[-–—]\s*(\d+)$/i.exec(phase.days.trim());
-    if (!match || Number(match[1]) !== previousEnd + 1 || Number(match[2]) < Number(match[1]) || Number(match[2]) > timing.firstReview.maxDays || !phase.firstAction?.trim() || !phase.howToCheck?.trim() || !phase.decisionRule?.trim()) return [issue("Milestones must have ordered, contiguous day ranges starting at day 1, stay within the estimated first-review window, and name the first action, check and decision rule.", `phases[${i}]`)];
+    if (!match || Number(match[1]) !== previousEnd + 1 || Number(match[2]) < Number(match[1]) || Number(match[2]) > review.maxDays || !phase.firstAction?.trim() || !phase.howToCheck?.trim() || !phase.decisionRule?.trim()) return [issue("Milestones must have ordered, contiguous day ranges starting at day 1, stay within the first-review window, and name the first action, check and decision rule.", `phases[${i}]`)];
     previousEnd = Number(match[2]);
   }
-  return previousEnd < timing.firstReview.minDays ? [issue("The milestones end before the proposed first review. Include the learning and review step.", "phases")] : [];
+  return previousEnd < review.minDays ? [issue("The milestones end before the proposed first review. Include the learning and review step.", "phases")] : [];
 }
 
 export const GOAL_TIMING_INSTRUCTION = `Choose timing by judging THIS goal, starting point, chosen mechanism, actual work, dependencies, review availability, supplied capacity and any real deadline. Do not use 14/30/90-day packages or arbitrary weekly windows. Return timing.preparation and timing.firstReview as honest minDays/maxDays ranges, a reason, 1–4 explicit assumptions, a reviewTrigger and an outcomeLag explanation. Separate work time from time to observe useful evidence; never promise a customer, ranking or revenue result by a date. Use 2–4 concrete phases with your own contiguous relative-day ranges starting at day 1 and ending within the first-review range; each phase includes firstAction, howToCheck and decisionRule. If capacity or baseline is unknown, label it as an assumption, do not invent it. Ask only when the unknown would change the approach. Review on a meaningful signal with an elapsed-time fallback so silence is not indefinite. If a deadline cannot accommodate the work, say so and propose a smaller useful milestone. Continue useful work based on what is learned; no fixed recurring plan length or annual reset.`;

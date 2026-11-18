@@ -1,9 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { cycleMilestoneInstruction, cycleProgress, milestoneWindows } from "../../shared/agents/planningCycles";
+import { cycleMilestoneInstruction, cycleProgress, milestoneWindows, lintCycleMilestones } from "../../shared/agents/planningCycles";
+import { focusedPlanTask } from "../../shared/agents/focusedPlan";
 import { lintFeasibility } from "../../shared/agents/specs";
 import { OwnerQuestionSchema, ownerAnswer } from "../../shared/climb/ownerQuestion";
 const question = { title: "How much time can you spare?", reason: "This changes how much work to prepare.", kind: "single" as const, options: [{ id: "small", label: "Up to one hour" }, { id: "more", label: "A few hours" }], allowOther: true };
 describe("short cycles and friendly questions", () => {
+  it("allows focused dependencies within the same deadline without weakening chronological checks", () => {
+    const phases = ["1–2", "3–4", "5–10", "11–14"].map((days, i) => ({ days,
+      firstAction: ["Review the prepared sample", "Privately verify the required product behavior", "Only with access, capacity and exact approval: observe the test", "Review progress, carrying incomplete observation forward"][i],
+      howToCheck: "Record what actually happened; availability and time remain unknown.",
+      decisionRule: "Without eligible exposure, record not-run; do not infer no demand.",
+    }));
+    expect(lintCycleMilestones(phases, 14, true)).toEqual([]);
+    expect(lintCycleMilestones(phases, 14)).toHaveLength(1); // detailed legacy contract unchanged
+    expect(focusedPlanTask(14)).toContain("2–4 milestones sized to the actual dependencies");
+    expect(focusedPlanTask(14)).not.toContain("exactly these relative-day windows");
+    for (const days of ["10–14", "12–14", "11–13", "11–15", "14–11"]) {
+      expect(lintCycleMilestones([...phases.slice(0, 3), { ...phases[3], days }], 14, true)).toHaveLength(1);
+    }
+    expect(lintCycleMilestones(phases, NaN, true)).toHaveLength(1);
+    expect(lintCycleMilestones([{ ...phases[0], days: "1–14" }], 14, true)).toHaveLength(1);
+    expect(lintCycleMilestones(phases.map(p => ({ ...p, howToCheck: "" })), 14, true)).toHaveLength(1);
+  });
   it("covers each day once without a one-week plan", () => {
     for (const days of [14, 30, 90, 365]) {
       const windows = milestoneWindows(days);

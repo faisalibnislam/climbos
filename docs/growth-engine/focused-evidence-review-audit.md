@@ -1,6 +1,19 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — 18 November: unknown capacity stays unknown
+## Current status — dependency-sized milestones and preserved V16 failure
+
+V16 (`launch-quality-v16-20261118`, engine v3.169, source hash `d0ba66c199984632db2c3ac941e249e0132dd737ed9877c5e1ed4f89ee96a54c`) finished below acceptance at **3.63/minimum 3**. Five calls cost **$0.973594**, bringing combined charged/held to **$74.397519 / $100**. Both reviews scored 3.63; the revision improved originality, judgment and paid-value scores but introduced a 2,432-character test brief against the existing 2,400-character limit and worsened simplicity. The runtime retained the earlier clean but failed draft and stopped its unproductive repair. This history is not relabelled as success.
+
+A confirmed constraint contributed to the workload problem: the fixed 14-day focused format required exactly two weekly milestones. The revised output still bundled product verification, access, invitations, observed sessions and review into its second week. V3.170 reuses the existing adaptive-plan chronology validator to allow **2–4 dependency-sized milestones within the same supplied review horizon**. It still rejects gaps, overlaps, reversed ranges, missing checks, a late finish or an early omitted review. Detailed-plan fixed windows and automatic goal timing remain unchanged. Unknown access/time cannot become a commitment, and exposure remains conditional on product behavior, access, capacity and exact approval. No campaign-timing prompt was changed.
+
+**151 tests in 11 files passed (13.26 seconds)**, including focused generation/save/approval, legacy cycle compatibility, timeline presentation and evaluation identity. App/Convex typechecks, changed-file ESLint and diff checks passed. No UI changes or generated files were needed. The evaluation hash now includes the two changed timing modules. V16 loaded and recorded its original v3.169 snapshot; the new logic will be tested in a separate run, never attributed retrospectively to V16.
+
+```sh
+pnpm exec vitest run tests/unit/planning-cycles.test.ts tests/unit/goal-timing.test.ts tests/unit/plan-timeline.test.ts tests/unit/focused-plan.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/creative-preparation.test.ts tests/unit/evaluation-identity.test.ts tests/unit/livoform-launch-input.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+## V3.169 — unknown capacity stays unknown
 
 The owner explicitly chose to keep tester access and founder time unknown and authorized continued work within the existing $100 cap. These are no longer pending required answers. Do not infer absence, invent an allowance, or withhold creative exploration. Historical input requests below are superseded by this instruction.
 

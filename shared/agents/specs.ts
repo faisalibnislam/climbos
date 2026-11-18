@@ -338,7 +338,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.169-first-step-checklists";
+export const ENGINE_VERSION = "v3.170-dependent-milestones";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -2795,7 +2795,7 @@ export function focusedStrategySpec(o: SpecOptions = {}): AgentSpec<z.infer<type
       ...lintStrategicDirection(out.strategicDirection, input.facts, input.availableSourceUrls ?? []),
       ...lintStrategicDirection({ ...out.strategicDirection, evidenceRefs: out.focusedMove.evidenceRefs }, input.facts, input.availableSourceUrls ?? []),
       ...lintActionPlan(out, input.constraints?.adaptiveTiming ? out.timing?.firstReview.maxDays : input.constraints?.horizonDays),
-      ...(input.constraints?.adaptiveTiming ? lintGoalTiming(out.timing, out.phases) : lintCycleMilestones(out.phases, input.constraints?.horizonDays ?? 14)),
+      ...(input.constraints?.adaptiveTiming ? lintGoalTiming(out.timing, out.phases) : lintCycleMilestones(out.phases, input.constraints?.horizonDays ?? 14, true)),
       ...lintWordCaps(out, { summary: 60, "focusedMove.firstAction": 30, "phases[].focus": 40, "weekOneChecklist[]": 25 }),
       ...lintNoAudience(out, input.constraints, input.facts),
       ...lintExperimentFeasibility(out, input.constraints).map(issue => ({ ...issue, rule: "focused_learning" })),
