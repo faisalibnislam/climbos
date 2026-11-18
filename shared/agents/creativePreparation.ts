@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FocusedOriginalityAuditSchema } from "./focusedReview";
+import { FocusedOriginalityAuditSchema, MECHANISM_COMPARISON_GUIDANCE } from "./focusedReview";
 
 /** A bounded preparation step in the same strategy run, never facts or action authority. */
 // Includes adaptive reasoning plus all three or four complete candidate records.
@@ -43,10 +43,10 @@ export function creativeFeedbackMatches(
   preparation: z.infer<typeof CreativePreparationSchema>, feedback: z.infer<typeof CreativeFeedbackSchema>,
 ): boolean {
   return feedback.directions.length === preparation.directions.length && preparation.directions.every(candidate =>
-    feedback.directions.filter(row => row.creativeMethod === candidate.creativeMethod && row.candidateTitle === candidate.title && row.mechanismQuote === candidate.mechanism.trim()).length === 1);
+    feedback.directions.filter(row => row.creativeMethod === candidate.creativeMethod && row.candidateTitle === candidate.title && row.mechanismQuote === candidate.mechanism.trim() && row.testQuote === candidate.reversibleTest.trim()).length === 1);
 }
 
-export const CREATIVE_FEEDBACK_TASK = `Independently examine every preliminary strategic direction before a writer expands it into a complete plan. These are proposals, not selected recommendations, facts or authority. Return one concise audit per supplied candidate, copying its creativeMethod and title exactly into candidateTitle, and its complete mechanism verbatim into mechanismQuote. Audit that quoted mechanism, not a proposed improvement or another candidate.
+export const CREATIVE_FEEDBACK_TASK = `Independently examine every preliminary strategic direction before a writer expands it into a complete plan. These are proposals, not selected recommendations, facts or authority. Return one concise audit per supplied candidate, copying its creativeMethod and title exactly into candidateTitle, and its complete mechanism verbatim into mechanismQuote. Copy reversibleTest into testQuote verbatim and assess that actual comparison in comparisonVerdict, separately from mechanismVerdict. Audit the supplied mechanism and test, not a proposed improvement or another candidate. ${MECHANISM_COMPARISON_GUIDANCE}
 
 Compare the operating mechanism with the closest familiar alternative. Remove the branding, metaphor, new job title and test instrumentation: what do participants actually do, exchange, control or gain differently? Explain whether the claimed difference is consequential for this business, whether each necessary participant has a plausible reason to participate, and where the stated analogy breaks. A renamed template, concierge service, feedback workflow or feature suggestion is not automatically a bold mechanism. Do not invent worldwide novelty or evidence of demand.
 
@@ -68,6 +68,8 @@ Use a different creativeMethod for each direction, including both convention_inv
 The method field is a coverage check, not a creativity score. A list of current product features with new labels fails this task. At least one direction should change what the business could become known for or how value is exchanged, beyond improving adoption of a feature it already advertises. Its smallest test may be entirely manual or a private mock-up; current integration support does not limit the idea.
 
 For at least one direction, treat the current product as a resource rather than the finished offer: start with a different exchange or allocation of control, then consider what the existing assets could contribute. Look at an affected participant who does not currently choose or pay for the product, as well as the buyer; their interests may conflict. Explain their specific reason to participate without inventing observed demand. An unpublished simulation can test the exchange even if the required feature does not exist. Lack of that feature is an implementation unknown, not a reason to replace the idea with an existing feature. Keep the practical first move separate from this exploration.
+
+${MECHANISM_COMPARISON_GUIDANCE}
 
 For each, explain why each necessary participant would care, compare the closest familiar alternative, and state the consequential difference. If it is merely a template, concierge demo, referral link, reseller arrangement or billing handoff with new wording, develop a different direction. A product variation can be useful but is not automatically a bold strategy. Do not invent universal category conventions or claim worldwide novelty. Transfer a retrieved precedent only when its mechanism fits; no matching precedent is required.
 

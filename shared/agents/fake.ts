@@ -100,7 +100,7 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
   } else if (req.schema === CreativeFeedbackSchema) {
     const candidates = CreativePreparationSchema.parse(JSON.parse(lastUser.split('<untrusted_content source="candidate proposals to compare">\n').at(-1)!.split("\n</untrusted_content>")[0]));
     output = { developedDirection: sample(z.toJSONSchema(CreativeDirectionSchema) as JsonSchema, "Synthetic development for workflow checks only, not a real strategy."), directions: candidates.directions.map(candidate => ({
-      creativeMethod: candidate.creativeMethod, candidateTitle: candidate.title, mechanismQuote: candidate.mechanism,
+      creativeMethod: candidate.creativeMethod, candidateTitle: candidate.title, mechanismQuote: candidate.mechanism, testQuote: candidate.reversibleTest, comparisonVerdict: "not_explained",
       closestFamiliarAlternative: "Synthetic alternative; not a real strategy judgment.",
       consequentialDifference: "Synthetic difference for workflow checks only.",
       mechanismVerdict: "unclear_difference",
@@ -111,7 +111,7 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
     const reviewingFirstDraft = lastUser.includes("fake-v1");
     const pass = mode === "ship" || !reviewingFirstDraft;
     const reviewedWork = system.includes("FOCUSED ORIGINALITY AUDIT:")
-      ? JSON.parse(lastUser.split("THE WORK TO REVIEW (JSON):\n").at(-1)!.split("\n\n")[0]) as { strategyExploration?: { bold?: { businessMechanism?: string } } }
+      ? JSON.parse(lastUser.split("THE WORK TO REVIEW (JSON):\n").at(-1)!.split("\n\n")[0]) as { strategyExploration?: { bold?: { businessMechanism?: string; reversibleTest?: { method?: string } } } }
       : null;
     output = {
       gates: gates.map((id) => ({ id, pass: pass, note: pass ? "ok" : "fails" })),
@@ -125,6 +125,8 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         closestFamiliarAlternative: "Synthetic conventional alternative; not an actual strategy judgment.",
         consequentialDifference: "Synthetic changed exchange; not evidence of real originality.",
         mechanismVerdict: "material_difference",
+        testQuote: reviewedWork?.strategyExploration?.bold?.reversibleTest?.method ?? "No proposed test supplied for this synthetic review.",
+        comparisonVerdict: "isolates_difference",
         testOfDifference: "Synthetic comparison only; no real experiment has run.",
       } } : {}),
     };

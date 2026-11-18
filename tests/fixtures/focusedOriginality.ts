@@ -4,5 +4,7 @@ export const focusedOriginalityFixture = {
   closestFamiliarAlternative: "A conventional synthetic value exchange.",
   consequentialDifference: "A different synthetic participant exchange, not a real-world originality claim.",
   mechanismVerdict: "material_difference" as const,
+  testQuote: "Privately walk through the proposed workflow on a past brief and record objections.",
+  comparisonVerdict: "isolates_difference" as const,
   testOfDifference: "Compare the two synthetic exchanges before taking any external action.",
 };

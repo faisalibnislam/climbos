@@ -10,27 +10,39 @@ export const FocusedOriginalityAuditSchema = z.object({
   closestFamiliarAlternative: z.string().trim().min(10).max(600),
   consequentialDifference: z.string().trim().min(10).max(900),
   mechanismVerdict: z.enum(["material_difference", "familiar_mechanism", "unclear_difference"]),
+  testQuote: z.string().trim().min(8).max(500).describe("Copy the complete proposed test method verbatim, not a better test you would suggest."),
+  comparisonVerdict: z.enum(["isolates_difference", "confounded", "not_explained"]).describe("Does that actual proposed test distinguish the claimed mechanism from its closest ordinary alternative? Missing access or an unbuilt feature alone does not make a private proposed test confounded."),
   testOfDifference: z.string().trim().min(10).max(700),
 });
 export type FocusedOriginalityAudit = z.infer<typeof FocusedOriginalityAuditSchema>;
+
+export function focusedOriginalityMatches(audit: FocusedOriginalityAudit, output: unknown): boolean {
+  const fields = new Map(stringFields(output).map(field => [field.path, field.text.trim()]));
+  return audit.mechanismQuote === fields.get("strategyExploration.bold.businessMechanism")
+    && audit.testQuote === fields.get("strategyExploration.bold.reversibleTest.method");
+}
+
+export const MECHANISM_COMPARISON_GUIDANCE = `Compare with the strongest ordinary way to obtain the same promised result, including manual services, contractual arrangements and workarounds outside the software category. A bare tool is a weak control when an ordinary service already offers the proposed benefit. State the changed rule or exchange after holding ordinary benefits constant, and the response that would distinguish it. Keep audience, promise, information and support comparable except for the mechanism being tested. Include the participant whose behavior must change; a seller's willingness to offer something cannot establish a buyer's response. A private simulation may test comprehension or choices inside that simulation, with demand and real use left untested. If the control is inadequate, repair the comparison rather than inventing a difference or discarding a distinctive uncertain idea. This is analytical comparison, not proof that every business uses that practice or a requirement for a matching precedent.`;
 
 export function lintFocusedOriginalityAudit(critique: CritiqueResult, rubric: Rubric, output?: unknown): LintIssue[] {
   if (!rubric.criteria.some(criterion => criterion.id === "F7")) return [];
   const parsed = FocusedOriginalityAuditSchema.safeParse(critique.originalityAudit);
   const invalid = (message: string): LintIssue[] => [{ rule: "review_scores", severity: "error", path: "review.originalityAudit", message }];
   if (!parsed.success) return invalid("Complete the bold mechanism comparison before accepting its originality score: closest familiar practice, consequential difference, mechanism verdict and test of the difference.");
-  const mechanism = output === undefined ? undefined : stringFields(output).find(field => field.path === "strategyExploration.bold.businessMechanism")?.text;
-  if (!mechanism?.trim() || parsed.data.mechanismQuote !== mechanism.trim()) {
-    return invalid("The originality audit must quote the complete current strategyExploration.bold.businessMechanism verbatim. Review this draft's bold idea, not its title, an adjacent idea, a partial excerpt or a previous version. The verdict is not valid until it is bound to the current mechanism.");
+  if (!focusedOriginalityMatches(parsed.data, output)) {
+    return invalid("The originality audit must quote the complete current strategyExploration.bold.businessMechanism and reversibleTest.method verbatim. Review this draft's idea and actual test, not another idea, a previous version or a replacement test you wish it proposed.");
   }
   const scores = critique.scores.filter(score => score.id === "F7");
   if (scores.length === 1 && scores[0].score >= rubric.shipRule.minEach && parsed.data.mechanismVerdict !== "material_difference") {
     return invalid(`The originality score passes but its audit finds ${parsed.data.mechanismVerdict}. A better test or presentation cannot make an unchanged familiar mechanism original. Repair the bold mechanism or correct the inconsistent review; do not approve this draft. Closest practice: ${parsed.data.closestFamiliarAlternative}. Difference: ${parsed.data.consequentialDifference}.`);
   }
+  if (scores.length === 1 && scores[0].score >= rubric.shipRule.minEach && parsed.data.comparisonVerdict !== "isolates_difference") {
+    return invalid(`The originality criterion passes but its audit finds the proposed comparison ${parsed.data.comparisonVerdict}. Repair the test against the closest ordinary alternative; preserve a distinctive mechanism and keep its evidence/feasibility uncertainty separate. Comparison finding: ${parsed.data.testOfDifference}`);
+  }
   return [];
 }
 
-export const FOCUSED_ORIGINALITY_REVIEW = `FOCUSED ORIGINALITY AUDIT: Independently compare the actual bold option with its closest familiar practice before scoring F7. Return originalityAudit with mechanismQuote (copy the complete current strategyExploration.bold.businessMechanism verbatim), closestFamiliarAlternative, consequentialDifference, mechanismVerdict and testOfDifference. Bind the comparison to that quoted mechanism, not an adjacent option, preliminary candidate or replacement you wish the writer had proposed. Describe what participants do, exchange or gain differently; remove the branding, labels, audience job titles and test instrumentation mentally, then ask what consequential mechanism remains. An approval log added to an approval workflow, a paid trial or a template with feedback is not automatically an unconventional strategy. Explain the actual difference for this business rather than inventing a new one for the writer. Use material_difference only for a specific consequential departure; familiar_mechanism when the mechanism remains ordinary; unclear_difference when the proposal does not explain its departure. This classification concerns the idea, not whether it is proven: an unprecedented, speculative, difficult or currently unbuilt mechanism may have a material difference. Do not require matching precedents, research validation, immediate feasibility or high confidence. Keep evidence, business fit, feasibility, risk and upside separate. testOfDifference compares the changed mechanism with the closest ordinary alternative; a better test does not retroactively make a familiar mechanism original. F7 cannot pass while your own audit finds a familiar or unexplained difference. A distinctive adjacent option does not compensate for a conventional bold one. If the difference is material but relevance or the test is weak, identify that narrower defect without discarding the idea. Assess only the current draft; this is an inspectable judgment, not a claim of worldwide originality.`;
+export const FOCUSED_ORIGINALITY_REVIEW = `FOCUSED ORIGINALITY AUDIT: Independently compare the actual bold option with its closest familiar practice before scoring F7. Return originalityAudit with mechanismQuote (copy the complete current strategyExploration.bold.businessMechanism verbatim), closestFamiliarAlternative, consequentialDifference, mechanismVerdict, testQuote (the complete current strategyExploration.bold.reversibleTest.method), comparisonVerdict and testOfDifference. Evaluate the test actually proposed before suggesting a repair; a better test in your review cannot validate a weaker test in the draft. Keep mechanism originality separate from comparison quality. F7 cannot pass with a confounded or unexplained comparison. ${MECHANISM_COMPARISON_GUIDANCE} Bind the comparison to that quoted mechanism, not an adjacent option, preliminary candidate or replacement you wish the writer had proposed. Describe what participants do, exchange or gain differently; remove the branding, labels, audience job titles and test instrumentation mentally, then ask what consequential mechanism remains. An approval log added to an approval workflow, a paid trial or a template with feedback is not automatically an unconventional strategy. Explain the actual difference for this business rather than inventing a new one for the writer. Use material_difference only for a specific consequential departure; familiar_mechanism when the mechanism remains ordinary; unclear_difference when the proposal does not explain its departure. This classification concerns the idea, not whether it is proven: an unprecedented, speculative, difficult or currently unbuilt mechanism may have a material difference. Do not require matching precedents, research validation, immediate feasibility or high confidence. Keep evidence, business fit, feasibility, risk and upside separate. testOfDifference compares the changed mechanism with the closest ordinary alternative; a better test does not retroactively make a familiar mechanism original. F7 cannot pass while your own audit finds a familiar or unexplained difference. A distinctive adjacent option does not compensate for a conventional bold one. If the difference is material but relevance or the test is weak, identify that narrower defect without discarding the idea. Assess only the current draft; this is an inspectable judgment, not a claim of worldwide originality.`;
 
 function focusedRepairTarget(critique: CritiqueResult, rubric: Rubric): number {
   // Meeting an individual floor does not mean a criterion passed the overall review.
@@ -46,12 +58,11 @@ function focusedRepairTarget(critique: CritiqueResult, rubric: Rubric): number {
 export function focusedRevisionOriginality(critique: CritiqueResult, rubric: Rubric, output: unknown): string {
   if (rubric.id !== FOCUSED_REVIEW_ID || !rubric.criteria.some(criterion => criterion.id === "F7")) return "";
   const audit = FocusedOriginalityAuditSchema.safeParse(critique.originalityAudit);
-  const mechanism = stringFields(output).find(field => field.path === "strategyExploration.bold.businessMechanism")?.text;
-  if (!audit.success || !mechanism?.trim() || audit.data.mechanismQuote !== mechanism.trim()) return "";
+  if (!audit.success || !focusedOriginalityMatches(audit.data, output)) return "";
   const scores = critique.scores.filter(score => score.id === "F7");
   if (scores.length !== 1 || !Number.isFinite(scores[0].score) || scores[0].score < 1 || scores[0].score > 5) return "";
   const needsRepair = scores[0].score < focusedRepairTarget(critique, rubric)
-    || (scores[0].score >= rubric.shipRule.minEach && audit.data.mechanismVerdict !== "material_difference");
+    || (scores[0].score >= rubric.shipRule.minEach && (audit.data.mechanismVerdict !== "material_difference" || audit.data.comparisonVerdict !== "isolates_difference"));
   return needsRepair ? JSON.stringify(audit.data) : "";
 }
 

@@ -6,8 +6,8 @@ import { focusedStrategySpec } from "../../shared/agents/specs";
 import { ZERO_USAGE, type TurnRequest } from "../../shared/ai/types";
 
 const base = focusedStrategySpec();
-const exploration = { bold: { businessMechanism: focusedOriginalityFixture.mechanismQuote } };
-const schema = z.object({ strategyExploration: z.object({ bold: z.object({ businessMechanism: z.string() }) }), summary: z.string() });
+const exploration = { bold: { businessMechanism: focusedOriginalityFixture.mechanismQuote, reversibleTest: { method: focusedOriginalityFixture.testQuote } } };
+const schema = z.object({ strategyExploration: z.object({ bold: z.object({ businessMechanism: z.string(), reversibleTest: z.object({ method: z.string() }) }) }), summary: z.string() });
 const original = { strategyExploration: exploration, summary: "Unsupported claim one. Unsupported claim two." };
 const revision = { strategyExploration: exploration, summary: "Only one remaining unsupported claim." };
 const repaired = { strategyExploration: exploration, summary: "Qualified proposal, not a proven result." };

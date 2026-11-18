@@ -38,10 +38,10 @@ async function run(patch: unknown, lastReview = review(5)) {
 
 describe("bounded focused section repairs", () => {
   it("carries earlier mechanism and factual findings into a later repair without feeding them to the independent critic", async () => {
-    const creativeSchema = schema.extend({ strategyExploration: z.object({ bold: z.object({ title: z.string(), businessMechanism: z.string() }) }) });
-    const first = { ...original, summary: "Payers carry all the outcome risk.", strategyExploration: { bold: { title: "Original refund proposal", businessMechanism: "A familiar paid inbox and refund guarantee." } } };
-    const middle = { summary: "Payment and customer risk remain unknown.", strategyExploration: { bold: { title: "Replacement wallet proposal", businessMechanism: "A familiar portable answer profile." } } };
-    const final = { strategyExploration: { bold: { title: "A changed exchange to review", businessMechanism: "A different synthetic value exchange with honest unknowns." } } };
+    const creativeSchema = schema.extend({ strategyExploration: z.object({ bold: z.object({ title: z.string(), businessMechanism: z.string(), reversibleTest: z.object({ method: z.string() }) }) }) });
+    const first = { ...original, summary: "Payers carry all the outcome risk.", strategyExploration: { bold: { title: "Original refund proposal", businessMechanism: "A familiar paid inbox and refund guarantee.", reversibleTest: { method: focusedOriginalityFixture.testQuote } } } };
+    const middle = { summary: "Payment and customer risk remain unknown.", strategyExploration: { bold: { title: "Replacement wallet proposal", businessMechanism: "A familiar portable answer profile.", reversibleTest: { method: focusedOriginalityFixture.testQuote } } } };
+    const final = { strategyExploration: { bold: { title: "A changed exchange to review", businessMechanism: "A different synthetic value exchange with honest unknowns.", reversibleTest: { method: focusedOriginalityFixture.testQuote } } } };
     const earlierReview = { ...review(3), originalityAudit: { ...focusedOriginalityFixture, mechanismQuote: first.strategyExploration.bold.businessMechanism, mechanismVerdict: "familiar_mechanism", closestFamiliarAlternative: "Earlier paid-inbox comparison", consequentialDifference: "Refunds alone do not change the exchange." } };
     earlierReview.evidenceAudit[0].claims = [{ path: "summary", quote: first.summary, verdict: "unsupported", basis: "No supplied source establishes which party bears all risk.", correction: "Keep the actual risk allocation unknown." }] as never;
     const laterReview = { ...review(3), originalityAudit: { ...focusedOriginalityFixture, mechanismQuote: middle.strategyExploration.bold.businessMechanism, mechanismVerdict: "familiar_mechanism", closestFamiliarAlternative: "Current profile-wallet comparison" } };
@@ -127,9 +127,9 @@ describe("bounded focused section repairs", () => {
     expect(result.output).toEqual(original); expect(result.assessment?.ship).toBe(false);
   });
   it("delivers mechanism-replacement guidance in the existing reserved repair, then reviews the complete result", async () => {
-    const creativeSchema = schema.extend({ strategyExploration: z.object({ bold: z.object({ businessMechanism: z.string() }) }) });
-    const first = { ...original, strategyExploration: { bold: { businessMechanism: "A familiar synthetic trial mechanism" } } };
-    const patch = { strategyExploration: { bold: { businessMechanism: "A changed synthetic participant exchange" } } };
+    const creativeSchema = schema.extend({ strategyExploration: z.object({ bold: z.object({ businessMechanism: z.string(), reversibleTest: z.object({ method: z.string() }) }) }) });
+    const first = { ...original, strategyExploration: { bold: { businessMechanism: "A familiar synthetic trial mechanism", reversibleTest: { method: focusedOriginalityFixture.testQuote } } } };
+    const patch = { strategyExploration: { bold: { businessMechanism: "A changed synthetic participant exchange", reversibleTest: { method: focusedOriginalityFixture.testQuote } } } };
     const realRubric = focusedStrategySpec().rubric;
     const creativeReview = (score: number, mechanism: string) => ({ ...review(score),
       originalityAudit: { ...focusedOriginalityFixture, mechanismQuote: mechanism,

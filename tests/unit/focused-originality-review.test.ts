@@ -18,6 +18,21 @@ function review(): CritiqueResult {
 }
 
 describe("the protected bold mechanism has an inspectable originality assessment", () => {
+  it("rejects a review that substitutes a better comparison for the actual proposed test", () => {
+    const critique = review(), plan = focusedPlanFixture();
+    Object.assign(critique.originalityAudit!, { testQuote: "A different test from another idea or a suggested repair, not this draft.", comparisonVerdict: "isolates_difference" });
+    const result = assess(critique, [], rubric, plan);
+    expect(result.ship).toBe(false);
+    expect(result.lint).toContainEqual(expect.objectContaining({ rule: "review_scores", path: "review.originalityAudit" }));
+  });
+  it("cannot pass F7 while its own review says the proposed control is weaker or confounded", () => {
+    const critique = review(), plan = focusedPlanFixture();
+    Object.assign(critique.originalityAudit!, { testQuote: plan.strategyExploration.bold.reversibleTest.method, comparisonVerdict: "confounded" });
+    const before = structuredClone(critique), result = assess(critique, [], rubric, plan);
+    expect(result.ship).toBe(false);
+    expect(result.critique).toEqual(before);
+    expect(result.lint).toContainEqual(expect.objectContaining({ rule: "review_scores", path: "review.originalityAudit" }));
+  });
   it("forwards the full current mechanism finding only for a required repair, including an average deficit", () => {
     const critique = review(), plan = focusedPlanFixture(), actual = focusedStrategySpec().rubric;
     expect(focusedRevisionOriginality(critique, actual, plan)).toBe("");

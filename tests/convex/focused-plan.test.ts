@@ -7,7 +7,7 @@ import { offerAssessmentFixture, offerFact } from "../fixtures/offerAssessment";
 import { approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import type { TurnRequest } from "../../shared/ai/types";
 import type { RateVersion } from "../../shared/economics/rates";
-const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], reviewScores: "", familiarBold: false, wrongBoldQuote: false, failTruth: false, unsupportedStateClaim: false, refusedTarget: false, unsupportedGuarantee: false, unsupportedPrice: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", explorationReference: "", dismissedChannel: false, emailMode: "", competingFirstActions: false, competingChecklist: false }));
+const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], reviewScores: "", familiarBold: false, wrongBoldQuote: false, wrongBoldTest: false, confoundedBoldTest: false, failTruth: false, unsupportedStateClaim: false, refusedTarget: false, unsupportedGuarantee: false, unsupportedPrice: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", explorationReference: "", dismissedChannel: false, emailMode: "", competingFirstActions: false, competingChecklist: false }));
 vi.mock("../../shared/ai/turn", async original => ({
   ...await original<typeof import("../../shared/ai/turn")>(),
   modelTurn: async (req: TurnRequest, rates: RateVersion) => {
@@ -75,6 +75,11 @@ vi.mock("../../shared/ai/turn", async original => ({
     if (result.ok && state.familiarBold && typeof result.output === "object" && result.output && "originalityAudit" in result.output) {
       (result.output as import("../../shared/agents/types").CritiqueResult).originalityAudit!.mechanismVerdict = "familiar_mechanism";
     }
+    if (result.ok && (state.wrongBoldTest || state.confoundedBoldTest) && typeof result.output === "object" && result.output && "originalityAudit" in result.output) {
+      const audit = (result.output as import("../../shared/agents/types").CritiqueResult).originalityAudit!;
+      if (state.wrongBoldTest) audit.testQuote = "A suggested replacement comparison that is not in the actual plan.";
+      if (state.confoundedBoldTest) audit.comparisonVerdict = "confounded";
+    }
     if (result.ok && state.wrongBoldQuote && typeof result.output === "object" && result.output && "originalityAudit" in result.output) {
       (result.output as import("../../shared/agents/types").CritiqueResult).originalityAudit!.mechanismQuote = plan.strategyExploration.adjacent.businessMechanism;
     }
@@ -86,7 +91,7 @@ vi.mock("../../shared/ai/turn", async original => ({
     return result;
   },
 }));
-afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.reviewScores = ""; state.familiarBold = false; state.wrongBoldQuote = false; state.failTruth = false; state.unsupportedStateClaim = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.unsupportedPrice = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.explorationReference = ""; state.dismissedChannel = false; state.emailMode = ""; state.competingFirstActions = false; state.competingChecklist = false; });
+afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.reviewScores = ""; state.familiarBold = false; state.wrongBoldQuote = false; state.wrongBoldTest = false; state.confoundedBoldTest = false; state.failTruth = false; state.unsupportedStateClaim = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.unsupportedPrice = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.explorationReference = ""; state.dismissedChannel = false; state.emailMode = ""; state.competingFirstActions = false; state.competingChecklist = false; });
 
 async function workspace() {
   const t = setup(); delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE;
@@ -739,8 +744,8 @@ it("persists semantic evidence failures and blocks approval and action even when
 });
 
 
-it.each(["familiar", "wrong_quote"])("persists an invalid originality review and blocks approval without lowering scores: %s", async failure => {
-  const { t, owner, slug, orgId } = await workspace(); state.familiarBold = failure === "familiar"; state.wrongBoldQuote = failure === "wrong_quote";
+it.each(["familiar", "wrong_quote", "wrong_test", "confounded_test"])("persists an invalid originality review and blocks approval without lowering scores: %s", async failure => {
+  const { t, owner, slug, orgId } = await workspace(); state.familiarBold = failure === "familiar"; state.wrongBoldQuote = failure === "wrong_quote"; state.wrongBoldTest = failure === "wrong_test"; state.confoundedBoldTest = failure === "confounded_test";
   await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
   await t.finishAllScheduledFunctions(() => undefined);
   const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
@@ -748,7 +753,7 @@ it.each(["familiar", "wrong_quote"])("persists an invalid originality review and
   expect(plan.expert?.quality?.agents[0].average).toBe(5);
   expect(plan.expert?.quality?.fixes).toContainEqual(expect.objectContaining({ rule: "review_scores", path: "review.originalityAudit" }));
   const revision = state.requests.find(req => JSON.stringify(req.messages).includes("A senior reviewer assessed your draft"));
-  expect(JSON.stringify(revision?.messages)).toContain(failure === "familiar" ? "A better test or presentation cannot make an unchanged familiar mechanism original" : "quote the complete current strategyExploration.bold.businessMechanism");
+  expect(JSON.stringify(revision?.messages)).toContain(failure === "familiar" ? "A better test or presentation cannot make an unchanged familiar mechanism original" : failure === "confounded_test" ? "Repair the test against the closest ordinary alternative" : "quote the complete current strategyExploration.bold.businessMechanism");
   await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
   await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: plan._id, playId: "focused" })).rejects.toThrow();
   expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);

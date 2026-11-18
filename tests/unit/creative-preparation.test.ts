@@ -17,7 +17,7 @@ const seeds = { directions: Array.from({ length: 3 }, (_, index) => ({
   meaningfulDifference: "A changed exchange, not a renamed platform.", unsupportedAssumptions: ["Customer interest remains unknown."],
   reversibleTest: "Compare two private mock-ups with a consenting participant.", evidenceRefs: [],
 })) };
-const feedback = { developedDirection: { ...seeds.directions[0], title: "Constructive synthetic departure" }, directions: seeds.directions.map(candidate => ({ ...focusedOriginalityFixture, mechanismQuote: candidate.mechanism, creativeMethod: candidate.creativeMethod, candidateTitle: candidate.title, mechanismVerdict: "familiar_mechanism" as const, consequentialDifference: "ADVISORY_ONLY: synthetic feedback, not evidence or a gate." })) };
+const feedback = { developedDirection: { ...seeds.directions[0], title: "Constructive synthetic departure" }, directions: seeds.directions.map(candidate => ({ ...focusedOriginalityFixture, mechanismQuote: candidate.mechanism, testQuote: candidate.reversibleTest, comparisonVerdict: "isolates_difference" as const, creativeMethod: candidate.creativeMethod, candidateTitle: candidate.title, mechanismVerdict: "familiar_mechanism" as const, consequentialDifference: "ADVISORY_ONLY: synthetic feedback, not evidence or a gate." })) };
 const draft = { summary: "Customer interest remains unknown." };
 const review = {
   gates: [{ id: "G1", pass: true, note: "Unknown preserved." }],
@@ -125,7 +125,7 @@ describe("creative preparation within the existing focused run", () => {
     };
     const possibilities = CreativePreparationSchema.parse({ directions: ["convention_inversion", "distant_transfer", "asset_recombination", "ownable_behavior"].map((creativeMethod, i) => ({ ...direction, creativeMethod, title: `Synthetic direction ${i}` })) });
     const largeFeedback = CreativeFeedbackSchema.parse({ developedDirection: direction, directions: possibilities.directions.map(candidate => ({
-      creativeMethod: candidate.creativeMethod, candidateTitle: candidate.title, mechanismQuote: candidate.mechanism,
+      creativeMethod: candidate.creativeMethod, candidateTitle: candidate.title, mechanismQuote: candidate.mechanism, testQuote: candidate.reversibleTest, comparisonVerdict: "isolates_difference" as const,
       closestFamiliarAlternative: fill("Closest synthetic practice ", 600), consequentialDifference: fill("Unverified consequential difference ", 900),
       mechanismVerdict: "unclear_difference", testOfDifference: fill("Synthetic comparison only ", 700),
     })) });
@@ -158,8 +158,10 @@ describe("creative preparation within the existing focused run", () => {
     })).rejects.toMatchObject({ kind: "invalid_output" });
     expect(calls).toBe(0);
   });
-  it.each([false, true])("rejects feedback about a different mechanism even when method and candidate title match (checkpoint=%s)", async cached => {
-    const wrong = structuredClone(feedback); wrong.directions[0].mechanismQuote = "An unrelated exchange from another candidate or earlier run.";
+  it.each([[false, "mechanism"], [true, "mechanism"], [false, "test"], [true, "test"]] as const)("rejects feedback about different work even when method and title match (checkpoint=%s, field=%s)", async (cached, field) => {
+    const wrong = structuredClone(feedback);
+    if (field === "mechanism") wrong.directions[0].mechanismQuote = "An unrelated exchange from another candidate or earlier run.";
+    else wrong.directions[0].testQuote = "An improved test suggested by the reviewer, absent from the candidate.";
     let calls = 0;
     await expect(runAgent(spec(), { brief: "Synthetic", task: "Prepare possibilities", facts: [] }, {
       phase: async (key, _label, fn) => {

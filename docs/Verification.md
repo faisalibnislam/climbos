@@ -1,3 +1,7 @@
+## 18 November — bind originality review to the actual comparison
+
+V3.206 binds mechanism and test quotations, separates comparison quality from novelty, and blocks contradictory passing reviews. Candidate feedback remains advisory; uncertain novel ideas remain eligible. **222 tests**, types and lint passed, including production-path approval denial. No new provider call or semantic quality pass. [Audit and commands](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November — preserve thousands and millions in numeric evidence
 
 V3.205 fixes reproduced k/m magnitude errors: 10 customers cannot support a 10k claim, while 10k and 10,000 correctly match. Decimal-string arithmetic preserves precision. **266 focused/permission tests**, types and lint passed. Numeric matching remains a necessary check, not semantic verification. Paid testing stays paused, runtime model unchanged. [Audit and commands](growth-engine/focused-evidence-review-audit.md).

@@ -1,5 +1,20 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.206 — review the actual bold comparison, not an imagined better test
+
+The saved agency draft compares a conditional capped quote against a calculator, while its reviewer identifies a manual capped proposal as the closer ordinary alternative. The old review contract bound the mechanism but left its test judgment unbound. Two red regressions showed that a passing review could quote a replacement test or contradict its own confounded-comparison finding.
+
+The existing originality audit now quotes the actual proposed test and records comparison quality separately from mechanism originality. Code checks both quotations and prevents a passing F7 from contradicting either judgment. Candidate feedback uses the same binding on fresh and resumed records, without filtering candidates. Repair feedback preserves the complete bound finding and distinguishes replacing an ordinary mechanism from correcting a test for a distinctive one. Generator and reviewer guidance now compares the same promised result, including ordinary manual/contractual alternatives, and includes the participant whose behavior the test claims to investigate. No matching precedent or verified feasibility is required.
+
+**222 focused, budget and permission tests passed in 12 files (11.65 seconds)**; app/Convex typechecks, changed-file ESLint and diff checks passed. Mocked production tests verify wrong-test and confounded-comparison failures persist and deny approval/start despite passing scores, with no action receipts. Existing reviews are retained; a review missing the new bindings cannot validate a new assessment.
+
+```sh
+pnpm exec vitest run tests/unit/focused-originality-review.test.ts tests/unit/creative-preparation.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-length-repair.test.ts tests/unit/focused-evidence-repair.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts tests/unit/strategy-prompt-cost.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+These checks enforce review integrity; the comparison verdict remains fallible model judgment. They do not automatically establish that a proposed mechanism is original or that the chosen control is correct. Paid tests remain paused, runtime models/call limits/budget controls are unchanged, and no fresh Livoform quality pass is claimed.
+
 ## V3.205 — preserve abbreviated numeric magnitudes
 
 A follow-up to the numeric-presence audit reproduced six failures around `k`/`m` quantities: a source reporting 10 customers could support a 10k claim, and equivalent written-out quantities could fail. The same validator now expands those abbreviations using decimal-string arithmetic, without rounding or floating-point conversion. Thus 10k matches 10,000, not 10 or 10m; decimal quantities and distinct integers beyond JavaScript's safe-integer range retain their identity. This does not infer currencies, periods, causal effects or semantic claim support.
