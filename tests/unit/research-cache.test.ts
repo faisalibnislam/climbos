@@ -98,6 +98,10 @@ describe("tenant research cache behavior", () => {
     const body = JSON.stringify(request?.messages);
     expect(body).toContain("first-party help or setup page");
     expect(body).toContain("Do not reread details already supplied");
+    expect(body).toContain("same bounded allowance");
+    expect(body).toContain("current official feature/plan page before collecting more channels");
+    expect(body).toContain("Reuse supplied dated competitor evidence");
+    expect(body).toContain("shared feature labels alone prove neither equivalence nor superiority");
     expect(body).toContain("retrieval date and stated update date per claim");
     expect(body).toContain("not tested behavior");
     expect(value?.notes).toBe(notes);

@@ -4,8 +4,9 @@ import { focusedPlanTask } from "../../shared/agents/focusedPlan";
 import { campaignTimingTask } from "../../shared/agents/planTasks";
 import { localToday } from "../../shared/agents/campaignTiming";
 import { LIVOFORM_PUBLIC_DOCS, LIVOFORM_PAYMENT_SETUP, livoformPublicDocsResearch } from "./livoformPublicDocs";
+import { LIVOFORM_ALTERNATIVE_SOURCES, livoformAlternativesResearch } from "./livoformAlternatives";
 
-const LaunchEvidencePackSchema = z.enum(["original", "public-docs-20261118", "public-docs-setup-20261118"]);
+const LaunchEvidencePackSchema = z.enum(["original", "public-docs-20261118", "public-docs-setup-20261118", "public-alternatives-20261118"]);
 export type LaunchEvidencePack = z.infer<typeof LaunchEvidencePackSchema>;
 
 /** Explicit opt-in: other stages must not silently ignore evidence selection. */
@@ -62,11 +63,13 @@ export function livoformLaunchInput(ownerInput: unknown, now = Date.now(), evide
   LaunchEvidencePackSchema.parse(evidencePack);
   const enriched = evidencePack !== "original";
   const sources = enriched ? [...LIVOFORM_LAUNCH_SOURCES, ...LIVOFORM_PUBLIC_DOCS.map(source => ({ url: source.url, title: `${source.title} — retrieved ${source.retrievedAt}; updated ${source.updatedAt ?? "unknown"}` }))] : LIVOFORM_LAUNCH_SOURCES;
+  if (evidencePack === "public-alternatives-20261118") sources.push(...LIVOFORM_ALTERNATIVE_SOURCES.map(source => ({ url: source.url, title: `${source.title} — retrieved ${source.retrievedAt}; updated ${source.publishedAt ?? "unknown"}` })));
   // The original frozen pack stays byte-identical. The new pack retains each page's own date.
   const researchBase = enriched
     ? `${RESEARCH.slice(0, RESEARCH.indexOf("\nThe homepage links "))}\nAdditional first-party documentation inspected on 2026-11-18, evidence pack public-docs-20261118. The homepage/pricing claims above retain their November 17 retrieval basis. The earlier failed read of /integrations/chatgpt-claude is superseded by the successful dated read below. The linked /use-cases/agencies and /templates pages remain uninspected and unavailable for citation. No community rules, creator audience, platform eligibility or competing vendor terms were checked. No product or payment behavior was tested.\n\n${livoformPublicDocsResearch()}`
     : RESEARCH;
-  const research = evidencePack === "public-docs-setup-20261118" ? `${researchBase}\n\n${LIVOFORM_PAYMENT_SETUP}` : researchBase;
+  const setupResearch = evidencePack === "public-docs-setup-20261118" || evidencePack === "public-alternatives-20261118" ? `${researchBase}\n\n${LIVOFORM_PAYMENT_SETUP}` : researchBase;
+  const research = evidencePack === "public-alternatives-20261118" ? `${setupResearch}\n\n${livoformAlternativesResearch()}` : setupResearch;
   const facts = owner.statements.map(statement => `Owner reports (${owner.reportedAt}): ${statement}`);
   const timingContext = { today: localToday("UTC", now), timezone: "UTC", now };
   const brief = "OWNER-SELECTED PUBLIC-SOURCE ACCEPTANCE CASE: Livoform, https://livoform.com/. Use the separately supplied dated owner reports to establish its launch situation. Proposed evaluation objective: find a narrow initial customer job, first qualified users, a meaningful activation event and evidence of willingness to pay. This objective and a 14-day initial test are evaluation choices, not an owner revenue target or deadline. Do not infer that free users, contacts or an audience exist or do not exist. Costs, margins, support capacity, owner time, geography and actual marketing budget remain unknown. A zero paid-media allocation is a constraint of this evaluation, not a statement of the real business budget. No external action is authorized. Build toward a conditional longer-term direction without invented forecasts.";

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
 import { livoformLaunchInput, livoformLaunchComparison, LIVOFORM_LAUNCH_QUESTIONS, normalizeLaunchComparison, parseLaunchEvidencePack } from "../../bench/strategy-quality/livoformLaunch";
 import { LIVOFORM_PUBLIC_DOCS } from "../../bench/strategy-quality/livoformPublicDocs";
+import { LIVOFORM_ALTERNATIVE_SOURCES } from "../../bench/strategy-quality/livoformAlternatives";
 import { referenceEvidenceBasis } from "../../shared/agents/evidenceKind";
 
 // Synthetic reports exercise provenance; these are not claims about the real business.
@@ -75,6 +76,33 @@ describe("owner-selected Livoform launch acceptance", () => {
     const artifact = (input: ReturnType<typeof livoformLaunchInput>) => ({ caseId: "livoform", schemaPassed: true, input, result: { output: { summary: "Synthetic" } } });
     expect(() => livoformLaunchComparison(artifact(prior), artifact(setup))).toThrow("identical business evidence");
     expect(() => livoformLaunchComparison(artifact(setup), artifact(setup))).not.toThrow();
+  });
+  it("adds alternative counterevidence without changing owner inputs or silently rewriting older packs", () => {
+    const prior = livoformLaunchInput(owner, now, "public-docs-setup-20261118");
+    const current = livoformLaunchInput(owner, now, "public-alternatives-20261118");
+    expect(current.facts).toEqual(prior.facts);
+    expect(current.constraints).toEqual(prior.constraints);
+    expect(current.task).toEqual(prior.task);
+    expect(current.brief).toEqual(prior.brief);
+    expect(current.ownerSuppliedUrls).toEqual(prior.ownerSuppliedUrls);
+    expect(current.precomputedResearch!.notes).toContain(prior.precomputedResearch!.notes);
+    expect(prior.availableSourceUrls).toHaveLength(8);
+    expect(current.availableSourceUrls).toHaveLength(12);
+    const notes = current.precomputedResearch!.notes;
+    for (const source of LIVOFORM_ALTERNATIVE_SOURCES) {
+      expect(current.availableSourceUrls).toContain(source.url);
+      expect(referenceEvidenceBasis(source.url, current.constraints?.factEvidenceBases, current.availableSourceUrls!)).toBe("source_reported");
+      expect(notes).toContain(source.retrievedAt);
+      expect(notes).toContain(source.responseSha256);
+    }
+    expect(notes).toContain("Tally adds no extra fee");
+    expect(notes).toContain("free on all plans");
+    expect(notes).toContain("they do not prove equivalent results");
+    expect(notes).toContain("No action is authorized");
+    expect(parseLaunchEvidencePack("launch-acceptance", "public-alternatives-20261118")).toBe("public-alternatives-20261118");
+    const record = (input: typeof current) => ({ caseId: "livoform", schemaPassed: true, input, result: { output: { summary: "Synthetic" } } });
+    expect(() => livoformLaunchComparison(record(prior), record(current))).toThrow("identical business evidence");
+    expect(() => livoformLaunchComparison(record(current), record(current))).not.toThrow();
   });
   it("rejects unknown packs and refuses to silently ignore pack selection on another stage", () => {
     expect(parseLaunchEvidencePack("launch-acceptance")).toBe("original");

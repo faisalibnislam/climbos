@@ -59,6 +59,11 @@ describe("creative preparation within the existing focused run", () => {
     expect(writer).toContain("No eligible exposure still means not-run, not failed demand");
     expect(writer).toContain("A required paid plan may put payment before activation");
     expect(writer).toContain("actual product activation remains untested");
+    expect(writer).toContain("does not establish a reason to pay over an external free alternative");
+    expect(writer).toContain("brief, invitation and experiment's metric consistent");
+    expect(writer).toContain("single-person roleplay cannot establish the real exchange");
+    expect(critic).toContain("An internal paywall is not a competitive advantage");
+    expect(critic).toContain("an owner-account demonstration cannot count as a participant using the product");
     expect(writer).toContain("Owner approval cannot create a missing capability");
     expect(writer).toContain("distinguish preparing instructions from performing the instructed task");
     expect(writer).not.toContain("at most 3 immediate items in weekOneChecklist");

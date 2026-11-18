@@ -1,5 +1,26 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.189 — test paid value against the strongest evidenced alternative
+
+The actual strategy path already carries saved business insights and dated research into the focused plan. `researchFor("business_insights")` already discovers direct competitors; no new competitor agent or provider was needed. The growth research brief, however, emphasized channel discovery and placed like-for-like comparisons inside SEO guidance. Paid-value reasoning could then treat a feature's internal paywall as the reason to buy. V3.189 gives a decision-changing official alternative comparison priority within the existing seven-search/four-fetch allowance, reusing supplied evidence rather than requiring a survey on every request.
+
+The focused writer and independent reviewer now challenge internal paywall reasoning with supplied free/current alternatives while preserving unknown comparative performance. They distinguish a one-off job from subscription retention. The test brief, invitation and metric must agree on who operates which account: an owner demonstration is job-fit evidence, while participant activation requires their own authorized access. Unknown access stays conditional; no trial, purchase, credential sharing or ClimbOS product operation is assumed. Exploration retains speculative new mechanisms, with a control and an observed behavior that test the consequential difference, including necessary participant handoffs. Models, acceptance thresholds, call count and execution boundaries are unchanged.
+
+A separately selected `public-alternatives-20261118` evaluation pack adds current official Tally, Jotform and Typeform documentation and the existing payment-setup addendum. All four public reads returned HTTP 200. Each retained record has the exact URL, retrieval date, displayed update date when available, response hash and bounded paraphrase. Tally publicly describes free payment collection, AI form creation/document recreation and assistant connections; these challenge feature-only differentiation but do not prove equal results or buyer preference. No account, product flow, eligibility, current fair-use limit or customer behavior was tested. Historical packs and owner inputs remain unchanged; different packs cannot be compared as a code-only gain. Tester access and founder time remain unknown.
+
+Focused verification: **173 tests in ten files passed (16.84 seconds)**, covering research routing/bounds, real writer/reviewer request construction, source-pack identity/provenance, budget and actual Convex plan generation, tenant/approval refusal and safety. App and Convex type checks, changed-file lint and diff checks passed. Model-quality benefit remains unverified until paid retesting.
+
+```sh
+pnpm exec vitest run tests/unit/creative-preparation.test.ts tests/unit/research-cache.test.ts tests/unit/livoform-launch-input.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/focused-originality-review.test.ts tests/unit/anthropic-budget.test.ts tests/unit/evaluation-identity.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+## Docs V10 — 3.88 clean fallback; originality repair regressed the draft
+
+V3.188 made eight calls for **$1.530810**, with review averages 3.50, 3.88 and 3.75. The saved clean middle draft still fails the unchanged quality average. Its respondent-held answer-card mechanism was distinct but its test did not isolate field control and cross-owner transfer. The last revision improved that test and received F7=4, but exceeded a draft's 2,400-character limit and still left tester paid-plan access ambiguous; the earlier clean failed draft was retained. The first draft's constructive proposal was a familiar paid-priority/refund arrangement. The added candidate stage has not established a dependable quality benefit. No separate comparison was run for V10.
+
+Loaded source hash: `3e3e8cf172e2eaa55c96820183846989b8f1c067c78eb3a5aac6ec7e76701e51`. Combined charged/held after V10: **$90.709794 / $100**, leaving **$9.290206** before the next evaluation. Public-document readings were not paid model calls. No external business action occurred.
+
 ## Docs V9 — cleaner retained fallback, quality still below the bar
 
 V3.187 with the unchanged documentation pack (`280cd1575809ebf6d3567cf7f15d87279137915b91030934dab959d00b9a83da`) made eight calls for **$1.504206**. Reviews were 3.44 with seven errors, 3.75 with zero errors, then 3.81 with one unsupported fee-bearer claim. The engine correctly retained the clean **still-failed 3.75** middle draft instead of promoting the higher-scoring factual regression. All required gates pass in that retained draft, but the quality average does not.
