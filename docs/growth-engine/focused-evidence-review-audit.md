@@ -1,6 +1,19 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — distinguish proposed futures from invented present facts
+## Current status — generate structural alternatives before polishing a feature
+
+V3.182 strengthens the existing bounded ideation task in response to repeated conventional candidates in docs V3–V5. The inversion method must identify a consequential change in who sets terms, chooses, owns outputs, does work, carries risk or receives value. A distant transfer must bring an operating rule or incentive, not merely rename an ordinary service as a tailor/library/concierge. At least one candidate treats the product as a resource for a different exchange and considers an affected non-buyer as well as the buyer. Interests may conflict; demand remains a hypothesis. Private simulations remain possible without current integration support. No example specific to Livoform, new agent, provider, call, token allowance or model was added.
+
+**168 tests in ten files passed (20.05 seconds)**, including the actual preparation request, protected exploration, evidence handling, budgets and permission boundaries. App/Convex types, changed-file ESLint and diff checks passed. These tests verify the contract and safeguards, not the originality of generated text.
+
+```sh
+pnpm exec vitest run tests/unit/creative-preparation.test.ts tests/unit/strategy-exploration.test.ts tests/unit/focused-originality-review.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-plan.test.ts tests/unit/anthropic-budget.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+The new structured reviewer in docs V5 correctly rejected both the assistant-connector idea and its first replacement, an ordinary AI reply approval workflow. The average-deficit repair now reaches the writer. The second replacement changes respondent ownership and portability of a proposed brief, with a manual comparison against a plain answer copy; its final review is pending. This is evidence that the actual mechanism can change during repair, not acceptance, business validation or proof that every new idea is original. V5 loaded v3.180; a fresh run will be needed to test V3.181/V3.182's generation changes.
+
+## V3.181 — distinguish proposed futures from invented present facts
 
 V3.181 removes an ambiguity in the highest-priority operating rule. It prohibited inventing “features” without distinguishing invented current claims from deliberately proposed future designs, while the creative task separately permitted unbuilt ideas. The truth rule now explicitly protects hypothetical future features, offers, partnerships and business models during strategic exploration. These remain labelled proposals, cannot justify present-tense customer promises and grant no implementation authority. No factual, numeric, source, budget, approval or tenant control is removed. This clarification is a plausible instruction-level contributor to feature-bound ideation, not a proven explanation for all conventional outputs.
 

@@ -1,3 +1,7 @@
+## 18 November 2026 — structural inversion and causal transfer
+
+V3.182 refines the existing ideation methods to change consequential roles/exchanges, distinguish causal transfers from metaphors and consider affected non-buyers. Same model, call count and token budget; hypotheses can be simulated without existing integrations. 168 tests in ten files, types/lint passed. Paid semantic effect awaits a fresh run. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November 2026 — truth rules allow clearly proposed futures
 
 V3.181 clarifies the highest-priority truth rule: labelled future designs are allowed in strategy exploration, while invented existing claims and unsupported customer promises remain prohibited. 166 focused/permission tests, types/lint passed. This resolves an instruction ambiguity; paid semantic benefit is not yet established. Latest completed docs V4 failed at 3.63, cumulative $81.785357 / $100; V5 loaded the preceding engine. [Audit](growth-engine/focused-evidence-review-audit.md).

@@ -40,6 +40,11 @@ describe("creative preparation within the existing focused run", () => {
       },
     });
     expect(requests).toHaveLength(3);
+    const ideation = JSON.stringify(requests[0].system);
+    expect(ideation).toContain("who sets the terms, chooses, owns the output");
+    expect(ideation).toContain("only a metaphor until the source domain's operating rule");
+    expect(ideation).toContain("an affected participant who does not currently choose or pay");
+    expect(ideation).toContain("An unpublished simulation can test the exchange even if the required feature does not exist");
     for (const request of requests.slice(0, 2)) {
       const system = JSON.stringify(request.system);
       expect(system).toContain("existing features");
