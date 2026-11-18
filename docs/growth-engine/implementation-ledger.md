@@ -1,3 +1,7 @@
+## 18 November — require complete milestones when generating new plans
+
+V3.191 aligns the focused/starter output schema with existing required timeline fields while keeping legacy reads compatible. Synthetic fixtures were updated to the same contract; **141 focused/regression/permission tests in seven files passed**. Cost tests now preserve the smaller starter allowance instead of assuming fewer focused calls are always cheaper than detailed planning. The active paid V2 run still uses V3.190; no new quality result is claimed. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — retain truncation failure and repair the quoted response allowance
 
 The first alternative-evidence test stopped at an incomplete candidate review, before any plan. The two calls cost $0.194658; combined charged/held is **$90.904452 / $100**. V3.190 raises that review's allowance to 8,000 tokens and updates its shared upfront quote. Same model, call count and acceptance bar; no partial answer is accepted. **120 tests in six files passed (18.34 seconds)**. [Audit](focused-evidence-review-audit.md).

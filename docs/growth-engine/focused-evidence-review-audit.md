@@ -1,5 +1,14 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.191 — align the generated milestone schema with existing validation
+
+The public-alternatives V2 draft omitted `firstAction` from three later phases. Existing deterministic lint correctly rejected that structure, but `FocusedStrategyDraftSchema` still inherited optional milestone fields from the legacy read schema. The model could therefore satisfy its provider schema and consume a review/revision on an already known format requirement.
+
+New focused/starter generation now requires nonempty `firstAction`, `tasks`, `howToCheck` and `decisionRule` in every phase. The public saved-plan read schema remains compatible with older records; no action is fabricated or silently copied from another task. Partial section repairs still validate any replaced phase array in full. No model, token allowance, call count, approval condition or quality threshold changes. The ongoing V2 paid run loaded V3.190 before this edit and cannot establish the new schema's effect.
+
+The first test run exposed older synthetic fixtures missing later-phase tasks; those fixtures and the fake provider now supply explicit synthetic tasks. A stale assertion also assumed fewer calls guaranteed a cheaper focused run. The current configured maximum quotes were $3.543 focused versus $3.44295 detailed (quote bounds, not actual charges); the added creative stages invalidate that old claim. The test now preserves the actual smaller starter allowance, alongside existing exact stage-quote and cap checks. No budget is hidden or reduced to pass a comparison. **141 tests in seven files passed (17.56 seconds)** after these corrections. Type checking also required the spec's existing saved-plan output type to remain explicit while its new-generation schema is stricter. Six demo workflow tests in two files also passed (2.95 seconds). App/Convex types and changed-file lint passed.
+
+
 ## V3.190 — complete the bounded candidate-review response
 
 The first public-alternatives run stopped before drafting: its candidate review consumed the entire 6,000-token output allowance, including 4,029 adaptive-reasoning tokens. The provider reported truncation and the engine rejected the incomplete review; no plan or acceptance score exists. Exploration and the failed review cost **$0.194658**, bringing combined charged/held to **$90.904452 / $100**. The failed artifact and receipt remain intact (`2d2b60eeb51c3e5f6e04ebd84c3fe1cf35bca5ce3ca95116be2fbfe84bfd387e`).

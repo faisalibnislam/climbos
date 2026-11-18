@@ -338,7 +338,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.190-complete-candidate-feedback";
+export const ENGINE_VERSION = "v3.191-complete-focused-milestones";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -410,10 +410,13 @@ export const FocusedStrategySchema = z.object({
   risks: StrategyV2Schema.shape.risks.max(3),
 });
 
-/** Bound new focused checklists without invalidating previously saved, longer plans. */
+/** Require the milestone fields already enforced by lint, without invalidating saved legacy plans. */
 const FocusedStrategyDraftSchema = FocusedStrategySchema.extend({
   phases: z.array(StrategyV2Schema.shape.phases.element.extend({
-    tasks: StrategyV2Schema.shape.phases.element.shape.tasks.unwrap().max(4).describe("One to four coherent steps, only as needed. Do not bundle unrelated chores to evade the bound. Keep necessary approvals and verification; defer optional work conditionally.").optional(),
+    firstAction: StrategyV2Schema.shape.phases.element.shape.firstAction.unwrap().trim().min(1),
+    tasks: StrategyV2Schema.shape.phases.element.shape.tasks.unwrap().max(4).describe("One to four coherent steps, only as needed. Do not bundle unrelated chores to evade the bound. Keep necessary approvals and verification; defer optional work conditionally."),
+    howToCheck: StrategyV2Schema.shape.phases.element.shape.howToCheck.unwrap().trim().min(1),
+    decisionRule: StrategyV2Schema.shape.phases.element.shape.decisionRule.unwrap().trim().min(1),
   })),
 });
 
@@ -2778,7 +2781,7 @@ function focusedOfferDraftInput(out: z.infer<typeof FocusedStrategySchema>, inpu
 
 /** Default owner experience: one decision and useful prepared work; no forced forecast portfolio. */
 export function focusedStrategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof FocusedStrategySchema>> {
-  const spec = base({
+  const spec = base<z.infer<typeof FocusedStrategySchema>>({
     id: "growth_strategy", role: "cmo", label: "Your next growth step", skills: ["owner-brevity", "focused-growth-strategy"],
     schema: FocusedStrategyDraftSchema, rubric: focusedRubric(rubricOf("growth-strategy")), criticSkills: ["owner-brevity"],
     lint: (out, input) => [

@@ -45,6 +45,16 @@ describe("a focused plan does useful work without invented forecasts", () => {
     expect(focusedStrategySpec().schema.safeParse(plan).success).toBe(false);
     expect(FocusedStrategySchema.safeParse(plan).success).toBe(true);
   });
+  it.each(["firstAction", "tasks", "howToCheck", "decisionRule"] as const)("requires %s in every newly generated milestone while preserving legacy reads", field => {
+    const plan = focusedPlanFixture();
+    delete plan.phases[1][field];
+    expect(FocusedStrategySchema.safeParse(plan).success).toBe(true);
+    for (const spec of [focusedStrategySpec(), starterStrategySpec()]) {
+      expect(spec.schema.safeParse(plan).success).toBe(false);
+      const schema = claudeSchema(jsonSchemaFor(spec.schema)) as { properties: { phases: { items: { required: string[] } } } };
+      expect(schema.properties.phases.items.required).toContain(field);
+    }
+  });
   it("quotes full-plan output headroom for both draft and revision while preserving the starter allowance", () => {
     const spec = focusedStrategySpec(), plan = planJob("strategy", { planStyle: "focused" });
     // A real revision used 13,740 thinking tokens plus its structured portfolio and hit 24,000.
@@ -100,7 +110,9 @@ describe("a focused plan does useful work without invented forecasts", () => {
     vi.stubEnv("CLIMBOS_ENGINE", "v2");
     const small = planJob("strategy", { planStyle: "focused" }), large = planJob("strategy", { planStyle: "detailed" });
     expect(small.steps.length).toBeLessThan(large.steps.length);
-    expect(maxJobMicros(small)).toBeLessThan(maxJobMicros(large));
+    // Fewer calls do not guarantee a cheaper quote: focused includes bounded creative preparation.
+    // The starter route must retain its smaller allowance instead of inheriting those stages.
+    expect(maxJobMicros(planJob("strategy", { planStyle: "starter" }))).toBeLessThan(maxJobMicros(small));
     vi.unstubAllEnvs();
   });
   it("distinguishes proposed recording cues from invented dashboard counts and unfinished public copy",()=>{
