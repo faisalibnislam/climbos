@@ -1,5 +1,13 @@
 # Focused strategy evidence review — 17 November 2026
 
+## Docs V9 — cleaner retained fallback, quality still below the bar
+
+V3.187 with the unchanged documentation pack (`280cd1575809ebf6d3567cf7f15d87279137915b91030934dab959d00b9a83da`) made eight calls for **$1.504206**. Reviews were 3.44 with seven errors, 3.75 with zero errors, then 3.81 with one unsupported fee-bearer claim. The engine correctly retained the clean **still-failed 3.75** middle draft instead of promoting the higher-scoring factual regression. All required gates pass in that retained draft, but the quality average does not.
+
+The initial referral-handoff idea remained ordinary counterparty adoption. Its replacement, respondent-held project answers, was judged materially different, but the comparison with ordinary autofill and observation of actual release were weak. The practical plan still needed a clearer paid-value hypothesis, the Core-without-built-in-AI tradeoff, a concrete access-research fallback, and simpler prerequisites. The last reviewer caught an unsupported assertion about who bears Polar fees; no price or fee allocation is being added as fact. Tester access and founder time remained unknown, and nothing was executed. No separate paid comparison was run for V9.
+
+Combined charged/held before docs V10: **$89.178984 / $100**. Docs V10 now evaluates V3.188's constructive candidate feedback on the **same evidence pack**; it is in progress and has no acceptance result yet. The opt-in setup addendum remains untested in a paid run. The repeated failures do not establish dependable strategy quality.
+
 ## Evaluation runner — use cumulative headroom for a complete revision
 
 The paid runner's actual HTTP guard already included both budget ledgers, but its pre-revision check used an unrelated $90 threshold from only the main ledger, and progress logs omitted the historical ledger. The preflight now uses combined charged/held amounts and reserves headroom for two text-only calls at the highest permitted input, cache-write, output and model limits: **$5.64**. This conservative check can stop before the cap, and neither spends that headroom nor authorizes a larger cap. The per-attempt $100 guard, global lock, uncertain holds, permitted endpoint/models and starter per-run cap remain intact. Progress logs now show both ledgers; the budget helper is also included in the loaded source fingerprint.

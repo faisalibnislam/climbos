@@ -1,3 +1,7 @@
+## 18 November — retain the clean V9 failure and test constructive feedback
+
+Docs V9 made eight calls for $1.504206 and retained a clean but below-bar **3.75/5** draft. The later 3.81 revision had an unsupported fee-bearer claim and was correctly not promoted. Originality/test design, paid-value reasoning and prerequisite clarity remain gaps. Combined charged/held **$89.178984 / $100** before the ongoing V3.188/docs V10 test. No external action, model switch or owner-input assumption. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — budget complete evaluation revisions cumulatively
 
 The paid runner now checks both ledgers against conservative headroom for a full revision/review pair and reports combined used/held amounts. The original $100 hard cap and per-attempt enforcement remain unchanged. **27 tests in three files**, types/lint/diff checks passed. No runtime model or acceptance change. [Audit](focused-evidence-review-audit.md).
