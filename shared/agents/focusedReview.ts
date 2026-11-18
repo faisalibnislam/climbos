@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { stringFields } from "./lint";
-import type { CritiqueResult, LintIssue, Rubric } from "./types";
+import type { AgentInput, CritiqueResult, LintIssue, Rubric } from "./types";
 
 export const FOCUSED_REVIEW_ID = "focused-growth-strategy";
 
@@ -80,9 +80,25 @@ export function focusedRevisionCriteria(critique: CritiqueResult, rubric: Rubric
   }).sort((a, b) => a.score - b.score).map(row => row.text).join("\n");
 }
 export const EVIDENCE_AUDIT_CATEGORIES = ["business_state", "comparative_claims", "capabilities_and_results"] as const;
+const PlanName = z.string().trim().min(1).max(80);
+const ProductPlanCheckSchema = z.object({
+  path: z.string().trim().min(1).max(300),
+  quote: z.string().trim().min(1).max(700),
+  claimedPlans: z.array(PlanName).min(1).max(6),
+  availabilityClaim: z.enum(["asserted_available", "conditional_unknown"]),
+  requirements: z.array(z.object({
+    capabilityQuote: z.string().trim().min(1).max(200),
+    eligiblePlans: z.array(PlanName).max(8).nullable().describe("Explicitly supported plans for this exact capability, not an assumed upgrade hierarchy; null means unknown, empty means no eligible plan established. Do not infer exclusions from this list."),
+    excludedPlans: z.array(PlanName).max(8).describe("Only plans explicitly excluded by the supplied evidence. Absence from an eligibility list is not an exclusion."),
+    basis: z.enum(["source_reported", "owner_reported", "unknown"]),
+    evidenceRef: z.string().trim().min(1).max(500).nullable(),
+    sourceQuote: z.string().trim().min(1).max(1000).nullable(),
+  })).min(1).max(6),
+});
 export const FocusedEvidenceAuditSchema = z.array(z.object({
   category: z.enum(EVIDENCE_AUDIT_CATEGORIES),
   basis: z.string().min(1).max(700),
+  planChecks: z.array(ProductPlanCheckSchema).max(4).describe("Capabilities/results only: check material current product-plan claims in actual tasks and drafts. Empty when no such claim exists. Do not gate speculative future features on current entitlements."),
   claims: z.array(z.object({
     path: z.string().min(1).max(300),
     quote: z.string().min(1).max(700),
@@ -92,6 +108,49 @@ export const FocusedEvidenceAuditSchema = z.array(z.object({
   })).max(4),
 })).length(3);
 export type FocusedEvidenceAudit = z.infer<typeof FocusedEvidenceAuditSchema>;
+
+export const PRODUCT_PLAN_REASONING = `For a workflow dependent on subscription entitlements, work backward from the exact required capabilities to the plans that support every one of them. Do not combine features from different plans or assume a more expensive tier inherits every free feature. Distinguish related but different capabilities, such as basic prompt generation versus document/brief-based creation. Optional features belong in separate conditional branches, not the cheapest plan's promised bundle. Preserve explicit exclusions and conflicts; an incomplete eligibility list does not prove exclusion. In the prepared test brief, state the smallest evidenced feature/plan combination, optional branches and remaining verification. Use a price only for the plan and billing basis actually needed and supported; do not invent missing prices or internal costs. Published eligibility does not establish owner/participant access, functional success or ClimbOS's ability to operate the product. Keep access and owner time unknown when supplied as unknown, and keep the concept/job-fit path distinct from actual activation. Proposed future features remain hypotheses, outside current-entitlement checks.`;
+
+/** Checks source presence and the review's own set intersection, not natural-language entailment. */
+function lintProductPlanCheck(check: z.infer<typeof ProductPlanCheckSchema>, fields: Map<string, string> | null, input?: AgentInput): LintIssue[] {
+  const issues: LintIssue[] = [];
+  const invalid = (message: string) => issues.push({ rule: "review_scores", severity: "error", path: "review.evidenceAudit", message });
+  const name = (plan: string) => plan.trim().toLowerCase();
+  const plans = check.claimedPlans.map(name);
+  const mentioned = (plan: string) => new RegExp(`(?<![\\p{L}\\p{N}_])${plan.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}\\p{N}_])`, "iu").test(check.quote);
+  if (!fields?.get(check.path)?.includes(check.quote) || new Set(plans).size !== plans.length || !check.claimedPlans.every(mentioned)) {
+    invalid("Bind the product-plan check to the exact current task/draft quote and every named plan; do not check another branch or infer a tier hierarchy.");
+    return issues;
+  }
+  for (const requirement of check.requirements) {
+    if (!check.quote.includes(requirement.capabilityQuote)) {
+      invalid(`Quote the actual capability in ${check.path}; do not substitute a different feature.`);
+      continue;
+    }
+    if (requirement.eligiblePlans === null) {
+      if (requirement.basis !== "unknown" || requirement.evidenceRef !== null || requirement.sourceQuote !== null || requirement.excludedPlans.length) invalid("Unknown plan eligibility must not carry a claimed supporting source. Describe conflicting or missing evidence in the audit basis.");
+      if (check.availabilityClaim === "asserted_available") issues.push({ rule: "invented_fact", severity: "error", path: check.path, message: `Eligibility for “${requirement.capabilityQuote}” is unknown. Do not assert that the named plan enables it; make verification a prerequisite or keep a separate private concept test.` });
+      continue;
+    }
+    const ref = requirement.evidenceRef, quote = requirement.sourceQuote;
+    const factIndex = ref?.match(/^fact:(0|[1-9]\d*)$/)?.[1];
+    const factBasis = factIndex !== undefined ? input?.constraints?.factEvidenceBases?.[Number(factIndex)] : undefined;
+    const sourceUrls = [...(input?.availableSourceUrls ?? []), ...(input?.precomputedResearch?.sources ?? []).map(source => source.url)];
+    const sourcePresent = Boolean(requirement.basis !== "unknown" && ref && quote && (factIndex !== undefined
+      ? factBasis === requirement.basis && input?.facts[Number(factIndex)]?.includes(quote)
+      : requirement.basis === "source_reported" && sourceUrls.includes(ref) && input?.precomputedResearch?.notes.includes(quote)));
+    const eligible = requirement.eligiblePlans.map(name);
+    const excluded = requirement.excludedPlans.map(name);
+    if (!sourcePresent || new Set(eligible).size !== eligible.length || new Set(excluded).size !== excluded.length || excluded.some(plan => eligible.includes(plan))) {
+      invalid(`The eligibility annotation for “${requirement.capabilityQuote}” needs an exact supplied quotation, recorded source class and available reference. This check does not independently verify the page or interpret the quotation.`);
+      continue;
+    }
+    const incompatible = check.claimedPlans.filter(plan => excluded.includes(name(plan)));
+    const unknown = check.claimedPlans.filter(plan => !eligible.includes(name(plan)) && !excluded.includes(name(plan)));
+    if (incompatible.length || (unknown.length && check.availabilityClaim === "asserted_available")) issues.push({ rule: "invented_fact", severity: "error", path: check.path, message: `The review's source-labelled eligibility map does not support ${[...incompatible, ...unknown].join(", ")} for “${requirement.capabilityQuote}” (${incompatible.length ? "explicit exclusions present" : "eligibility unknown"}). Each named plan must satisfy every required feature in this branch. Split the workflow by supported plan or leave that feature untested; do not combine entitlements across plans. Published eligibility is not account access or tested behavior.` });
+  }
+  return issues;
+}
 
 /** Repair only an omitted parent/index when one verbatim quote identifies exactly one compatible field. */
 export function resolveFocusedEvidencePaths(critique: CritiqueResult, output: unknown): CritiqueResult {
@@ -120,7 +179,7 @@ export function resolveFocusedEvidencePaths(critique: CritiqueResult, output: un
 }
 
 /** Enforces the review contract, not semantic entailment: the reviewer can still miss a claim. */
-export function lintFocusedEvidenceAudit(value: unknown, output?: unknown): LintIssue[] {
+export function lintFocusedEvidenceAudit(value: unknown, output?: unknown, input?: AgentInput): LintIssue[] {
   const parsed = FocusedEvidenceAuditSchema.safeParse(value);
   const invalid = (message: string): LintIssue => ({ severity: "error", rule: "review_scores", path: "review.evidenceAudit", message });
   if (!parsed.success || EVIDENCE_AUDIT_CATEGORIES.some(category => parsed.data.filter(row => row.category === category).length !== 1)) {
@@ -130,6 +189,8 @@ export function lintFocusedEvidenceAudit(value: unknown, output?: unknown): Lint
   const issues: LintIssue[] = [];
   for (const row of parsed.data) {
     if (!row.basis.trim()) issues.push(invalid(`Explain what was checked for ${row.category}, including when no relevant claim exists.`));
+    if (row.category !== "capabilities_and_results" && row.planChecks.length) issues.push(invalid("Put product-plan checks in capabilities_and_results; keep the other categories' planChecks empty."));
+    if (row.category === "capabilities_and_results") for (const check of row.planChecks) issues.push(...lintProductPlanCheck(check, fields, input));
     for (const claim of row.claims) {
       if (!claim.quote.trim() || !claim.basis.trim() || !claim.correction.trim() || (fields && !fields.get(claim.path)?.includes(claim.quote))) {
         issues.push(invalid(`The ${row.category} audit must quote the exact current draft at ${claim.path} and explain its evidence basis and correction. Do not invent a quotation or reuse another draft's review.`));
@@ -151,6 +212,8 @@ Before flagging a promised asset, cross-read its exact preparedWork item: comple
 Check the preparedWork kind as well as its target. Fictional worked examples belong in test_brief, with each numeric line starting "Fictional test data:" or each value followed by "(illustrative test amount)". A page_copy item saying "private" still receives public-copy checks; status draft, a heading or a bare "(fictional)" cannot waive those findings. When the intended artifact is a private example, request correct classification and local labels while preserving the useful example. Never relabel actual product claims as fictional to avoid evidence requirements.
 For owner-reviewable public drafts, a documented first-party feature may be written in the business's own voice without saying "our site says" in every sentence. Cross-read evidenceRefs, status draft and checksBeforeUse: when the exact supplied feature supports the claim and the checks require actual product verification before use, classify it as qualified source-reported copy, not tested functionality. This does not permit unlisted features, inferred plan eligibility, invented speed/results, or claims that a test actually ran. For example, a published conditional-question feature supports a proposed conditional-question example; it does not prove an unlisted editing flow or that the entire job works on a particular free tier.
 Verification checks do not create missing feature evidence. A broad source-described function does not establish a more specific behavior inferred by the writer: importing a document does not prove that repeated questions are removed, and collecting responses does not prove that an assistant receives a summary. If an invitation promises that unlisted behavior, mark the promise unsupported even when checksBeforeUse says to test it. A private illustrative artifact or a clearly worded experiment asking whether the behavior is possible may be qualified. Keep the exact lifecycle and wording distinct: a speculative exploration elsewhere cannot qualify a present-tense promise in public copy.
+${PRODUCT_PLAN_REASONING}
+In capabilities_and_results.planChecks, inspect up to four material named-plan claims in the actual phases and drafts, including private instructions; private status does not make an unsupported prerequisite true. Each check binds the exact path and quote, every plan offered by that branch, and each exact required capability substring. For each requirement, record explicitly eligible and explicitly excluded plans with recorded source class, exact supplied fact reference or source URL, and a verbatim supporting quotation from that fact or the supplied research notes. Do not invent or paraphrase the quotation. Missing or conflicting eligibility stays null with basis unknown and null reference/quote. Partial lists leave other plans unknown; do not fabricate exclusions or a tier hierarchy. asserted_available means the task assumes eligibility, even if account access is conditional. conditional_unknown is only for a draft that explicitly makes eligibility verification a prerequisite. A known exclusion cannot be waived by a general "check first" caveat. Keep planChecks empty in other categories and when no material current-plan claim exists; explain applicability in basis. Do not put speculative future capabilities into a current-entitlement check. Code checks quoted source presence and set consistency, not semantic entailment; you must assess whether the quotation supports the feature, plans and product actually claimed.
 For each category quote the 1–2 most decision-relevant claims using exact string field paths and verbatim substrings. Include every material unsupported claim you find (up to four per category). verdict supported requires the supplied evidence to establish the same scope; qualified requires the draft itself to mark the uncertainty or proposal; unsupported requires a correction. basis identifies the supporting supplied fact/page or the specific missing evidence. Use correction "none" for supported/qualified claims. If a factual correction is required, verdict must be unsupported, even when surrounding text hedges. Optional editorial improvements belong in scored fixes. If there truly is no relevant claim, claims may be empty but basis must explain what you checked. Do not let a supported sentence hide a contradiction elsewhere. This audit is model judgment, not verified truth; code validates coverage and quotations and blocks unsupported findings even if you mark all gates passed. Keep the quality bar unchanged. Assess workload, originality and economic depth in the scored criteria, not as invented fact failures.`;
 
 

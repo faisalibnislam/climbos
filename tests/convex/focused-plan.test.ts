@@ -7,7 +7,7 @@ import { offerAssessmentFixture, offerFact } from "../fixtures/offerAssessment";
 import { approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import type { TurnRequest } from "../../shared/ai/types";
 import type { RateVersion } from "../../shared/economics/rates";
-const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], reviewScores: "", familiarBold: false, wrongBoldQuote: false, wrongBoldTest: false, confoundedBoldTest: false, failTruth: false, unsupportedStateClaim: false, refusedTarget: false, unsupportedGuarantee: false, unsupportedPrice: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", explorationReference: "", dismissedChannel: false, emailMode: "", competingFirstActions: false, competingChecklist: false }));
+const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], reviewScores: "", planEligibilityMode: "", familiarBold: false, wrongBoldQuote: false, wrongBoldTest: false, confoundedBoldTest: false, failTruth: false, unsupportedStateClaim: false, refusedTarget: false, unsupportedGuarantee: false, unsupportedPrice: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", explorationReference: "", dismissedChannel: false, emailMode: "", competingFirstActions: false, competingChecklist: false }));
 vi.mock("../../shared/ai/turn", async original => ({
   ...await original<typeof import("../../shared/ai/turn")>(),
   modelTurn: async (req: TurnRequest, rates: RateVersion) => {
@@ -52,6 +52,7 @@ vi.mock("../../shared/ai/turn", async original => ({
       plan.preparedWork[0].approvedOfferPlayName = plan.focusedMove.title;
       plan.experiments[0].name = plan.focusedMove.title;
     }
+    if (state.planEligibilityMode) plan.phases[1].tasks = [state.planEligibilityMode === "supported" ? "If Pro access exists, check AI drafting from a brief." : "If Core or Pro access exists, check AI drafting from a brief."];
     if (state.wrongLearningTest) plan.experiments[0].name = "Unrelated test that does not track the primary move";
     plan.phases[0].tasks = [plan.focusedMove.firstAction];
     plan.weekOneChecklist = [plan.focusedMove.firstAction];
@@ -65,6 +66,14 @@ vi.mock("../../shared/ai/turn", async original => ({
     }
     const { fakeTurn } = await import("../../shared/agents/fake");
     const result = await fakeTurn(req, rates);
+    if (result.ok && state.planEligibilityMode && typeof result.output === "object" && result.output && "evidenceAudit" in result.output) {
+      const audit = (result.output as import("../../shared/agents/types").CritiqueResult).evidenceAudit!;
+      audit.find(row => row.category === "capabilities_and_results")!.planChecks = [{
+        path: "phases[1].tasks[0]", quote: plan.phases[1].tasks![0], claimedPlans: state.planEligibilityMode === "supported" ? ["Pro"] : ["Core", "Pro"], availabilityClaim: "asserted_available",
+        requirements: [{ capabilityQuote: "AI drafting from a brief", eligiblePlans: ["Pro", "Business"], excludedPlans: ["Core"], basis: "source_reported", evidenceRef: "https://business.example/plans",
+          sourceQuote: state.planEligibilityMode === "unbound" ? "An invented eligibility claim that was never supplied." : "Core has no built-in AI. Pro and Business support AI drafting from a brief." }],
+      }];
+    }
     if (result.ok && state.failTruth && typeof result.output === "object" && result.output && "gates" in result.output) {
       (result.output as { gates: { id: string; pass: boolean; note: string }[] }).gates.find(g => g.id === "G1")!.pass = false;
     }
@@ -91,7 +100,7 @@ vi.mock("../../shared/ai/turn", async original => ({
     return result;
   },
 }));
-afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.reviewScores = ""; state.familiarBold = false; state.wrongBoldQuote = false; state.wrongBoldTest = false; state.confoundedBoldTest = false; state.failTruth = false; state.unsupportedStateClaim = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.unsupportedPrice = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.explorationReference = ""; state.dismissedChannel = false; state.emailMode = ""; state.competingFirstActions = false; state.competingChecklist = false; });
+afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.reviewScores = ""; state.planEligibilityMode = ""; state.familiarBold = false; state.wrongBoldQuote = false; state.wrongBoldTest = false; state.confoundedBoldTest = false; state.failTruth = false; state.unsupportedStateClaim = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.unsupportedPrice = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.explorationReference = ""; state.dismissedChannel = false; state.emailMode = ""; state.competingFirstActions = false; state.competingChecklist = false; });
 
 async function workspace() {
   const t = setup(); delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE;
@@ -772,5 +781,22 @@ it("blocks an invented price whose digits occur inside a real price despite pass
   expect(plan.expert?.quality?.fixes).toContainEqual(expect.objectContaining({ rule: "invented_fact", path: "preparedWork[0].draft", message: expect.stringContaining("$29") }));
   await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
   await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: plan._id, playId: "focused" })).rejects.toThrow();
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
+
+
+it.each(["unsupported", "supported", "unbound"])("enforces source-bound product-plan reasoning through persistence and approval: %s", async mode => {
+  const { t, owner, slug, orgId } = await workspace(); state.planEligibilityMode = mode;
+  await t.mutation(internal.engine.putResearchCache, { orgId, businessWebsite: "https://business.example/", cacheKey: "b".repeat(64), agentId: "business_insights", modelKey: "claude-haiku-5.5", notes: "Synthetic published eligibility: Core has no built-in AI. Pro and Business support AI drafting from a brief.", sources: [{ url: "https://business.example/plans" }], expiresAt: Date.now() + 86400000 });
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(plan.expert?.quality?.agents[0].average).toBe(5);
+  expect(plan.expert?.quality?.state).toBe(mode === "supported" ? "passed" : "failed");
+  if (mode !== "supported") {
+    expect(plan.expert?.quality?.fixes).toContainEqual(expect.objectContaining({ rule: mode === "unbound" ? "review_scores" : "invented_fact" }));
+    await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
+    await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: plan._id, playId: "focused" })).rejects.toThrow();
+  }
   expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
 });

@@ -1,5 +1,23 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.207 — check required capabilities against the same product plan
+
+The saved Livoform draft grouped Core and Pro as alternatives for AI drafting from a brief, despite supplied notes explicitly excluding Core from AI and placing brief-based creation on Pro/Business. The existing semantic audit caught that example, but there was no structured eligibility map or deterministic check preventing a review from approving its own contradictory plan recommendation. Eight failing local regressions reproduced that gap before the fix.
+
+The existing capabilities audit now includes an explicit applicability inventory for material current-plan claims. Each annotation binds the actual task/draft quotation, named plans, required capability substrings, eligible/excluded plan sets, source class, reference and supplied quotation. Code checks quotation presence and set consistency: every proposed plan must satisfy every required capability in that branch. A positive list does not imply that all other plans are excluded; unknown eligibility can remain conditional, while an explicit exclusion cannot be waived by a general check-first caveat. Conflicting annotations fail review. Source-reported and owner-reported facts retain their recorded class. Future product hypotheses remain outside current-entitlement checks.
+
+Writer/reviewer guidance works backward from required capabilities to the smallest evidenced combination, separates optional features and distinguishes concept/job-fit checks from actual activation. Published eligibility does not establish account access, tested behavior or ClimbOS execution ability. The runtime and the existing review-only evaluation path pass their actual input/research context into assessment. No evaluation script was executed. Existing saved reviews remain unchanged; an omitted inventory cannot validate a fresh assessment.
+
+**240 focused, budget and permission tests passed in 13 files (14.39 seconds)**. After type-only test fixture corrections, the **15 eligibility tests passed again (0.98 seconds)**. App/Convex typechecks, changed-file ESLint and diff checks passed. Mocked production tests persist incompatible or unbound eligibility failures, deny approval/start despite passing scores, and create no action receipts; the supported-plan branch remains usable.
+
+```sh
+pnpm exec vitest run tests/unit/focused-plan-eligibility.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/focused-evidence-repair.test.ts tests/unit/focused-originality-review.test.ts tests/unit/creative-preparation.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-length-repair.test.ts tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts tests/unit/strategy-prompt-cost.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm exec vitest run tests/unit/focused-plan-eligibility.test.ts
+pnpm typecheck
+```
+
+**Limit:** these local fixtures supply eligibility annotations; they do not establish that the model will discover every claim or interpret every source correctly. The validator checks that a URL is available and the quotation occurs in supplied notes, not that the quotation belongs to that page or semantically entails the annotation. It does not independently verify product plans, prices, access or behavior. Originality and end-to-end usefulness still need future semantic acceptance testing. Paid tests remain paused at **$99.063401 used/held of $100**; runtime models, call limits, budget and authorization controls are unchanged. Tester access and founder time remain unknown. No new Livoform quality pass is claimed.
+
 ## V3.206 — review the actual bold comparison, not an imagined better test
 
 The saved agency draft compares a conditional capped quote against a calculator, while its reviewer identifies a manual capped proposal as the closer ordinary alternative. The old review contract bound the mechanism but left its test judgment unbound. Two red regressions showed that a passing review could quote a replacement test or contradict its own confounded-comparison finding.

@@ -13,7 +13,7 @@ const review = (score: number) => ({
   scores: ["useful", "XV"].map(id => ({ id, score, note: "Correct the summary, preserve the example.", fix: score < 4 ? "Keep audience availability unknown." : "none" })),
   strengths: ["Keep the complete prepared example."], fixes: score < 4 ? ["Correct the summary only."] : [],
   originalityAudit: focusedOriginalityFixture,
-  evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map(category => ({ category, basis: "Synthetic fixture, no real business evidence", claims: [] })),
+  evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map(category => ({ category, planChecks: [], basis: "Synthetic fixture, no real business evidence", claims: [] })),
 });
 const spec = { ...focusedStrategySpec({ maxRevisions: 1 }), creativePreparation: false, sectionRevisions: true, schema, lint: undefined,
   rubric: { id: "focused-growth-strategy", title: "Synthetic repair", gates: [{ id: "truth", text: "Do not invent" }], criteria: [{ id: "useful", name: "Useful", anchors: { 1: "weak", 3: "partial", 5: "ready" } }], shipRule: { minEach: 4, minAverage: 4 } },

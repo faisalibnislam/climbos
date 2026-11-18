@@ -212,10 +212,10 @@ function withVerdict(r: Rubric): Rubric {
   return r.criteria.some((c) => c.id === EXPERT_VERDICT.id) ? r : { ...r, criteria: [...r.criteria, EXPERT_VERDICT] };
 }
 
-export function assess(critique: CritiqueResult, lint: LintIssue[], baseRubric: Rubric, output?: unknown): Assessment {
+export function assess(critique: CritiqueResult, lint: LintIssue[], baseRubric: Rubric, output?: unknown, input?: AgentInput): Assessment {
   if (baseRubric.id === FOCUSED_REVIEW_ID) critique = resolveFocusedEvidencePaths(critique, output);
   const rubric = withVerdict(baseRubric);
-  const reviewIssues: LintIssue[] = baseRubric.id === FOCUSED_REVIEW_ID ? [...lintFocusedEvidenceAudit(critique.evidenceAudit, output), ...lintFocusedOriginalityAudit(critique, baseRubric, output)] : [];
+  const reviewIssues: LintIssue[] = baseRubric.id === FOCUSED_REVIEW_ID ? [...lintFocusedEvidenceAudit(critique.evidenceAudit, output, input), ...lintFocusedOriginalityAudit(critique, baseRubric, output)] : [];
   const scores = rubric.criteria.map((criterion) => {
     const entries = critique.scores.filter((entry) => entry.id === criterion.id);
     if (entries.length !== 1 || !Number.isFinite(entries[0].score) || entries[0].score < 1 || entries[0].score > 5) {
@@ -604,6 +604,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
   // shipOn "gates": the review only blocks on hard gates and lint (lean mode for content);
   // "rubric": every criterion must also clear the ship rule (strategy, insights).
   // Numbers may trace to this job's research as well as the brief and facts.
+  const reviewInput = { ...input, precomputedResearch: research ?? undefined };
   const lintOf = (o: T) => lintAgentOutput(spec,input,o,research??undefined);
   // Best of two (cheap models): a second first draft from a bolder angle; the reviewer's scores pick the stronger one.
   // Both drafts (and then both reviews) run at the same time; each phase checkpoints on its own.
@@ -633,8 +634,8 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     const lintA = lintOf(current);
     const lintB = lintOf(alt);
     const [cA, cB] = await both(critique(0, current, lintA), critique(0, alt, lintB, true));
-    const aA = assess(cA, lintA, spec.rubric, current);
-    const aB = assess(cB, lintB, spec.rubric, alt);
+    const aA = assess(cA, lintA, spec.rubric, current, reviewInput);
+    const aB = assess(cB, lintB, spec.rubric, alt, reviewInput);
     if (betterAssessment(aB, aA, Boolean(spec.sectionRevisions && spec.rubric.id === FOCUSED_REVIEW_ID))) {
       current = alt;
       firstReview = { c: cB, lint: lintB };
@@ -658,7 +659,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
       revisionFailure = { kind: error.kind, message: `Optional review failed: ${error.message}`.slice(0, 300) };
       break;
     }
-    const a = assess(c, lint, spec.rubric, current);
+    const a = assess(c, lint, spec.rubric, current, reviewInput);
     history.push({ round, average: a.average, gatesPassed: a.gatesPassed, lintErrors: a.lint.filter((l) => l.severity === "error").length });
     if (!best.assessment || betterAssessment(a, best.assessment, Boolean(spec.sectionRevisions && spec.rubric.id === FOCUSED_REVIEW_ID))) best = { output: current, assessment: a, round };
     const shipped = spec.shipOn === "gates" ? a.gatesPassed && a.lint.every((l) => l.severity !== "error") : a.ship;

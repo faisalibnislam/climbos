@@ -1,3 +1,7 @@
+## 18 November — check product-plan eligibility across required features
+
+V3.207 checks the review's source-labelled plan eligibility against each required capability in the actual task or draft. Incompatible bundles, unsupported asserted eligibility and unbound annotations fail; incomplete evidence stays unknown and future product hypotheses remain eligible. **240 tests**, a subsequent **15-test eligibility rerun**, types and lint passed, including approval/start denial. These tests validate supplied annotations, not autonomous source interpretation or a new Livoform quality pass. Paid tests remain paused; runtime models are unchanged. [Audit and commands](focused-evidence-review-audit.md).
+
 ## 18 November — bind originality review to the actual comparison
 
 V3.206 binds mechanism and test quotations, separates comparison quality from novelty, and blocks contradictory passing reviews. Candidate feedback remains advisory; uncertain novel ideas remain eligible. **222 tests**, types and lint passed, including production-path approval denial. No new provider call or semantic quality pass. [Audit and commands](focused-evidence-review-audit.md).

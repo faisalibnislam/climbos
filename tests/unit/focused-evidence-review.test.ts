@@ -9,9 +9,9 @@ import { focusedStrategySpec } from "../../shared/agents/specs";
 const rubric: Rubric = { id: "focused-growth-strategy", title: "Focused test", gates: [{ id: "G1", text: "Truth" }], criteria: [{ id: "F1", name: "Useful", anchors: { 1: "weak", 3: "partial", 5: "ready" } }], shipRule: { minEach: 4, minAverage: 4 } };
 const output = { summary: "Audience availability is unknown. A private example may help test the job." };
 const audit = () => [
-  { category: "business_state", basis: "The supplied brief leaves audience unknown; the draft preserves that distinction.", claims: [{ path: "summary", quote: "Audience availability is unknown.", verdict: "supported", basis: "Supplied brief, not an inferred zero.", correction: "none" }] },
-  { category: "comparative_claims", basis: "The draft proposes a test without claiming a best-performing channel.", claims: [] },
-  { category: "capabilities_and_results", basis: "No existing capability or performance is claimed.", claims: [] },
+  { category: "business_state", planChecks: [], basis: "The supplied brief leaves audience unknown; the draft preserves that distinction.", claims: [{ path: "summary", quote: "Audience availability is unknown.", verdict: "supported", basis: "Supplied brief, not an inferred zero.", correction: "none" }] },
+  { category: "comparative_claims", planChecks: [], basis: "The draft proposes a test without claiming a best-performing channel.", claims: [] },
+  { category: "capabilities_and_results", planChecks: [], basis: "No existing capability or performance is claimed.", claims: [] },
 ];
 const review = (evidenceAudit: unknown = audit()): CritiqueResult => ({ gates: [{ id: "G1", pass: true, note: "ok" }], scores: ["F1", "XV"].map(id => ({ id, score: 5, note: "Ready", fix: "none" })), strengths: [], fixes: [], evidenceAudit } as CritiqueResult);
 
