@@ -1,6 +1,21 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status: v15 result, scoped locator fix and required launch context
+## Current status — 18 November: unknown capacity stays unknown
+
+The owner explicitly chose to keep tester access and founder time unknown and authorized continued work within the existing $100 cap. These are no longer pending required answers. Do not infer absence, invent an allowance, or withhold creative exploration. Historical input requests below are superseded by this instruction.
+
+V3.169 fixes a confirmed inconsistency left by the canonical Today card: its first phase checklist and weekly checklist could still assign different or additional work. New focused/starter outputs now receive a deterministic hard check that both checklists contain exactly the selected first action. Necessary later work must remain in the later milestones with its prerequisites; the validator does not delete or rewrite it. Historical saved-plan schemas remain readable. Existing approval checks block a conflicting new plan even when the model critic passes it. Runtime model, acceptance thresholds, campaign-timing prompt and action permissions are unchanged.
+
+The existing writer guidance now distinguishes preparation/progress review from the exposure-relative observation window. Late or incomplete observation carries forward; no exposure means not-run, not failed demand. This is guidance, not a new automatic clock or proof of semantic date consistency. Unknown access/time does not become a commitment to conduct sessions. No UI or scheduling subsystem was added.
+
+Focused checks passed **160 tests in 11 files (14.79 seconds)**, including the real mocked Convex save/approval boundary, audience permission tests and budget guards. Initial failures exposed stale mock checklists; fixtures were aligned without weakening audience enforcement. App/Convex typechecks, changed-file ESLint and diff checks passed. V16 is running on the same frozen Livoform evidence and unchanged `claude-sonnet-5-5`; its result is pending. The last settled combined charged/held total before V16 was **$73.423925 / $100**.
+
+```sh
+pnpm exec vitest run tests/unit/focused-plan.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/creative-preparation.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/agent-escalation.test.ts tests/unit/anthropic-budget.test.ts tests/unit/evaluation-budget.test.ts tests/unit/ai-qa-budget.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+## Historical v15 result, scoped locator fix and launch-context request
 
 **Verified implementation is improved; dependable strategy quality remains unresolved.** V14 passed at 4/5 on every criterion, and both v13/v14 separate comparisons preferred the revised advice over the original. The unchanged-engine repeat failed at 3.75. The next section-repair run, v15, failed at **3.88/minimum 3**, with owner workload the remaining below-threshold criterion. All histories, raw responses and failures are preserved. No score was changed to force acceptance.
 

@@ -7,7 +7,7 @@ import { offerAssessmentFixture, offerFact } from "../fixtures/offerAssessment";
 import { approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import type { TurnRequest } from "../../shared/ai/types";
 import type { RateVersion } from "../../shared/economics/rates";
-const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], reviewScores: "", failTruth: false, unsupportedStateClaim: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", explorationReference: "", dismissedChannel: false, emailMode: "", competingFirstActions: false }));
+const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], reviewScores: "", failTruth: false, unsupportedStateClaim: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", explorationReference: "", dismissedChannel: false, emailMode: "", competingFirstActions: false, competingChecklist: false }));
 vi.mock("../../shared/ai/turn", async original => ({
   ...await original<typeof import("../../shared/ai/turn")>(),
   modelTurn: async (req: TurnRequest, rates: RateVersion) => {
@@ -53,6 +53,9 @@ vi.mock("../../shared/ai/turn", async original => ({
       plan.experiments[0].name = plan.focusedMove.title;
     }
     if (state.wrongLearningTest) plan.experiments[0].name = "Unrelated test that does not track the primary move";
+    plan.phases[0].tasks = [plan.focusedMove.firstAction];
+    plan.weekOneChecklist = [plan.focusedMove.firstAction];
+    if (state.competingChecklist) plan.phases[0].tasks.push("Find participants and coordinate an additional experiment.");
     if (state.unsupportedGuarantee) plan.preparedWork[0] = { ...plan.preparedWork[0], kind: "social_post", draft: "Review our service for your next project. We guarantee your money back." };
     if (state.refusedTarget) plan.preparedWork[0] = { ...plan.preparedWork[0], kind: "creator_pitch", target: "Creator.example — suggest our product" };
     if (req.schema?.safeParse(plan).success) {
@@ -76,7 +79,7 @@ vi.mock("../../shared/ai/turn", async original => ({
     return result;
   },
 }));
-afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.reviewScores = ""; state.failTruth = false; state.unsupportedStateClaim = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.explorationReference = ""; state.dismissedChannel = false; state.emailMode = ""; state.competingFirstActions = false; });
+afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.reviewScores = ""; state.failTruth = false; state.unsupportedStateClaim = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.explorationReference = ""; state.dismissedChannel = false; state.emailMode = ""; state.competingFirstActions = false; state.competingChecklist = false; });
 
 async function workspace() {
   const t = setup(); delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE;
@@ -105,8 +108,21 @@ it("creates only the canonical focused next-step card, with no external effect",
   expect(planCards).toHaveLength(1);
   expect(planCards[0]).toMatchObject({ title: firstAction, kind: "note", externalEffect: false, status: "proposed", costEstimateMicros: 0 });
   expect(plan.expert!.phases[0].firstAction).toBe(firstAction);
+  expect(plan.expert!.phases[0].tasks).toEqual([firstAction]);
+  expect(plan.expert!.weekOneChecklist).toEqual([firstAction]);
   expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
   expect((await t.run(ctx => ctx.db.query("approvals").collect())).every(approval => approval.status === "pending")).toBe(true);
+});
+
+it("withholds a conflicting first checklist even when the model critic gives passing scores", async () => {
+  const { t, owner, slug, orgId } = await workspace(); state.competingChecklist = true;
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(plan.expert?.quality?.state).toBe("failed");
+  expect(plan.expert?.phases[0].tasks).toHaveLength(2);
+  await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
 });
 
 it.each(["focused", "starter"] as const)("connects the precedent library to the real %s writer, critic and saved plan", async planStyle => {
@@ -485,7 +501,7 @@ it.each(["unrelated", "negative", "reported", "draft"])("keeps %s audience evide
   const fixes = plan.expert?.quality?.fixes?.filter(f => f.rule === "no_audience") ?? [];
   if (blocked) {
     expect(plan.expert?.quality?.state).toBe("failed");
-    expect(fixes).toContainEqual(expect.objectContaining({ rule: "no_audience", path: "focusedMove.firstAction" }));
+    expect(fixes).toContainEqual(expect.objectContaining({ rule: "no_audience", path: "firstActions[0].title" }));
     await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
   } else {
     expect(fixes).toEqual([]);

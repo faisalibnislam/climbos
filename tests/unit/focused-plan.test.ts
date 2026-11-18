@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { focusedPlanFixture } from "../fixtures/focusedPlan";
 import { FocusedStrategySchema, focusedStrategySpec, starterStrategySpec, strategySpec, lintPreparedDrafts } from "../../shared/agents/specs";
-import { focusedPlanTask, focusedRefreshContext } from "../../shared/agents/focusedPlan";
+import { focusedPlanTask, focusedRefreshContext, lintFocusedFirstStep, projectFocusedFirstStep } from "../../shared/agents/focusedPlan";
 import { lintCycleMilestones } from "../../shared/agents/planningCycles";
 import {lintAgentOutput} from "../../shared/agents/runtime";
 import { planJob, maxJobMicros } from "../../convex/lib/jobPlans";
@@ -9,6 +9,28 @@ import { jsonSchemaFor } from "../../shared/ai/types";
 import { claudeSchema } from "../../shared/ai/anthropicSchema";
 
 describe("a focused plan does useful work without invented forecasts", () => {
+  it("rejects competing first checklists without silently dropping necessary later work", () => {
+    const plan = focusedPlanFixture();
+    plan.phases[0].tasks!.push("Find testers and build a working product demonstration.");
+    plan.weekOneChecklist.push("Arrange observed customer sessions.");
+    const projected = projectFocusedFirstStep(plan);
+    expect(lintFocusedFirstStep(projected).map(issue => issue.path)).toEqual(["phases[0].tasks", "weekOneChecklist"]);
+    expect(projected.phases[0].tasks).toEqual(plan.phases[0].tasks);
+    expect(projected.weekOneChecklist).toEqual(plan.weekOneChecklist);
+    expect(FocusedStrategySchema.safeParse(plan).success).toBe(true); // historical reads remain compatible
+  });
+  it("allows later conditional work with unknown access and time, preserving bold exploration", () => {
+    const plan = focusedPlanFixture();
+    plan.phases[1].tasks = ["Only after review and when access and time are available: verify the proposed workflow before an approved test."];
+    plan.phases[1].decisionRule = "At cycle review carry incomplete observation forward; without exposure record not-run, not failed demand.";
+    expect(lintFocusedFirstStep(plan)).toEqual([]);
+    expect(plan.strategyExploration.bold.evidenceStrength).toBe("low");
+    plan.weekOneChecklist = ["A different first action"];
+    expect(lintFocusedFirstStep(plan)).toEqual([expect.objectContaining({ severity: "error", path: "weekOneChecklist" })]);
+    plan.weekOneChecklist = [plan.focusedMove.firstAction];
+    plan.phases[0].tasks = undefined;
+    expect(lintFocusedFirstStep(plan)).toEqual([expect.objectContaining({ severity: "error", path: "phases[0].tasks" })]);
+  });
   it("places creative exploration before the execution plan in the actual provider schema without changing saved fields", () => {
     const schema = claudeSchema(jsonSchemaFor(focusedStrategySpec().schema)) as { properties: Record<string, { properties: Record<string, unknown> }> };
     expect(Object.keys(schema.properties)[0]).toBe("strategyExploration");

@@ -1,3 +1,7 @@
+## 18 November — first-step checklist consistency
+
+`v3.169-first-step-checklists`: deterministic validation of both first checklists, preserving rejected content for repair and historical schema compatibility. Unknown tester access/founder time are not required answers. 160 focused/budget/permission tests pass; same-model V16 acceptance pending. No campaign-timing edits, model change or external execution. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — preserve honest quality failures and repair scoped locators
 
 `v3.168-scoped-review-locators`: an explicitly named array can disambiguate an exact citation quote when its missing index is unique inside that array. Repeated entries still fail; underlying evidence findings remain blocked. 152 focused/permission tests, types and lint passed. V15 finished below quality at 3.88, with owner workload unresolved. Combined used/held $73.423925 / $100. No paid run active; actual tester access and founder time are pending. [Current audit](focused-evidence-review-audit.md).

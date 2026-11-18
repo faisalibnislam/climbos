@@ -1,3 +1,7 @@
+## 18 November 2026 — one first checklist, unknown access retained
+
+V3.169 rejects inconsistent or overloaded first checklists without deleting later work. The saved plan, Today step and first checklist agree, and approval remains blocked on a failed check. **160 focused, budget and permission tests passed**. Tester access and founder time remain unknown by owner choice; V16 is running within the existing cap. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 17 November 2026 — creative methods and product-test validity
 
 ## 18 November 2026 — v15 acceptance and exact array-locator repair

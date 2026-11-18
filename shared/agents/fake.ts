@@ -304,11 +304,14 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         x.guardrails = ["Unsubscribes stay under 1% (estimate)"];
       }
     // Keep the synthetic primary learning record bound to its synthetic focused move.
-    const focused = output as { focusedMove?: { title: string }; experiments?: { name: string }[] };
+    const focused = output as { focusedMove?: { title: string; firstAction: string }; experiments?: { name: string }[]; phases?: { tasks?: string[] }[] };
     if (focused?.focusedMove && focused.experiments?.[0]) focused.experiments[0].name = focused.focusedMove.title;
     // Cites must resolve to a fact or a page the research read; the fake has neither, so it cites nothing.
     if (plan && typeof plan === "object" && "diagnosis" in plan) for (const x of [...(plan.channels ?? []), ...(plan.audiences ?? [])]) if (x && typeof x === "object") x.cites = [];
-    if (plan && typeof plan === "object" && Array.isArray(plan.weekOneChecklist) && "diagnosis" in plan) plan.weekOneChecklist = ["Update the comparison page with the referral offer.", "Pitch the comparison page to 10 partner newsletters."];
+    if (plan && typeof plan === "object" && Array.isArray(plan.weekOneChecklist) && "diagnosis" in plan) {
+      plan.weekOneChecklist = focused.focusedMove ? [focused.focusedMove.firstAction] : ["Update the comparison page with the referral offer.", "Pitch the comparison page to 10 partner newsletters."];
+      if (focused.focusedMove && focused.phases?.[0]) focused.phases[0].tasks = [focused.focusedMove.firstAction];
+    }
     // Channel scoring: valid library types and the candidates named in the prompt.
     const cf = output as { types?: unknown; dimensions?: unknown; channels?: unknown; summary?: unknown; decisions?: unknown };
     if (cf && typeof cf === "object" && Array.isArray(cf.types) && Array.isArray(cf.dimensions) && Array.isArray(cf.channels)) {
