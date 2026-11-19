@@ -14,9 +14,9 @@ vi.mock("../../shared/integrations/resendMarketing", async original => ({
   getBroadcast: vi.fn(async () => { provider.reads++; await provider.onRecovery?.(); return provider.recovery ? { ok: true, data: provider.recovery } : { ok: false, providerMessage: "Read unavailable" }; }),
   sendBroadcast: vi.fn(async ({ expectedDraft }: { expectedDraft: unknown }) => { provider.sentDraft = expectedDraft; provider.sends++; if (provider.outcome === "throw") throw new Error("Lost provider response"); return { status: provider.outcome, externalId: "broadcast-test" }; }),
 }));
-afterEach(() => { provider.synced = []; provider.drafts = 0; provider.sends = 0; provider.outcome = "verified"; provider.onRead = null; provider.recovery = null; provider.reads = 0; provider.onRecovery = null; provider.lastDraft = null; provider.sentDraft = null; });
+afterEach(() => { vi.restoreAllMocks(); provider.synced = []; provider.drafts = 0; provider.sends = 0; provider.outcome = "verified"; provider.onRead = null; provider.recovery = null; provider.reads = 0; provider.onRecovery = null; provider.lastDraft = null; provider.sentDraft = null; });
 
-async function fixture(body = "A useful update for subscribers.", recipients = 1, withdrawnConsents = 0) {
+async function fixture(body = "A useful update for subscribers.", recipients = 1, withdrawnConsents = 0, scheduledFor?: number) {
   const t = setup(), owner = await asNewUser(t, "email-boundary@example.com");
   const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Email boundary" });
   await makePaid(t, orgId);
@@ -42,9 +42,11 @@ async function fixture(body = "A useful update for subscribers.", recipients = 1
     await ctx.db.patch(artifactId, { currentVersionId: versionId });
     return artifactId;
   });
-  await owner.client.mutation(api.marketing.approveSend, { slug, artifactId, emailIndex: 0, segment: "newsletter", providerSegmentId: "seg-news", from: "Owner <hello@example.com>" });
+  const audiencePreviewHash = scheduledFor !== undefined ? (await owner.client.query(api.marketing.emailAudiencePreview, { slug, segment: "newsletter" })).previewHash : undefined;
+  await owner.client.mutation(api.marketing.approveSend, { slug, artifactId, emailIndex: 0, segment: "newsletter", providerSegmentId: "seg-news", from: "Owner <hello@example.com>", ...(scheduledFor !== undefined ? { scheduledFor, audiencePreviewHash } : {}) });
   const args = await t.run(async ctx => {
     const scheduled = (await ctx.db.system.query("_scheduled_functions").collect()).find(f => f.name.includes("executeSend"))!;
+    if (scheduledFor !== undefined) expect(scheduled.scheduledTime).toBe(scheduledFor);
     await ctx.scheduler.cancel(scheduled._id);
     return scheduled.args[0] as FunctionArgs<typeof internal.marketing.executeSend>;
   });
@@ -820,4 +822,107 @@ it("rejects foreign workspace previews, invalid pages and address/identity misma
   const updated = await f.owner.client.query(api.marketing.emailAudiencePreview, { slug: f.slug, segment: "newsletter" });
   const result = await f.owner.client.query(api.marketing.emailRecipientReview, { ...args, previewHash: updated.previewHash });
   expect(result).toMatchObject({ ready: false }); expect(result).not.toHaveProperty("items");
+});
+
+it("waits for the exact approved time, then uses the existing one-attempt executor", async () => {
+  const at = Date.now() + 2 * 3_600_000, f = await fixture(undefined, 1, 0, at);
+  expect((await f.owner.client.query(api.marketing.scheduledSends, { slug: f.slug, artifactId: f.artifactId })).items).toMatchObject([{ scheduledFor: at, windowEnd: at + 3_600_000 }]);
+  await f.t.action(internal.marketing.executeSend, f.args);
+  expect(provider.synced).toEqual([]); expect(provider.sends).toBe(0);
+  expect((await f.t.run(ctx => ctx.db.get(f.args.approvalId)))?.executionStartedAt).toBeUndefined();
+  vi.spyOn(Date, "now").mockReturnValue(at);
+  await f.t.action(internal.marketing.executeSend, f.args);
+  await f.t.action(internal.marketing.executeSend, f.args);
+  expect(provider.sends).toBe(1);
+  expect((await f.t.run(ctx => ctx.db.get(f.args.approvalId)))?.status).toBe("consumed");
+});
+
+it.each(["cancel", "expired", "cancel then expire"])("releases an unstarted schedule exactly once: %s", async mode => {
+  const at = Date.now() + 2 * 3_600_000, f = await fixture(undefined, 1, 0, at);
+  if (mode.includes("cancel")) {
+    await f.owner.client.mutation(api.marketing.cancelScheduledSend, { slug: f.slug, approvalId: f.args.approvalId });
+    await f.owner.client.mutation(api.marketing.cancelScheduledSend, { slug: f.slug, approvalId: f.args.approvalId });
+  }
+  vi.spyOn(Date, "now").mockReturnValue(at + 3_600_000);
+  await f.t.mutation(internal.marketing.expireUnstartedSends, {});
+  await f.t.mutation(internal.marketing.expireUnstartedSends, {});
+  await f.t.action(internal.marketing.executeSend, f.args);
+  expect(provider.synced).toEqual([]); expect(provider.sends).toBe(0);
+  const r = (await f.t.run(ctx => ctx.db.get(f.args.reservationId)))!;
+  expect(r.status).toBe("reconciled");
+  const p = (await f.t.run(ctx => ctx.db.get(r.periodId)))!;
+  expect(p.meterReserved.byoMarketingSends).toBe(0); expect(p.meterUsed.byoMarketingSends).toBe(0);
+  expect((await f.owner.client.query(api.marketing.scheduledSends, { slug: f.slug, artifactId: f.artifactId })).items).toEqual([]);
+});
+
+it.each(["content", "audience", "schedule", "window", "pause", "permission", "allowance period"])("rechecks scheduled delivery before any provider write after %s changes", async change => {
+  const at = Date.now() + 2 * 3_600_000, f = await fixture(undefined, 1, 0, at);
+  await f.t.run(async ctx => {
+    const a = (await ctx.db.get(f.args.approvalId))!;
+    if (change === "content") { const artifact = (await ctx.db.get(f.artifactId))!; await ctx.db.patch(artifact.currentVersionId!, { body: "Changed after approval" }); }
+    if (change === "audience") { const contact = (await ctx.db.query("contacts").withIndex("by_org", q => q.eq("orgId", f.orgId)).first())!; await ctx.db.insert("suppressions", { orgId: f.orgId, emailHash: contact.emailHash, reason: "unsubscribe", source: "test", createdAt: Date.now() }); }
+    if (change === "schedule") await ctx.db.patch(a._id, { scope: { ...a.scope, scheduledFor: at - 1000, windowEnd: at + 3_600_000 - 1000 }, expiresAt: at + 3_600_000 - 1000 });
+    if (change === "window") await ctx.db.patch(a._id, { scope: { ...a.scope, windowEnd: at + 60_000 } });
+    if (change === "pause") await ctx.db.patch(f.orgId, { emergencyStop: { active: true, at: Date.now(), by: f.owner.userId } });
+    if (change === "permission") { const m = (await ctx.db.query("memberships").withIndex("by_org_user", q => q.eq("orgId", f.orgId).eq("userId", f.owner.userId)).unique())!; await ctx.db.patch(m._id, { role: "viewer" }); }
+    if (change === "allowance period") { const r = (await ctx.db.get(f.args.reservationId))!; const p = (await ctx.db.get(r.periodId))!; await ctx.db.patch(p._id, { endsAt: at - 1 }); const { _id: _id, _creationTime: _time, ...fields } = p; await ctx.db.insert("usagePeriods", { ...fields, startsAt: at - 1, endsAt: at + 86_400_000 }); }
+  });
+  vi.spyOn(Date, "now").mockReturnValue(at);
+  await f.t.action(internal.marketing.executeSend, f.args);
+  expect(provider.synced).toEqual([]); expect(provider.drafts).toBe(0); expect(provider.sends).toBe(0);
+  expect((await f.t.run(ctx => ctx.db.get(f.args.reservationId)))?.status).toBe("reconciled");
+});
+
+it("does not cancel, expire or release a started or uncertain scheduled delivery", async () => {
+  const at = Date.now() + 2 * 3_600_000, f = await fixture(undefined, 1, 0, at);
+  vi.spyOn(Date, "now").mockReturnValue(at); provider.outcome = "uncertain";
+  await f.t.action(internal.marketing.executeSend, f.args);
+  await expect(f.owner.client.mutation(api.marketing.cancelScheduledSend, { slug: f.slug, approvalId: f.args.approvalId })).rejects.toThrow(/already started/);
+  vi.spyOn(Date, "now").mockReturnValue(at + 3_600_000);
+  await f.t.mutation(internal.marketing.expireUnstartedSends, {});
+  expect((await f.t.run(ctx => ctx.db.get(f.args.reservationId)))?.status).toBe("unresolved");
+  expect(provider.sends).toBe(1);
+});
+
+it("denies foreign and viewer cancellation, and foreign schedule inspection", async () => {
+  const f = await fixture(undefined, 1, 0, Date.now() + 2 * 3_600_000);
+  const other = await asNewUser(f.t, "foreign-schedule@example.com");
+  await expect(other.client.mutation(api.marketing.cancelScheduledSend, { slug: f.slug, approvalId: f.args.approvalId })).rejects.toThrow();
+  await expect(other.client.query(api.marketing.scheduledSends, { slug: f.slug, artifactId: f.artifactId })).rejects.toThrow();
+  await f.t.run(async ctx => { const m = (await ctx.db.query("memberships").withIndex("by_org_user", q => q.eq("orgId", f.orgId).eq("userId", f.owner.userId)).unique())!; await ctx.db.patch(m._id, { role: "viewer" }); });
+  expect((await f.owner.client.query(api.marketing.scheduledSends, { slug: f.slug, artifactId: f.artifactId })).canCancel).toBe(false);
+  await expect(f.owner.client.mutation(api.marketing.cancelScheduledSend, { slug: f.slug, approvalId: f.args.approvalId })).rejects.toThrow();
+  expect((await f.t.run(ctx => ctx.db.get(f.args.reservationId)))?.status).toBe("held");
+});
+
+it.each(["missing preview", "stale preview", "past", "too far", "allowance ends"])("refuses an invalid scheduled approval without reserving more allowance: %s", async kind => {
+  const f = await fixture(undefined, 1, 0, Date.now() + 2 * 3_600_000);
+  await f.owner.client.mutation(api.marketing.cancelScheduledSend, { slug: f.slug, approvalId: f.args.approvalId });
+  const preview = await f.owner.client.query(api.marketing.emailAudiencePreview, { slug: f.slug, segment: "newsletter" });
+  if (kind === "stale preview") await f.importContact("late@example.com");
+  if (kind === "allowance ends") await f.t.run(async ctx => { const r = (await ctx.db.get(f.args.reservationId))!; await ctx.db.patch(r.periodId, { endsAt: Date.now() + 2.5 * 3_600_000 }); });
+  const scheduledFor = Date.now() + (kind === "past" ? -1 : kind === "too far" ? 24 * 3_600_000 : 2 * 3_600_000);
+  await expect(f.owner.client.mutation(api.marketing.approveSend, { slug: f.slug, artifactId: f.artifactId, emailIndex: 0, segment: "newsletter", providerSegmentId: "seg-news", from: f.args.from, scheduledFor, ...(kind !== "missing preview" ? { audiencePreviewHash: preview.previewHash } : {}) })).rejects.toThrow();
+  expect((await f.t.run(ctx => ctx.db.query("usageReservations").collect())).filter(r => r.orgId === f.orgId && r.status === "held")).toEqual([]);
+  expect(provider.synced).toEqual([]);
+});
+
+it.each(["cancel", "send", "uncertain"])("settles the workspace's shared-account allowance after scheduled %s", async outcome => {
+  const at = Date.now() + 2 * 3_600_000, f = await fixture(undefined, 1, 0, at);
+  const sibling = await f.owner.client.mutation(api.orgs.createWorkspace, { businessName: "Sibling business" });
+  await f.t.run(async ctx => { const r = (await ctx.db.get(f.args.reservationId))!; const org = (await ctx.db.get(f.orgId))!; const p = (await ctx.db.get(r.periodId))!; expect(p.accountId).toBe(org.accountId); await ctx.db.patch(p._id, { orgId: sibling.orgId }); });
+  if (outcome === "cancel") await f.owner.client.mutation(api.marketing.cancelScheduledSend, { slug: f.slug, approvalId: f.args.approvalId });
+  else { vi.spyOn(Date, "now").mockReturnValue(at); if (outcome === "uncertain") provider.outcome = "uncertain"; await f.t.action(internal.marketing.executeSend, f.args); }
+  const r = (await f.t.run(ctx => ctx.db.get(f.args.reservationId)))!;
+  expect(r.status).toBe(outcome === "uncertain" ? "unresolved" : "reconciled");
+  expect(provider.sends).toBe(outcome === "cancel" ? 0 : 1);
+});
+
+it("stops at the delivery deadline even when provider preparation began inside the window", async () => {
+  const at = Date.now() + 2 * 3_600_000, f = await fixture(undefined, 1, 0, at);
+  const clock = vi.spyOn(Date, "now").mockReturnValue(at);
+  provider.onRead = async () => { clock.mockReturnValue(at + 3_600_000); };
+  await f.t.action(internal.marketing.executeSend, f.args);
+  expect(provider.sends).toBe(0);
+  expect((await f.t.run(ctx => ctx.db.get(f.args.reservationId)))?.status).toBe("reconciled");
 });

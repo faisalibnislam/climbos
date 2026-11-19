@@ -1,4 +1,5 @@
 import { reconcileProgressJourneys } from "./lib/progressJourneys";
+import { emailDeliveryWindow, EMAIL_DELIVERY_WINDOW_MS } from "../shared/growth/emailSchedule";
 import { productSourceAvailable } from "./productTracking";
 import { checkedJourneyStep, journeyRecipientEvidence, journeyStepRefV, recordJourneyAcceptance, type JourneyStepRef } from "./lib/customerJourneys";
 import { customerProgressStateV, customerProgressRuleV } from "./lib/customerProgress";
@@ -498,6 +499,7 @@ export const approveSend = mutation({
     lifecycleRule: v.optional(customerProgressRuleV),
     audiencePreviewHash: v.optional(v.string()),
     journeyStep: v.optional(journeyStepRefV),
+    scheduledFor: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "approve");
@@ -526,7 +528,7 @@ export const approveSend = mutation({
       if (step.artifactId !== a._id || step.artifactVersionId !== ver._id || step.emailIndex !== args.emailIndex) throw appError("INVALID", "This email does not match the saved follow-up step.");
     }
     const recipients = await eligibleRecipients(ctx, org._id, args.segment, lifecycleRule, args.journeyStep);
-    if (lifecycleRule && args.audiencePreviewHash !== await lifecyclePreviewHash(org._id, args.segment, lifecycleRule, recipients, args.journeyStep)) throw appError("INVALID", "The customer-progress audience changed or was not previewed. Review its current count and rule before approving.");
+    if ((lifecycleRule || args.scheduledFor !== undefined) && args.audiencePreviewHash !== await lifecyclePreviewHash(org._id, args.segment, lifecycleRule, recipients, args.journeyStep)) throw appError("INVALID", "The email audience changed or was not previewed. Review its current count and rule before approving.");
     const stats = { sendable: recipients.length };
     if (stats.sendable === 0) throw appError("INVALID", lifecycleRule ? "No opted-in contacts match this customer-progress rule with recent usable evidence. Review the reports or choose a different purpose." : "Nobody in this segment has a recorded marketing opt-in. ClimbOS won't send without one.");
     // The owner's contact frequency limit holds the whole send rather than silently dropping people from an approved segment.
@@ -535,17 +537,19 @@ export const approveSend = mutation({
     if (blocked) throw appError("INVALID", blocked);
     // Reserve the send volume against the plan's marketing-send quota (customer's provider bill is separate).
     const period = access.period;
+    const now = Date.now();
+    const delivery = args.scheduledFor === undefined ? null : emailDeliveryWindow(args.scheduledFor, now, period.endsAt);
+    if (args.scheduledFor !== undefined && !delivery) throw appError("INVALID", "Choose a time at least one minute ahead, within 23 hours, with the following delivery hour inside your current allowance period.");
     const decision = decideReservation(ledgerOf(period), { costMicros: 0, topupCostMicros: 0, meters: { byoMarketingSends: stats.sendable } });
     if (!decision.ok) throw appError("LIMIT_REACHED", decision.message);
     await ctx.db.patch(period._id, ledgerPatch(decision.next));
     const policyVersion = await activePolicyVersion(ctx, org._id);
-    const now = Date.now();
-    const expiresAt = now + 24 * 3_600_000;
+    const expiresAt = delivery?.windowEnd ?? now + 24 * 3_600_000;
     const html = toHtml(email.text, org.name);
     const contentHash = await sha256Hex(canonicalJson({ subject: email.subject, html, from: args.from.trim() }));
     const { connection, credentialId } = await marketingConnection(ctx, org._id);
     const reservationId = await ctx.db.insert("usageReservations", { orgId: org._id, periodId: period._id, purpose: "email_send", walletMicros: 0, topupMicros: 0, meters: { byoMarketingSends: stats.sendable }, status: "held", createdAt: now });
-    const scope = { ...(args.journeyStep ? { journeyStep: args.journeyStep } : {}), ...(lifecycleRule ? { lifecycleRule } : {}), destination: args.providerSegmentId, audience: args.segment, spendLimitMinor: stats.sendable, recipientSetHash: await recipientSetHash(recipients), artifactVersionId: ver._id, reservationId, connectionId: connection?.status === "connected" ? connection._id : undefined, credentialId };
+    const scope = { ...(delivery ?? {}), ...(args.journeyStep ? { journeyStep: args.journeyStep } : {}), ...(lifecycleRule ? { lifecycleRule } : {}), destination: args.providerSegmentId, audience: args.segment, spendLimitMinor: stats.sendable, recipientSetHash: await recipientSetHash(recipients), artifactVersionId: ver._id, reservationId, connectionId: connection?.status === "connected" ? connection._id : undefined, credentialId };
     const binding = { orgId: org._id, subjectType: "email_send", subjectId: a._id, actionKind: `send:${args.emailIndex}`, contentHash, scope, policyVersion, expiresAt };
     const approvalId = await ctx.db.insert("approvals", {
       orgId: org._id,
@@ -564,9 +568,62 @@ export const approveSend = mutation({
       expiresAt,
       createdAt: now,
     });
-    await ctx.scheduler.runAfter(0, internal.marketing.executeSend, { approvalId, reservationId, subject: email.subject, html, from: args.from.trim(), segment: args.segment, providerSegmentId: args.providerSegmentId });
+    await ctx.scheduler.runAt(delivery?.scheduledFor ?? now, internal.marketing.executeSend, { approvalId, reservationId, subject: email.subject, html, from: args.from.trim(), segment: args.segment, providerSegmentId: args.providerSegmentId });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "email.send_approved", subjectType: "artifact", subjectId: a._id, summary: `Approved sending “${email.subject}” to ${stats.sendable} opted-in contact(s) in “${args.segment}”${lifecycleRule ? `; owner-selected progress: ${lifecycleRule.scope} / ${lifecycleRule.state}, observations no older than ${lifecycleRule.maxAgeDays} UTC days` : ""}.` });
-    return { recipients: stats.sendable };
+    if (delivery) await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "email.delivery_scheduled", subjectType: "approval", subjectId: approvalId, summary: `Approved one delivery attempt from ${new Date(delivery.scheduledFor).toISOString()} until ${new Date(delivery.windowEnd).toISOString()}. Later steps are not approved.` });
+    return { recipients: stats.sendable, scheduledFor: delivery?.scheduledFor ?? null };
+  },
+});
+
+async function emailAllowancePeriod(ctx: QueryCtx | MutationCtx, reservation: Doc<"usageReservations">) {
+  const period = await ctx.db.get(reservation.periodId);
+  const org = await ctx.db.get(reservation.orgId);
+  return period && (period.orgId === reservation.orgId || (org?.accountId && period.accountId === org.accountId)) ? period : null;
+}
+
+/** Cancel/expire only before the one-attempt claim. Never resolve an unknown send here. */
+async function closeUnstartedSend(ctx: MutationCtx, approval: Doc<"approvals">, reason: string, expired: boolean, actorId?: Id<"users">) {
+  if (approval.subjectType !== "email_send" || approval.executionStartedAt !== undefined || approval.executionFinishedAt !== undefined) return false;
+  const reservation = approval.scope.reservationId ? await ctx.db.get(approval.scope.reservationId as Id<"usageReservations">) : null;
+  if (reservation?.orgId === approval.orgId && reservation.purpose === "email_send" && reservation.status === "held") {
+    const period = await emailAllowancePeriod(ctx, reservation);
+    if (!period) throw appError("INVALID", "The email allowance does not belong to this workspace.");
+    await ctx.db.patch(period._id, ledgerPatch(releaseReservation(ledgerOf(period), { walletMicros: reservation.walletMicros, topupMicros: reservation.topupMicros, meters: reservation.meters })));
+    await ctx.db.patch(reservation._id, { status: "reconciled", reconciledAt: Date.now() });
+  }
+  await ctx.db.patch(approval._id, { status: expired ? "expired" : "invalidated", executionFinishedAt: Date.now(), executionOutcome: "failed", invalidatedReason: reason });
+  await audit(ctx, { orgId: approval.orgId, actorType: actorId ? "user" : "system", ...(actorId ? { actorId } : {}), action: expired ? "email.schedule_expired" : "email.schedule_cancelled", subjectType: "approval", subjectId: approval._id, summary: reason });
+  return true;
+}
+
+export const scheduledSends = query({
+  args: { slug: v.string(), artifactId: v.id("artifacts") },
+  handler: async (ctx, { slug, artifactId }) => {
+    const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
+    assertSameOrg(await ctx.db.get(artifactId), org._id, "email");
+    const rows = await ctx.db.query("approvals").withIndex("by_subject", q => q.eq("subjectType", "email_send").eq("subjectId", artifactId)).filter(q => q.and(q.eq(q.field("orgId"), org._id), q.neq(q.field("scope.scheduledFor"), undefined), q.eq(q.field("executionStartedAt"), undefined), q.eq(q.field("executionFinishedAt"), undefined))).take(21);
+    return { canCancel: can(role, "approve"), omitted: rows.length > 20, items: rows.slice(0, 20).map(a => ({ id: a._id, title: a.title, scheduledFor: a.scope.scheduledFor!, windowEnd: a.scope.windowEnd!, invalidated: a.status !== "approved" })) };
+  },
+});
+
+export const cancelScheduledSend = mutation({
+  args: { slug: v.string(), approvalId: v.id("approvals") },
+  handler: async (ctx, { slug, approvalId }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
+    const approval = assertSameOrg(await ctx.db.get(approvalId), org._id, "email approval");
+    if (approval.subjectType !== "email_send" || approval.scope.scheduledFor === undefined) throw appError("INVALID", "Choose a scheduled email.");
+    if (approval.executionStartedAt !== undefined) throw appError("INVALID", "This attempt already started. Check its result in Activity; cancellation cannot recall it.");
+    await closeUnstartedSend(ctx, approval, "Cancelled before delivery started. No email sent; reserved allowance released.", false, user._id);
+  },
+});
+
+export const expireUnstartedSends = internalMutation({
+  args: {},
+  handler: async ctx => {
+    const rows = await ctx.db.query("approvals").withIndex("by_email_unstarted_expiry", q => q.eq("subjectType", "email_send").eq("executionStartedAt", undefined).eq("executionFinishedAt", undefined).lte("expiresAt", Date.now())).take(50);
+    for (const approval of rows) await closeUnstartedSend(ctx, approval, "Delivery approval expired before the attempt started. No email sent; reserved allowance released. Review again to send.", true);
+    if (rows.length === 50) await ctx.scheduler.runAfter(0, internal.marketing.expireUnstartedSends, {});
+    return rows.length;
   },
 });
 
@@ -607,6 +664,8 @@ async function sendProblem(ctx: MutationCtx, c: NonNullable<Awaited<ReturnType<t
   try { await requirePaid(ctx, org, "sending"); } catch { return "Your plan no longer allows email sending."; }
   const access = await chargeableAccess(ctx, org);
   if (!access.allowed) return access.message;
+  if (access.period._id !== reservation.periodId) return "The email allowance period changed. Review the send again.";
+  if (a.scope.scheduledFor !== undefined && (!Number.isSafeInteger(a.scope.scheduledFor) || a.scope.windowEnd !== a.scope.scheduledFor + EMAIL_DELIVERY_WINDOW_MS || a.expiresAt !== a.scope.windowEnd || Date.now() < a.scope.scheduledFor || Date.now() >= a.scope.windowEnd)) return "The approved delivery window is not open. Review the send again.";
   const index = Number(a.actionKind.replace(/^send:/, ""));
   if (!/^send:\d+$/.test(a.actionKind) || !Number.isSafeInteger(index)) return "The approved email selection is invalid.";
   const email = selectedEmail(artifact, version, index);
@@ -614,7 +673,7 @@ async function sendProblem(ctx: MutationCtx, c: NonNullable<Awaited<ReturnType<t
   const frequency = await segmentFrequency(ctx, org._id, args.segment, org.contactFrequencyDays, c.recipients, a._id);
   const frequencyIssue = frequency ? frequencyBlockMessage(frequency, org.contactFrequencyDays!) : null;
   if (frequencyIssue) return frequencyIssue;
-  const scope = { ...(a.scope.journeyStep ? { journeyStep: a.scope.journeyStep } : {}), ...(c.lifecycleRule ? { lifecycleRule: c.lifecycleRule } : {}), destination: args.providerSegmentId, audience: args.segment, spendLimitMinor: c.recipients.length, recipientSetHash: await recipientSetHash(c.recipients), artifactVersionId: version._id, reservationId: args.reservationId, connectionId: c.connectionId, credentialId: c.credentialId };
+  const scope = { ...(a.scope.scheduledFor !== undefined ? { scheduledFor: a.scope.scheduledFor, windowEnd: a.scope.windowEnd } : {}), ...(a.scope.journeyStep ? { journeyStep: a.scope.journeyStep } : {}), ...(c.lifecycleRule ? { lifecycleRule: c.lifecycleRule } : {}), destination: args.providerSegmentId, audience: args.segment, spendLimitMinor: c.recipients.length, recipientSetHash: await recipientSetHash(c.recipients), artifactVersionId: version._id, reservationId: args.reservationId, connectionId: c.connectionId, credentialId: c.credentialId };
   const check = await checkApprovalForExecution({ approval: a, current: { orgId: org._id, subjectType: "email_send", subjectId: artifact._id, actionKind: a.actionKind, contentHash: await sha256Hex(canonicalJson({ subject: args.subject, html: args.html, from: args.from })), scope, policyVersion: await activePolicyVersion(ctx, org._id), expiresAt: a.expiresAt }, now: Date.now(), emergencyStop: Boolean(org.emergencyStop?.active), capabilityReady: true });
   return check.ok ? null : check.message;
 }
@@ -634,6 +693,7 @@ export const claimSend = internalMutation({
   handler: async (ctx, args) => {
     const c = await readSendContext(ctx, args.approvalId, args.segment);
     if (!c || c.approval.executionStartedAt !== undefined || c.approval.executionFinishedAt !== undefined) return null;
+    if (c.approval.scope.scheduledFor !== undefined && c.approval.scope.scheduledFor > Date.now()) return null;
     const reservation = await ctx.db.get(args.reservationId);
     if (!reservation || reservation.orgId !== c.org._id || reservation.purpose !== "email_send" || reservation.status !== "held" || (c.approval.scope.reservationId && c.approval.scope.reservationId !== reservation._id)) return null;
     const error = await sendProblem(ctx, c, args);
@@ -689,8 +749,8 @@ export const finishSend = internalMutation({
         if (contact) await ctx.db.patch(contact._id, { lastMarketingEmailAt: now });
       }
     }
-    const period = await ctx.db.get(reservation.periodId);
-    if (period?.orgId !== approval.orgId) throw appError("INVALID", "The email allowance does not belong to this workspace.");
+    const period = await emailAllowancePeriod(ctx, reservation);
+    if (!period) throw appError("INVALID", "The email allowance does not belong to this workspace.");
     if (reservation.status === "held" && args.status === "uncertain") {
       await ctx.db.patch(reservation._id, { status: "unresolved" }); // Keep quota held until the provider outcome is known.
     } else if (reservation.status === "held") {
@@ -811,8 +871,8 @@ async function readEmailRecovery(ctx: QueryCtx | MutationCtx, args: EmailRecover
   const reservation = id ? await ctx.db.get(id) : null;
   const hashes = a.emailRecipientHashBatches.flat();
   if (!reservation || reservation.orgId !== org._id || reservation.purpose !== "email_send" || !["held", "unresolved"].includes(reservation.status) || reservation.meters.byoMarketingSends !== a.scope.spendLimitMinor || new Set(hashes).size !== a.scope.spendLimitMinor || hashes.length !== a.scope.spendLimitMinor || hashes.length > MAX_CONTACT_ROWS) throw appError("INVALID", "The original email allowance or recipient evidence needs review.");
-  const period = await ctx.db.get(reservation.periodId);
-  if (!period || period.orgId !== org._id) throw appError("INVALID", "The original email allowance is unavailable.");
+  const period = await emailAllowancePeriod(ctx, reservation);
+  if (!period) throw appError("INVALID", "The original email allowance is unavailable.");
   // A changed draft, expired approval, stopped workspace or lapsed plan cannot authorize a retry,
   // but also must not prevent observing what happened to the original approved request.
   return { org, user, approval: a, reservation, period, connection, credentialId,
@@ -872,8 +932,8 @@ export const finishEmailRecovery = internalMutation({
     }
     const id = a.scope.reservationId ? ctx.db.normalizeId("usageReservations", a.scope.reservationId) : null;
     const reservation = id ? await ctx.db.get(id) : null;
-    const period = reservation ? await ctx.db.get(reservation.periodId) : null;
-    if (!reservation || !period || reservation.orgId !== a.orgId || period.orgId !== a.orgId || !["held", "unresolved"].includes(reservation.status) || reservation.purpose !== "email_send" || reservation.meters.byoMarketingSends === undefined || reservation.meters.byoMarketingSends !== a.scope.spendLimitMinor || new Set(hashes).size !== a.scope.spendLimitMinor) throw appError("INVALID", "The original allowance changed during recovery.");
+    const period = reservation ? await emailAllowancePeriod(ctx, reservation) : null;
+    if (!reservation || !period || reservation.orgId !== a.orgId || !["held", "unresolved"].includes(reservation.status) || reservation.purpose !== "email_send" || reservation.meters.byoMarketingSends === undefined || reservation.meters.byoMarketingSends !== a.scope.spendLimitMinor || new Set(hashes).size !== a.scope.spendLimitMinor) throw appError("INVALID", "The original allowance changed during recovery.");
     const released = releaseReservation(ledgerOf(period), { walletMicros: 0, topupMicros: 0, meters: reservation.meters });
     released.meterUsed = { ...released.meterUsed, byoMarketingSends: released.meterUsed.byoMarketingSends + reservation.meters.byoMarketingSends };
     await ctx.db.patch(period._id, ledgerPatch(released));

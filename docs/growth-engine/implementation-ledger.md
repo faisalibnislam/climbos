@@ -1,3 +1,7 @@
+## 19 November — exact scheduled email delivery
+
+Built bounded scheduling, durable pending review, cancellation and expiry cleanup on the existing approved send executor. Existing exact audience/version/destination/permission checks remain; shared-account settlement now matches reservation ownership. **189 tests/five files**, four desktop/mobile cases, types and scoped lint passed. No paid calls, runtime-model change or live sending. [Audit](scheduled-email-delivery-audit.md).
+
 ## 19 November — observed product funnels and account cohorts
 
 Saved owner-defined measurements calculate distinct-person or explicit-account activation/repeat-use sequences from the authenticated product event path. Deterministic time ordering, mature denominators, seven-day late-arrival allowance, disputed-data exclusions and durable correction cutoffs are covered. The actual planner context receives the source-labeled summary. **243 focused tests in nine files** and **four desktop/mobile cases** passed; an added actual-job-context assertion passed in the five-test backend file. Types and scoped lint passed, with final source checks recorded in the audit. No paid call or runtime-model change. [Audit](product-funnels-audit.md).

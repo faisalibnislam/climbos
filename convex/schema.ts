@@ -4279,6 +4279,7 @@ export default defineSchema({
     .index("by_org_status", ["orgId", "status"])
     .index("by_org_subject_status_decided", ["orgId", "subjectType", "status", "decidedAt"])
     .index("by_org_email_execution", ["orgId", "subjectType", "executionOutcome", "executionReconciledAt", "executionFinishedAt", "executionStartedAt"])
+    .index("by_email_unstarted_expiry", ["subjectType", "executionStartedAt", "executionFinishedAt", "expiresAt"])
     .index("by_subject", ["subjectType", "subjectId"]),
 
   autonomyPolicies: defineTable({

@@ -6,7 +6,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { FunctionReturnType } from "convex/server";
 import { Suspense, useEffect, useState } from "react";
-import { Button, Callout, Checkbox, ConfirmDialog, Field, Input, Select, Skeleton, Spinner, toast } from "@/components/ui";
+import { Button, Callout, Checkbox, ConfirmDialog, DateTimePicker, Field, Input, Select, Skeleton, Spinner, toast } from "@/components/ui";
+import { localEmailDeliveryTime } from "@shared/growth/emailSchedule";
 import { CUSTOMER_PROGRESS_LABELS, type CustomerProgressRule } from "@shared/growth/customerProgress";
 import { ErrorCallout, FactList, MessageText, NoteList, PERMISSION_WHO } from "../shared";
 import { EmailSenderCheck } from "./EmailSenderCheck";
@@ -44,7 +45,28 @@ type ProviderSegment = { id: string; name: string };
 
 /** Send one approved email through the customer's own Resend account to opted-in contacts. */
 export function EmailSendPanel({ slug, artifact }: { slug: string; artifact: ArtifactView }) {
-  return <div className="flex flex-col gap-4"><EmailSendRecovery slug={slug} artifact={artifact} /><Suspense fallback={<p role="status">Opening email review…</p>}><EmailSendEntry slug={slug} artifact={artifact} /></Suspense></div>;
+  return <div className="flex flex-col gap-4"><ScheduledEmails slug={slug} artifact={artifact} /><EmailSendRecovery slug={slug} artifact={artifact} /><Suspense fallback={<p role="status">Opening email review…</p>}><EmailSendEntry slug={slug} artifact={artifact} /></Suspense></div>;
+}
+
+function deliveryLabel(timestamp: number) {
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "long" }).format(timestamp);
+}
+
+function ScheduledEmails({ slug, artifact }: { slug: string; artifact: ArtifactView }) {
+  const scheduled = useQuery(api.marketing.scheduledSends, { slug, artifactId: artifact.id });
+  const cancel = useMutation(api.marketing.cancelScheduledSend);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  if (!scheduled?.items.length) return null;
+  return <div className="flex flex-col gap-3">
+    {scheduled.items.map(item => <Callout key={item.id} tone={item.invalidated ? "warning" : "info"} title={item.invalidated ? "Scheduled approval changed" : "Email scheduled"}>
+      <p>{item.title}</p><p className="mt-2">{deliveryLabel(item.scheduledFor)}. Delivery window ends {deliveryLabel(item.windowEnd)}.</p>
+      <p className="mt-2">{item.invalidated ? "This approval can no longer send. Cancel it to release the reserved allowance now." : "The current email, audience, consent and allowance will be checked again. Changes stop the send for a new review."}</p>
+      {scheduled.canCancel ? <Button type="button" className="mt-3" disabled={busy} onClick={async () => { setBusy(true); setError(null); try { await cancel({ slug, approvalId: item.id }); toast({ tone: "success", title: "Scheduled email cancelled" }); } catch (e) { setError(e); } finally { setBusy(false); } }}>{busy ? "Cancelling…" : "Cancel scheduled email"}</Button> : null}
+    </Callout>)}
+    {scheduled.omitted ? <p>Showing 20 pending schedules. More are recorded in Activity.</p> : null}
+    {error ? <ErrorCallout error={error} /> : null}
+  </div>;
 }
 
 type JourneyReview = Extract<FunctionReturnType<typeof api.customerJourneys.stepReview>, { ready: true }>;
@@ -104,13 +126,16 @@ function EmailSendForm({ slug, artifact, journey }: { slug: string; artifact: Ar
   const progressReady = !limitByProgress || Boolean(lifecycleRule && audiencePreview?.rule && lifecycleRule.scope === audiencePreview.rule.scope && lifecycleRule.state === audiencePreview.rule.state && lifecycleRule.criterion === audiencePreview.rule.criterion && lifecycleRule.maxAgeDays === audiencePreview.rule.maxAgeDays);
   const reportedGroups = audiencePreview?.progressOptions ?? [];
   const selectableGroups = progressGroup && !reportedGroups.some(group => group.key === progressGroup.key) ? [...reportedGroups, { ...progressGroup, contacts: 0 }] : reportedGroups;
-  const [approvedAudience, setApprovedAudience] = useState<{ rule?: CustomerProgressRule; hash: string; count: number } | null>(null);
+  const [approvedAudience, setApprovedAudience] = useState<{ rule?: CustomerProgressRule; hash: string; count: number; scheduledFor?: number } | null>(null);
+  const [deliveryMode, setDeliveryMode] = useState("now");
+  const [deliveryTime, setDeliveryTime] = useState("");
+  const scheduledFor = deliveryMode === "later" ? localEmailDeliveryTime(deliveryTime) : undefined;
   const [providerSegmentId, setProviderSegmentId] = useState("");
   const [from, setFrom] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [sent, setSent] = useState<{ recipients: number; subject: string } | null>(null);
+  const [sent, setSent] = useState<{ recipients: number; subject: string; scheduledFor: number | null } | null>(null);
 
   const providerConnected = audience?.providerConnected ?? false;
 
@@ -190,6 +215,7 @@ function EmailSendForm({ slug, artifact, journey }: { slug: string; artifact: Ar
     const e: Record<string, string> = {};
     if (!chosen) e.segment = "Choose a group.";
     if (!providerSegmentId) e.provider = "Choose a Resend list.";
+    if (deliveryMode === "later" && (scheduledFor == null || scheduledFor < Date.now() + 60_000 || scheduledFor > Date.now() + 23 * 3_600_000)) e.delivery = "Choose a valid local time at least one minute ahead and within 23 hours.";
     if (!/^[^<>]*<?[^\s@<>]+@[^\s@<>]+\.[a-z]{2,}>?$/i.test(from.trim())) e.from = "Use “Name <hello@yourdomain.com>”.";
     setFieldErrors(e);
     return Object.keys(e).length === 0;
@@ -202,7 +228,7 @@ function EmailSendForm({ slug, artifact, journey }: { slug: string; artifact: Ar
       onSubmit={(e) => {
         e.preventDefault();
         if (audiencePreview && progressReady && audiencePreview.eligible > 0 && !frequency?.message && validate()) {
-          setApprovedAudience({ rule: lifecycleRule, hash: audiencePreview.previewHash, count: audiencePreview.eligible });
+          setApprovedAudience({ rule: lifecycleRule, hash: audiencePreview.previewHash, count: audiencePreview.eligible, ...(scheduledFor != null ? { scheduledFor } : {}) });
           setConfirming(true);
         }
       }}
@@ -288,11 +314,16 @@ function EmailSendForm({ slug, artifact, journey }: { slug: string; artifact: Ar
 
       <EmailSenderCheck key={`${slug}:${from}`} slug={slug} from={from} report={audience.senderReadiness} />
 
+      <Field label="Delivery"><Select value={deliveryMode} onValueChange={setDeliveryMode} options={[{ value: "now", label: "Send after approval" }, { value: "later", label: "Choose a delivery time" }]} /></Field>
+      {deliveryMode === "later" ? <Field label="Delivery time" error={fieldErrors.delivery} hint={`Your timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}. Choose within 23 hours. This exact email has a one-hour delivery window and must fit your current allowance period.`}>
+        <DateTimePicker value={deliveryTime} onChange={setDeliveryTime} />
+      </Field> : null}
+
       <Button type="submit" className="self-start" disabled={!audiencePreview || !progressReady || audiencePreview.eligible === 0 || Boolean(frequency?.message)}>
-        Send
+        {deliveryMode === "later" ? "Review scheduled delivery" : "Send"}
       </Button>
       {error ? <ErrorCallout error={error} /> : null}
-      {sent ? (
+      {sent && sent.scheduledFor === null ? (
         <Callout tone="info" live="status" title="Sending…">
           “{sent.subject}” → {sent.recipients.toLocaleString("en-US")} {sent.recipients === 1 ? "person" : "people"}. Confirmation shows under Activity.
         </Callout>
@@ -301,16 +332,16 @@ function EmailSendForm({ slug, artifact, journey }: { slug: string; artifact: Ar
       <ConfirmDialog
         open={confirming}
         onOpenChange={setConfirming}
-        title={`Send to ${approvedAudience?.count.toLocaleString("en-US") ?? 0} people?`}
-        description="Can't be unsent."
-        confirmLabel={`Send to ${approvedAudience?.count.toLocaleString("en-US") ?? 0} people`}
-        confirmDisabled={!approvedAudience || approvedAudience.hash !== audiencePreview?.previewHash || Boolean(frequency?.message)}
+        title={`${approvedAudience?.scheduledFor !== undefined ? "Schedule delivery" : "Send"} to ${approvedAudience?.count.toLocaleString("en-US") ?? 0} ${approvedAudience?.count === 1 ? "person" : "people"}?`}
+        description={approvedAudience?.scheduledFor !== undefined ? "You can cancel before delivery starts. No later email or new recipient is approved." : "Can't be unsent."}
+        confirmLabel={approvedAudience?.scheduledFor !== undefined ? "Approve scheduled delivery" : `Send to ${approvedAudience?.count.toLocaleString("en-US") ?? 0} ${approvedAudience?.count === 1 ? "person" : "people"}`}
+        confirmDisabled={!approvedAudience || approvedAudience.hash !== audiencePreview?.previewHash || approvedAudience.scheduledFor !== scheduledFor || Boolean(frequency?.message)}
         onConfirm={async () => {
           setError(null);
           try {
-            const res = await approveSend({ slug, artifactId: artifact.id, emailIndex: Number(emailIndex), segment, providerSegmentId, from: from.trim(), ...(journey ? { journeyStep: journey.ref } : {}), ...(approvedAudience?.rule ? { lifecycleRule: approvedAudience.rule, audiencePreviewHash: approvedAudience.hash } : {}) });
-            setSent({ recipients: res.recipients, subject: email?.subject ?? "" });
-            toast({ tone: "info", title: "Send approved." });
+            const res = await approveSend({ slug, artifactId: artifact.id, emailIndex: Number(emailIndex), segment, providerSegmentId, from: from.trim(), ...(journey ? { journeyStep: journey.ref } : {}), ...(approvedAudience?.rule ? { lifecycleRule: approvedAudience.rule } : {}), ...(approvedAudience ? { audiencePreviewHash: approvedAudience.hash, ...(approvedAudience.scheduledFor !== undefined ? { scheduledFor: approvedAudience.scheduledFor } : {}) } : {}) });
+            setSent({ recipients: res.recipients, subject: email?.subject ?? "", scheduledFor: res.scheduledFor });
+            toast({ tone: "info", title: res.scheduledFor === null ? "Send approved." : "Delivery scheduled." });
           } catch (e) {
             setError(e);
           }
@@ -323,6 +354,7 @@ function EmailSendForm({ slug, artifact, journey }: { slug: string; artifact: Ar
             ...(approvedAudience?.rule ? [{ term: "Progress rule", detail: `${approvedAudience.rule.scope} · ${CUSTOMER_PROGRESS_LABELS[approvedAudience.rule.state]} · ${approvedAudience.rule.criterion}. Owner observations no older than ${approvedAudience.rule.maxAgeDays} UTC calendar days.` }] : []),
             ...(providerName ? [{ term: "Via", detail: `“${providerName}”` }] : []),
             { term: "From", detail: from.trim() },
+            ...(approvedAudience?.scheduledFor !== undefined ? [{ term: "Delivery", detail: `${deliveryLabel(approvedAudience.scheduledFor)}. Window ends one hour later. Audience and permission checked again before sending.` }] : []),
           ]}
         />
         {approvedAudience && approvedAudience.hash !== audiencePreview?.previewHash ? <Callout tone="warning">The recipient evidence changed. Close this confirmation and review the updated audience.</Callout> : null}
