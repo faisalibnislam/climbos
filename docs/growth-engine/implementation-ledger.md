@@ -1,3 +1,7 @@
+## 19 November — give planning the saved follow-up state
+
+The existing strategy/lifecycle context now receives bounded owner configuration and tracker bookkeeping, with incomplete totals unknown and no contact identities. Retention retries preserve the original snapshot; channel-cache identity ignores only repeat-check clocks, retaining changed configuration/holds. **191 focused tests across six files**, types and scoped lint passed. Counts are not distinct customers or business outcomes; paid calls stay paused and runtime models unchanged. [Audit](customer-followup-journeys-audit.md#planning-integration-follow-up).
+
 ## 19 November — saved customer follow-up journeys
 
 Closed the audited bounded enrollment/cadence/exit gap using existing owner progress, versioned email drafts and exact send approval. Tracking never sends; accepted steps retain original enrollment identities and advance only on verified provider acceptance/recovery. **199 focused tests across 8 files**, **4 desktop/mobile browser cases**, typecheck and scoped lint passed. Live telemetry, provider delivery and customer outcomes remain unverified. Paid calls stay paused and runtime models unchanged. [Audit, paths, commands and limits](customer-followup-journeys-audit.md).

@@ -2,7 +2,9 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import { asNewUser, setup } from "./helpers";
 import type { AgentInput } from "../../shared/agents/types";
+import type { Id } from "../../convex/_generated/dataModel";
 import { RATE_VERSIONS } from "../../shared/economics/rates";
+import { emailAudienceBrief } from "../../shared/growth/emailAudience";
 
 const capture = vi.hoisted(() => ({ inputs: [] as AgentInput[] }));
 vi.mock("../../shared/agents/runtime", async original => ({ ...await original<typeof import("../../shared/agents/runtime")>(), runAgent: vi.fn(async (_spec: unknown, input: AgentInput) => {
@@ -26,6 +28,89 @@ async function fixture() {
   const audience = async () => (await t.query(internal.jobWrites.jobContext, { runId: data.runId }))!.audience;
   return { t, owner, orgId, slug, ...data, audience };
 }
+
+async function followup(f: Awaited<ReturnType<typeof fixture>>, status: "active" | "paused" = "active") {
+  return f.t.run(async ctx => {
+    const business = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", f.orgId)).first())!;
+    const artifactId = await ctx.db.insert("artifacts", { orgId: f.orgId, businessId: business._id, kind: "email", channel: "email", title: "Useful guidance", status: "draft", currentVersion: 1, createdAt: NOW, updatedAt: NOW });
+    const artifactVersionId = await ctx.db.insert("artifactVersions", { orgId: f.orgId, artifactId, version: 1, body: "Private draft", hashtags: [], claimFactIds: [], unsupportedClaims: [], contentHash: "fixture", createdAt: NOW });
+    await ctx.db.patch(artifactId, { currentVersionId: artifactVersionId });
+    const journeyId = await ctx.db.insert("customerJourneys", { orgId: f.orgId, name: "Help with first export", segment: "newsletter", rule: { scope: "Export app", state: "started", criterion: "First useful export not yet observed", maxAgeDays: 7 }, steps: [{ artifactId, artifactVersionId, emailIndex: 0, delayDays: 2, title: "Useful guidance" }], status, revision: 2, createdBy: f.owner.userId, trackingOwnerId: f.owner.userId, createdAt: NOW, updatedAt: NOW, checkedAt: NOW - 60_000, nextCheckAt: NOW + 60_000 });
+    await ctx.db.insert("journeyContacts", { orgId: f.orgId, journeyId, contactId: f.contactId, status: "held", stepIndex: 0, enrolledAt: NOW - 86400000, dueAt: NOW, reason: "Progress needs review", updatedAt: NOW, accepted: [] });
+    return journeyId;
+  });
+}
+
+it("delivers saved follow-up state to the real writer as bookkeeping, never unique customers or authorization", async () => {
+  const f = await fixture(); const activeId = await followup(f); await followup(f, "paused");
+  const evidence = (await f.audience()).followups!;
+  expect(evidence).toMatchObject({ configurationCounts: { active: 1, paused: 1 }, enrollmentCounts: { held: 2 }, observedEnrollments: 2, coverage: "complete" });
+  vi.stubEnv("CLIMBOS_FAKE_LLM", "");
+  await f.t.action(internal.jobs.simplePlanJob, { runId: f.runId, task: "retention_plan" });
+  const brief = capture.inputs[0].brief;
+  expect(brief).toContain("Help with first export"); expect(brief).toContain('"paused":1');
+  expect(brief).toContain("not a unique customer across journeys");
+  expect(brief).toContain("not customer activation, retention, delivery or revenue");
+  expect(brief).toContain("not automatic reactivation");
+  expect(brief).not.toContain(f.contactId); expect(brief).not.toContain("a".repeat(64));
+  const step = (await f.t.run(ctx => ctx.db.query("workflowSteps").withIndex("by_run", q => q.eq("runId", f.runId)).collect())).find(s => s.index === -1)!;
+  expect(JSON.parse(step.output!).progressSnapshot.followups).toEqual(evidence);
+  await f.t.run(async ctx => { await ctx.db.patch(activeId, { status: "archived" }); await ctx.db.patch(f.runId, { status: "executing" }); });
+  await f.t.action(internal.jobs.simplePlanJob, { runId: f.runId, task: "retention_plan" });
+  expect(capture.inputs[1]).toEqual(capture.inputs[0]); // Retry keeps the original context.
+  expect((await f.audience()).followups!.configurationCounts).toMatchObject({ active: 0, paused: 1, archived: 1 });
+  for (const table of ["approvals", "actionReceipts", "emailLog"] as const) expect(await f.t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+});
+
+it("keeps absent historical follow-up evidence unknown and known empty current records distinct", async () => {
+  const f = await fixture(); const a = await f.audience();
+  expect(a.followups).toMatchObject({ configurationCounts: { active: 0, draft: 0, paused: 0, archived: 0 }, enrollmentCounts: { active: 0, held: 0, exited: 0, completed: 0 }, coverage: "complete" });
+  expect(emailAudienceBrief({ ...a, followups: undefined })).toContain("configuration and tracking history unavailable");
+  expect(emailAudienceBrief(a)).not.toContain("configuration and tracking history unavailable");
+});
+
+it("does not churn channel identity on a recheck clock, while changed state and holds invalidate it", async () => {
+  const f = await fixture(); const journeyId = await followup(f); const before = await f.audience();
+  await f.t.run(ctx => ctx.db.patch(journeyId, { checkedAt: NOW }));
+  const refreshed = await f.audience();
+  expect(emailAudienceBrief(refreshed, { cacheKey: true })).toBe(emailAudienceBrief(before, { cacheKey: true }));
+  expect(emailAudienceBrief(refreshed)).not.toBe(emailAudienceBrief(before));
+  await f.t.run(ctx => ctx.db.patch(journeyId, { status: "paused", checkError: "Needs owner review" }));
+  expect(emailAudienceBrief(await f.audience(), { cacheKey: true })).not.toBe(emailAudienceBrief(before, { cacheKey: true }));
+});
+
+it("keeps capped configuration totals unknown and discloses omitted configuration details", async () => {
+  const f = await fixture(); const id = await followup(f);
+  await f.t.run(async ctx => {
+    const { _id, _creationTime, ...record } = (await ctx.db.get(id))!;
+    for (let i = 0; i < 20; i++) await ctx.db.insert("customerJourneys", { ...record, name: `Historical follow-up ${i}` });
+  });
+  expect((await f.audience()).followups).toMatchObject({ configurationCounts: null, enrollmentCounts: null, observedConfigurations: 20, coverage: "partial", omittedConfigurations: null });
+  expect((await f.audience()).followups!.recent).toHaveLength(5);
+});
+
+it("never presents a bounded enrollment sample as complete customer or journey totals", async () => {
+  const f = await fixture(); const ids: Id<"customerJourneys">[] = [];
+  for (let j = 0; j < 6; j++) ids.push(await followup(f));
+  await f.t.run(async ctx => {
+    for (let i = 0; i < 199; i++) {
+      const contactId = await ctx.db.insert("contacts", { orgId: f.orgId, emailHash: `entry-${i}`, emailDomain: "example.com", source: "csv_import", segments: ["newsletter"], createdAt: NOW });
+      for (const journeyId of ids) await ctx.db.insert("journeyContacts", { orgId: f.orgId, journeyId, contactId, status: "held", stepIndex: 0, enrolledAt: NOW, dueAt: NOW, reason: "Needs report", updatedAt: NOW, accepted: [] });
+    }
+  });
+  expect((await f.audience()).followups).toMatchObject({ configurationCounts: { active: 6 }, enrollmentCounts: null, observedEnrollments: 1000, coverage: "partial", omittedConfigurations: 1 });
+});
+
+it("does not include another workspace's follow-up or treat an unmatched enrollment as valid coverage", async () => {
+  const f = await fixture();
+  const other = await asNewUser(f.t, "foreign-followup@example.com");
+  const org = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Foreign follow-up" });
+  const own = await followup(f);
+  await f.t.run(async ctx => { await ctx.db.patch(own, { orgId: org.orgId, name: "FOREIGN PRIVATE WORKFLOW" }); });
+  const evidence = (await f.audience()).followups!;
+  expect(evidence).toMatchObject({ configurationCounts: { active: 0 }, enrollmentCounts: null, coverage: "partial" });
+  expect(JSON.stringify(evidence)).not.toContain("FOREIGN PRIVATE WORKFLOW");
+});
 
 it.each(["deleted", "suppressed", "withdrawn", "future", "no source", "no address"] as const)("does not describe a %s contact as a ready recorded audience", async fault => {
   const f = await fixture();

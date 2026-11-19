@@ -3,6 +3,7 @@ import { currentMarketingConsent, type EmailAudienceSnapshot } from "../../share
 import type { Id } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
 import { appError } from "./tenancy";
+import { MAX_CUSTOMER_JOURNEYS, type FollowupPlanningEvidence } from "../../shared/growth/customerJourneys";
 
 export const MAX_MARKETING_CONTACTS = 10_000;
 const MAX_CONSENT_RECORDS = 100;
@@ -23,11 +24,12 @@ export async function recordedMarketingConsent(ctx: Pick<QueryCtx, "db">, orgId:
 /** Planning evidence only. A capped join cannot become an exact sendable audience. */
 export async function planningEmailAudience(ctx: QueryCtx, orgId: Id<"organizations">): Promise<EmailAudienceSnapshot> {
   const observedAt = Date.now();
-  const [contacts, consents, suppressions, progress] = await Promise.all([
+  const [contacts, consents, suppressions, progress, followups] = await Promise.all([
     ctx.db.query("contacts").withIndex("by_org", q => q.eq("orgId", orgId)).take(PLANNING_SAMPLE + 1),
     ctx.db.query("consentRecords").withIndex("by_org_contact", q => q.eq("orgId", orgId)).take(PLANNING_SAMPLE + 1),
     ctx.db.query("suppressions").withIndex("by_org_email", q => q.eq("orgId", orgId)).take(PLANNING_SAMPLE + 1),
     ctx.db.query("contactProgress").withIndex("by_org", q => q.eq("orgId", orgId)).take(101),
+    planningFollowups(ctx, orgId),
   ]);
   const limitations: string[] = [];
   for (const [name, rows] of [["Contact", contacts], ["Consent", consents], ["Suppression", suppressions]] as const) {
@@ -44,5 +46,30 @@ export async function planningEmailAudience(ctx: QueryCtx, orgId: Id<"organizati
   const suppressed = new Set(suppressions.map(r => r.emailHash));
   const count = active.filter(c => consented.has(c._id) && !suppressed.has(c.emailHash) && c.emailCiphertext && c.emailIv).length;
   const knownEmpty = contacts.length <= PLANNING_SAMPLE && active.length === 0;
-  return { customerProgress: customerProgressEvidence(active.map(contact => ({ customerProgress: progress.slice(0, 100).find(report => report.contactId === contact._id)?.progress })), contacts.length <= PLANNING_SAMPLE && progress.length <= 100, observedAt), contacts: contacts.length > PLANNING_SAMPLE ? null : active.length, consented: knownEmpty ? 0 : limitations.length ? null : count, observedContacts: active.length, coverage: limitations.length ? "partial" : "complete", limitations, observedAt };
+  return { followups, customerProgress: customerProgressEvidence(active.map(contact => ({ customerProgress: progress.slice(0, 100).find(report => report.contactId === contact._id)?.progress })), contacts.length <= PLANNING_SAMPLE && progress.length <= 100, observedAt), contacts: contacts.length > PLANNING_SAMPLE ? null : active.length, consented: knownEmpty ? 0 : limitations.length ? null : count, observedContacts: active.length, coverage: limitations.length ? "partial" : "complete", limitations, observedAt };
+}
+
+/** Bounded tenant-only bookkeeping; never use this sample as an exact dispatch audience. */
+async function planningFollowups(ctx: QueryCtx, orgId: Id<"organizations">): Promise<FollowupPlanningEvidence> {
+  const [journeys, entries] = await Promise.all([
+    ctx.db.query("customerJourneys").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").take(MAX_CUSTOMER_JOURNEYS + 1),
+    ctx.db.query("journeyContacts").withIndex("by_org", q => q.eq("orgId", orgId)).take(PLANNING_SAMPLE + 1),
+  ]);
+  const configurations = journeys.slice(0, MAX_CUSTOMER_JOURNEYS), known = new Set(configurations.map(j => j._id));
+  const observed = entries.slice(0, PLANNING_SAMPLE), matched = observed.filter(e => known.has(e.journeyId));
+  const configurationCounts = { draft: 0, active: 0, paused: 0, archived: 0 }, enrollmentCounts = { active: 0, held: 0, exited: 0, completed: 0 };
+  for (const j of configurations) configurationCounts[j.status]++;
+  for (const e of matched) enrollmentCounts[e.status]++;
+  const limitations: string[] = [];
+  if (journeys.length > MAX_CUSTOMER_JOURNEYS) limitations.push("Configuration coverage exceeds the 20-record bound");
+  if (entries.length > PLANNING_SAMPLE) limitations.push("Enrollment coverage exceeds the 1,000-record planning bound");
+  if (matched.length !== observed.length) limitations.push("Some enrollment records have no matching configuration in this tenant snapshot");
+  return {
+    configurationCounts: journeys.length > MAX_CUSTOMER_JOURNEYS ? null : configurationCounts,
+    enrollmentCounts: limitations.length ? null : enrollmentCounts,
+    observedConfigurations: configurations.length, observedEnrollments: observed.length,
+    coverage: limitations.length ? "partial" : "complete", limitations,
+    recent: configurations.slice(0, 5).map(j => ({ name: j.name, status: j.status, scope: j.rule.scope, state: j.rule.state, criterion: j.rule.criterion, steps: j.steps.length, checkedAt: j.checkedAt ?? null, checkHeld: Boolean(j.checkError) })),
+    omittedConfigurations: journeys.length > MAX_CUSTOMER_JOURNEYS ? null : Math.max(0, configurations.length - 5),
+  };
 }
