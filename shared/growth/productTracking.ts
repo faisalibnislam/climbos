@@ -9,6 +9,7 @@ export const productEventName = z.string().regex(/^[a-zA-Z][a-zA-Z0-9_.:-]{0,79}
 export const productEventInput = z.object({
   eventId: z.string().min(1).max(128).regex(/^[\x21-\x7e]+$/),
   email: z.string().trim().toLowerCase().email().max(254),
+  accountRef: z.string().trim().min(1).max(128).optional(),
   event: productEventName,
   occurredAt: z.string().datetime({ offset: true }),
 }).strict();

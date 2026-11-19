@@ -82,7 +82,7 @@ export const rotate = mutation({
 
 /** One atomic authenticated observation transaction. No external calls, scheduling, consent writes or approvals. */
 export const ingest = internalMutation({
-  args: { tokenHash: v.string(), emailHash: v.string(), eventIdHash: v.string(), event: v.string(), occurredAt: v.number() },
+  args: { tokenHash: v.string(), emailHash: v.string(), eventIdHash: v.string(), event: v.string(), occurredAt: v.number(), accountHash: v.optional(v.string()) },
   handler: async (ctx, a) => {
     const now = Date.now();
     const source = await ctx.db.query("productTrackingSources").withIndex("by_hash", q => q.eq("tokenHash", a.tokenHash)).unique();
@@ -90,8 +90,8 @@ export const ingest = internalMutation({
     const minute = Math.floor(now / 60_000), count = source.rateMinute === minute ? source.rateCount ?? 0 : 0;
     if (count >= 120) return { status: 429, result: "rate_limited" };
     await ctx.db.patch(source._id, { rateMinute: minute, rateCount: count + 1 });
-    if (![a.emailHash, a.eventIdHash].every(h => /^[a-f0-9]{64}$/.test(h)) || !Number.isSafeInteger(a.occurredAt)) return { status: 400, result: "invalid_event" };
-    const payloadHash = await sha256Hex(canonicalJson({ emailHash: a.emailHash, event: a.event, occurredAt: a.occurredAt }));
+    if (![a.emailHash, a.eventIdHash, ...(a.accountHash ? [a.accountHash] : [])].every(h => /^[a-f0-9]{64}$/.test(h)) || !Number.isSafeInteger(a.occurredAt)) return { status: 400, result: "invalid_event" };
+    const payloadHash = await sha256Hex(canonicalJson({ emailHash: a.emailHash, event: a.event, occurredAt: a.occurredAt, ...(a.accountHash ? { accountHash: a.accountHash } : {}) }));
     const prior = await ctx.db.query("productEvents").withIndex("by_source_event", q => q.eq("sourceId", source._id).eq("eventIdHash", a.eventIdHash)).unique();
     if (prior) return prior.payloadHash === payloadHash ? { status: 200, result: prior.outcome, duplicate: true } : { status: 409, result: "event_id_conflict" };
     const mapping = source.mappings.find(m => m.event === a.event);
@@ -115,13 +115,13 @@ export const ingest = internalMutation({
     else if (existing?.source && existing.source.occurredAt === a.occurredAt && (existing.source.conflict || existing.state !== mapping.state || existing.criterion !== mapping.criterion)) outcome = "conflict";
     if (outcome === "applied" || outcome === "conflict") {
       const revision = previous.revision + 1;
-      const report = { scope: source.scope, state: outcome === "conflict" ? "unknown" as const : mapping.state, criterion: outcome === "conflict" ? "Resolve conflicting milestones at the same event time" : mapping.criterion, evidence: outcome === "conflict" ? `Source ${source.name} reported incompatible milestones at the same time. Current progress is unknown.` : `Authenticated source ${source.name} reported event ${a.event}. Its meaning is owner-defined; delivery is not independent verification.`, observedOn: new Date(a.occurredAt).toISOString().slice(0, 10), recordedAt: now, recordedBy: source.createdBy, revision, source: { id: source._id, name: source.name, event: a.event, occurredAt: a.occurredAt, ...(outcome === "conflict" ? { conflict: true } : {}) } };
+      const report = { scope: source.scope, state: outcome === "conflict" ? "unknown" as const : mapping.state, criterion: outcome === "conflict" ? "Resolve conflicting milestones at the same event time" : mapping.criterion, evidence: outcome === "conflict" ? `Source ${source.name} reported incompatible milestones at the same time. Current progress is unknown.` : `Authenticated source ${source.name} reported event ${a.event}. Its meaning is owner-defined; delivery is not independent verification.`, observedOn: new Date(a.occurredAt).toISOString().slice(0, 10), recordedAt: now, recordedBy: source.createdBy, revision, ...(existing?.tracking ? { tracking: existing.tracking } : {}), source: { id: source._id, name: source.name, event: a.event, occurredAt: a.occurredAt, ...(outcome === "conflict" ? { conflict: true } : {}) } };
       const progress = { current: [...previous.current.filter(r => progressScopeKey(r.scope) !== source.scopeKey), report], history: [...previous.history, report].slice(-20), revision };
       if (record) await ctx.db.patch(record._id, { progress });
       else await ctx.db.insert("contactProgress", { orgId: source.orgId, contactId: contact._id, progress });
       await reconcileProgressJourneys(ctx, source.orgId, contact._id, progress);
     }
-    await ctx.db.insert("productEvents", { orgId: source.orgId, sourceId: source._id, contactId: contact._id, eventIdHash: a.eventIdHash, payloadHash, event: a.event, occurredAt: a.occurredAt, receivedAt: now, outcome });
+    await ctx.db.insert("productEvents", { orgId: source.orgId, sourceId: source._id, contactId: contact._id, eventIdHash: a.eventIdHash, payloadHash, event: a.event, occurredAt: a.occurredAt, receivedAt: now, outcome, ...(a.accountHash ? { accountHash: a.accountHash } : {}) });
     await ctx.db.patch(source._id, { lastReceivedAt: now });
     return { status: 200, result: outcome, duplicate: false };
   },
@@ -168,7 +168,7 @@ export const receive = httpAction(async (ctx, request) => {
     const parsed = productEventInput.safeParse(raw);
     if (!parsed.success) return respond(400, "invalid_event");
     const e = parsed.data;
-    const result = await ctx.runMutation(internal.productTracking.ingest, { tokenHash: await sha256Hex(token), emailHash: await sha256Hex(e.email), eventIdHash: await sha256Hex(e.eventId), event: e.event, occurredAt: Date.parse(e.occurredAt) });
+    const result = await ctx.runMutation(internal.productTracking.ingest, { tokenHash: await sha256Hex(token), emailHash: await sha256Hex(e.email), eventIdHash: await sha256Hex(e.eventId), event: e.event, occurredAt: Date.parse(e.occurredAt), ...(e.accountRef ? { accountHash: await sha256Hex(e.accountRef) } : {}) });
     return new Response(JSON.stringify({ result: result.result, ...(result.duplicate !== undefined ? { duplicate: result.duplicate } : {}) }), { status: result.status, headers: { ...headers, ...(result.status === 429 ? { "retry-after": "60" } : {}) } });
   } catch { return respond(503, "event_not_recorded_retry_same_id"); }
   finally { reader.releaseLock(); }

@@ -1,5 +1,8 @@
 # ClimbOS development handoff for Claude Code
 
+**19 November — product measurements:** Owners can define event-based first-value and repeat-value windows for people or explicit server account IDs. Daily UTC cohorts separate mature observations from pending periods, preserve correction cutoffs and feed the existing planning context. This is calculated source evidence, not verified churn, revenue or causal lift. [Audit and limits](growth-engine/product-funnels-audit.md).
+
+
 **19 November — authenticated product milestones:** Customers → Product tracking now connects owner-defined events from a product server to existing contact progress, follow-up eligibility, exact email review and lifecycle planning. Source reports remain distinct from owner observations and measured outcomes. Keys are write-only, revocable and tenant-bound; events cannot send messages or create consent. After a manual correction, owners can explicitly resume future events; progress stays Unknown until a newer event arrives. Requires product-server setup; no automatic browser tracking, inactivity inference or cohort/revenue claims. [Implementation, tests and limits](growth-engine/product-tracking-audit.md). Contact erasure now detects incomplete history and preserves deletion suppression across re-imports. [Privacy regression](growth-engine/contact-erasure-completeness-audit.md). Paid calls remain paused and runtime models unchanged.
 
 

@@ -494,6 +494,7 @@ export const exportData = internalQuery({
     const deals = await ctx.db.query("deals").withIndex("by_org_updated", q => q.eq("orgId", orgId)).order("desc").paginate({ cursor: null, numItems: 500, maximumBytesRead: 1_000_000 });
     const customerJourneys = await ctx.db.query("customerJourneys").withIndex("by_org", q => q.eq("orgId", orgId)).take(21);
     const journeyContacts = await ctx.db.query("journeyContacts").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
+    const productFunnels = await ctx.db.query("productFunnels").withIndex("by_org", q => q.eq("orgId", orgId)).take(21);
     const productSources = await ctx.db.query("productTrackingSources").withIndex("by_org", q => q.eq("orgId", orgId)).take(21);
     const productEvents = await ctx.db.query("productEvents").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
     const contactProgress = await ctx.db.query("contactProgress").withIndex("by_org", q => q.eq("orgId", orgId)).take(101);
@@ -540,6 +541,8 @@ export const exportData = internalQuery({
         customerJourneys: strip(customerJourneys.slice(0, 20)),
         journeyContacts: strip(journeyContacts.slice(0, 1000)),
         customerJourneysLimited: customerJourneys.length > 20 || journeyContacts.length > 1000,
+        productFunnels: strip(productFunnels.slice(0, 20)),
+        productFunnelsLimited: productFunnels.length > 20,
         productTrackingSources: strip(productSources.slice(0, 20).map(({ tokenHash: _hash, ...row }) => row)),
         productEvents: strip(productEvents.slice(0, 1000)),
         productTrackingLimited: productSources.length > 20 || productEvents.length > 1000,
@@ -846,6 +849,7 @@ const PURGE_BY_ORG: { table: string; index: string }[] = [
   { table: "agentTokens", index: "by_org" },
   { table: "productTrackingSources", index: "by_org" },
   { table: "productEvents", index: "by_org" },
+  { table: "productFunnels", index: "by_org" },
   { table: "inviteLinks", index: "by_org" },
   { table: "reportShares", index: "by_org" },
   // Sales, outreach and lead capture.

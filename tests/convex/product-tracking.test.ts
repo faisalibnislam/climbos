@@ -75,7 +75,7 @@ it("resumes only explicitly selected future events, preserving the correction an
   vi.setSystemTime(NOW + 1000);
   await f.post({ eventId: "new-value", event: "real_export", occurredAt: new Date(NOW + 1).toISOString() });
   const current = (await f.read())!.progress.current[0];
-  expect(current.state).toBe("activated"); expect(current.source?.id).toBe(f.sourceId); expect(current.tracking).toBeUndefined();
+  expect(current.state).toBe("activated"); expect(current.source?.id).toBe(f.sourceId); expect(current.tracking?.after).toBe(NOW);
   for (const table of ["approvals", "actionReceipts", "emailLog", "workflowRuns"] as const) expect(await f.t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
 });
 it("requires a current manual observation, matching tenant scope, available source and manage permission to resume", async () => {

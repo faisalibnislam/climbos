@@ -1,3 +1,7 @@
+## 19 November — observed product funnels and account cohorts
+
+Saved owner-defined measurements calculate distinct-person or explicit-account activation/repeat-use sequences from the authenticated product event path. Deterministic time ordering, mature denominators, seven-day late-arrival allowance, disputed-data exclusions and durable correction cutoffs are covered. The actual planner context receives the source-labeled summary. **243 focused tests in nine files** and **four desktop/mobile cases** passed; an added actual-job-context assertion passed in the five-test backend file. Types and scoped lint passed, with final source checks recorded in the audit. No paid call or runtime-model change. [Audit](product-funnels-audit.md).
+
 ## 19 November — complete contact erasure and deletion suppression
 
 Local regressions exposed partial consent-history deletion, truncated duplicate-identity deletion, and a prior unsubscribe reason that could allow telemetry after re-import. Deletion now checks complete supported sets and strengthens existing suppression to deletion; oversized history holds without partial writes or false completion. **279 focused tests/12 files**, app/Convex types, scoped lint and whitespace checks passed. The product milestone UI was verified in six distinct desktop/mobile cases, with the two product cases subsequently extended and reverified for manual correction recovery. Paid calls remain paused and runtime models unchanged. [Erasure audit](contact-erasure-completeness-audit.md); [tracking audit](product-tracking-audit.md).

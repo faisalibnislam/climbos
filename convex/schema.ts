@@ -1833,9 +1833,15 @@ export default defineSchema({
     tokenHash: v.string(), prefix: v.string(), createdAt: v.number(), expiresAt: v.number(), revokedAt: v.optional(v.number()),
     lastReceivedAt: v.optional(v.number()), rateMinute: v.optional(v.number()), rateCount: v.optional(v.number()),
   }).index("by_org", ["orgId"]).index("by_hash", ["tokenHash"]),
+  productFunnels: defineTable({
+    orgId: v.id("organizations"), sourceId: v.id("productTrackingSources"), name: v.string(), scope: v.string(),
+    entity: v.union(v.literal("person"), v.literal("account")), entryEvent: v.string(), activationEvent: v.string(), returnEvent: v.string(),
+    activationDays: v.number(), returnStartDay: v.number(), returnEndDay: v.number(), lookbackDays: v.number(),
+    createdAt: v.number(), createdBy: v.id("users"),
+  }).index("by_org", ["orgId"]),
   productEvents: defineTable({
     orgId: v.id("organizations"), sourceId: v.id("productTrackingSources"), contactId: v.id("contacts"),
-    eventIdHash: v.string(), payloadHash: v.string(), event: v.string(), occurredAt: v.number(), receivedAt: v.number(),
+    eventIdHash: v.string(), payloadHash: v.string(), event: v.string(), occurredAt: v.number(), receivedAt: v.number(), accountHash: v.optional(v.string()),
     outcome: v.union(v.literal("applied"), v.literal("older"), v.literal("owner_override"), v.literal("conflict")),
   }).index("by_org", ["orgId"]).index("by_org_contact", ["orgId", "contactId"])
     .index("by_source_event", ["sourceId", "eventIdHash"]).index("by_received", ["receivedAt"]),
