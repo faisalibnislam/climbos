@@ -1,3 +1,4 @@
+import { journeyStepRefV } from "./lib/customerJourneys";
 import { dealStageHistoryV } from "./lib/dealHistory";
 import { dealQualificationV } from "./lib/dealQualification";
 import { customerProgressRecordV, customerProgressRuleV } from "./lib/customerProgress";
@@ -1849,6 +1850,21 @@ export default defineSchema({
   })
     .index("by_org", ["orgId"])
     .index("by_org_email", ["orgId", "emailHash"]),
+
+  /** Owner-configured review journeys; tracking never grants permission to send. Steps stay bound to saved versions. */
+  customerJourneys: defineTable({
+    orgId: v.id("organizations"), name: v.string(), segment: v.string(), rule: customerProgressRuleV,
+    steps: v.array(v.object({ artifactId: v.id("artifacts"), artifactVersionId: v.id("artifactVersions"), emailIndex: v.number(), delayDays: v.number(), title: v.string() })),
+    status: v.union(v.literal("draft"), v.literal("active"), v.literal("paused"), v.literal("archived")), revision: v.number(),
+    createdBy: v.id("users"), trackingOwnerId: v.id("users"), createdAt: v.number(), updatedAt: v.number(), nextCheckAt: v.number(),
+    checkedAt: v.optional(v.number()), checkError: v.optional(v.string()),
+  }).index("by_org", ["orgId"]).index("by_due", ["status", "nextCheckAt"]),
+  journeyContacts: defineTable({
+    orgId: v.id("organizations"), journeyId: v.id("customerJourneys"), contactId: v.id("contacts"),
+    status: v.union(v.literal("active"), v.literal("held"), v.literal("exited"), v.literal("completed")),
+    stepIndex: v.number(), enrolledAt: v.number(), dueAt: v.number(), reason: v.string(), updatedAt: v.number(),
+    accepted: v.array(v.object({ stepIndex: v.number(), approvalId: v.id("approvals"), acceptedAt: v.number(), basis: v.union(v.literal("provider_accepted"), v.literal("provider_reconciled")) })),
+  }).index("by_org", ["orgId"]).index("by_org_contact", ["orgId", "contactId"]).index("by_journey", ["journeyId"]).index("by_journey_contact", ["journeyId", "contactId"]),
 
   /** Kept separate so contact eligibility scans never load narrative observation history. */
   contactProgress: defineTable({
@@ -4187,6 +4203,7 @@ export default defineSchema({
       audience: v.optional(v.string()),
       recipientSetHash: v.optional(v.string()),
       lifecycleRule: v.optional(customerProgressRuleV),
+      journeyStep: v.optional(journeyStepRefV),
       artifactVersionId: v.optional(v.string()),
       credentialId: v.optional(v.string()),
       reservationId: v.optional(v.string()),
@@ -4231,6 +4248,7 @@ export default defineSchema({
     emailProviderPayloadHash: v.optional(v.string()),
     /** Exact recipients frozen at claim, then rechecked at dispatch; used for recovery and contact pressure. */
     emailRecipientHashBatches: v.optional(v.array(v.array(v.string()))),
+    emailJourneyRecipients: v.optional(v.array(v.object({ emailHash: v.string(), enrollmentId: v.id("journeyContacts"), stepIndex: v.number(), dueAt: v.number() }))),
     emailRecovery: v.optional(v.object({ sentAt: v.number(), checkedAt: v.number(), nextOffset: v.number() })),
     executionExternalId: v.optional(v.string()),
     executionOutcome: v.optional(v.union(v.literal("verified"), v.literal("failed"), v.literal("uncertain"), v.literal("fixture_verified"))),

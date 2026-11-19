@@ -3,7 +3,9 @@
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import type { FunctionReturnType } from "convex/server";
+import { Suspense, useEffect, useState } from "react";
 import { Button, Callout, Checkbox, ConfirmDialog, Field, Input, Select, Skeleton, Spinner, toast } from "@/components/ui";
 import { CUSTOMER_PROGRESS_LABELS, type CustomerProgressRule } from "@shared/growth/customerProgress";
 import { ErrorCallout, FactList, MessageText, NoteList, PERMISSION_WHO } from "../shared";
@@ -41,7 +43,21 @@ type ProviderSegment = { id: string; name: string };
 
 /** Send one approved email through the customer's own Resend account to opted-in contacts. */
 export function EmailSendPanel({ slug, artifact }: { slug: string; artifact: ArtifactView }) {
-  return <div className="flex flex-col gap-4"><EmailSendRecovery slug={slug} artifact={artifact} /><EmailSendForm slug={slug} artifact={artifact} /></div>;
+  return <div className="flex flex-col gap-4"><EmailSendRecovery slug={slug} artifact={artifact} /><Suspense fallback={<p role="status">Opening email review…</p>}><EmailSendEntry slug={slug} artifact={artifact} /></Suspense></div>;
+}
+
+type JourneyReview = Extract<FunctionReturnType<typeof api.customerJourneys.stepReview>, { ready: true }>;
+function EmailSendEntry({ slug, artifact }: { slug: string; artifact: ArtifactView }) {
+  const params = useSearchParams();
+  const hasJourney = params.has("journey"), journey = params.get("journey") ?? "", rawStep = params.get("step") ?? "";
+  const validStep = /^\d+$/.test(rawStep) && Number.isSafeInteger(Number(rawStep));
+  const review = useQuery(api.customerJourneys.stepReview, hasJourney && validStep ? { slug, journey, stepIndex: Number(rawStep), artifactId: artifact.id } : "skip");
+  if (hasJourney) {
+    if (!validStep || review?.ready === false) return <Callout tone="warning" title="Review this follow-up first">{review?.ready === false ? review.message : "This step link is incomplete."} <Link className="text-link" href={`/app/${slug}/customers`}>Open Customers → Follow-ups</Link></Callout>;
+    if (!review) return <p role="status">Checking the saved follow-up…</p>;
+    return <EmailSendForm key={`${review.ref.journeyId}:${review.ref.revision}:${review.ref.stepIndex}`} slug={slug} artifact={artifact} journey={review} />;
+  }
+  return <EmailSendForm key={artifact.id} slug={slug} artifact={artifact} />;
 }
 
 export function EmailSendRecovery({ slug, artifact }: { slug: string; artifact: ArtifactView }) {
@@ -67,22 +83,22 @@ export function EmailSendRecovery({ slug, artifact }: { slug: string; artifact: 
   </div>;
 }
 
-function EmailSendForm({ slug, artifact }: { slug: string; artifact: ArtifactView }) {
+function EmailSendForm({ slug, artifact, journey }: { slug: string; artifact: ArtifactView; journey?: JourneyReview }) {
   const audience = useQuery(api.marketing.audience, { slug });
   const loadProviderSegments = useAction(api.marketing.providerSegments);
   const approveSend = useMutation(api.marketing.approveSend);
   const [providerSegments, setProviderSegments] = useState<ProviderSegment[] | null>(null);
   const [segError, setSegError] = useState<unknown>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [emailIndex, setEmailIndex] = useState("0");
-  const [segment, setSegment] = useState("");
-  const [limitByProgress, setLimitByProgress] = useState(false);
-  const [progressGroup, setProgressGroup] = useState<(Omit<CustomerProgressRule, "maxAgeDays"> & { key: string }) | null>(null);
-  const [observationAge, setObservationAge] = useState("");
+  const [emailIndex, setEmailIndex] = useState(String(journey?.emailIndex ?? 0));
+  const [segment, setSegment] = useState(journey?.segment ?? "");
+  const [limitByProgress, setLimitByProgress] = useState(Boolean(journey));
+  const [progressGroup, setProgressGroup] = useState<(Omit<CustomerProgressRule, "maxAgeDays"> & { key: string }) | null>(journey ? { ...journey.rule, key: JSON.stringify([journey.rule.scope, journey.rule.state, journey.rule.criterion]) } : null);
+  const [observationAge, setObservationAge] = useState(journey ? String(journey.rule.maxAgeDays) : "");
   const maxAgeDays = Number(observationAge);
   const lifecycleRule: CustomerProgressRule | undefined = limitByProgress && progressGroup && Number.isInteger(maxAgeDays) && maxAgeDays >= 1 && maxAgeDays <= 365
     ? { scope: progressGroup.scope, state: progressGroup.state, criterion: progressGroup.criterion, maxAgeDays } : undefined;
-  const audiencePreview = useQuery(api.marketing.emailAudiencePreview, segment ? { slug, segment, ...(lifecycleRule ? { lifecycleRule } : {}), includeProgressOptions: limitByProgress } : "skip");
+  const audiencePreview = useQuery(api.marketing.emailAudiencePreview, segment ? { slug, segment, ...(lifecycleRule ? { lifecycleRule } : {}), includeProgressOptions: limitByProgress, ...(journey ? { journeyStep: journey.ref } : {}) } : "skip");
   const frequency = audiencePreview?.frequency;
   const progressReady = !limitByProgress || Boolean(lifecycleRule && audiencePreview?.rule && lifecycleRule.scope === audiencePreview.rule.scope && lifecycleRule.state === audiencePreview.rule.state && lifecycleRule.criterion === audiencePreview.rule.criterion && lifecycleRule.maxAgeDays === audiencePreview.rule.maxAgeDays);
   const reportedGroups = audiencePreview?.progressOptions ?? [];
@@ -191,10 +207,12 @@ function EmailSendForm({ slug, artifact }: { slug: string; artifact: ArtifactVie
       }}
     >
       {intro}
+      {journey ? <Callout tone="info" title={`Follow-up: ${journey.name}`}>Step {journey.ref.stepIndex + 1} uses its saved email and audience rules. Only contacts due for this step can qualify. This review does not approve later steps.</Callout> : null}
       <MessageText text={audience.note} className="text-sm text-ink-3" />
 
       <Field label="Which email?">
         <Select
+          disabled={Boolean(journey)}
           value={emailIndex}
           onValueChange={setEmailIndex}
           options={emails.map((m, i) => ({ value: String(i), label: `Email ${i + 1}: ${m.subject}` }))}
@@ -210,6 +228,7 @@ function EmailSendForm({ slug, artifact }: { slug: string; artifact: ArtifactVie
 
       <Field label="Who gets it" error={fieldErrors.segment}>
         <Select
+          disabled={Boolean(journey)}
           value={segment}
           onValueChange={value => { setSegment(value); setProgressGroup(null); }}
           placeholder="Choose a group…"
@@ -220,19 +239,19 @@ function EmailSendForm({ slug, artifact }: { slug: string; artifact: ArtifactVie
         />
       </Field>
       {segment ? <div className="flex flex-col gap-3 rounded-lg border border-line p-3">
-        <Checkbox label="Limit this email by customer progress" checked={limitByProgress} onCheckedChange={checked => setLimitByProgress(checked === true)} />
+        <Checkbox disabled={Boolean(journey)} label="Limit this email by customer progress" checked={limitByProgress} onCheckedChange={checked => setLimitByProgress(checked === true)} />
         {limitByProgress ? <>
           <p className="text-sm text-ink-2">Use dated owner reports to match this email to a particular stage. This does not establish live activity or replace email permission.</p>
-          <Field label="Reported customer group"><Select value={progressGroup?.key ?? ""} placeholder="Choose a reported group…" onValueChange={key => {
+          <Field label="Reported customer group"><Select disabled={Boolean(journey)} value={progressGroup?.key ?? ""} placeholder="Choose a reported group…" onValueChange={key => {
             const group = audiencePreview?.progressOptions.find(option => option.key === key);
             if (group) setProgressGroup({ key, scope: group.scope, state: group.state, criterion: group.criterion });
           }} options={selectableGroups.map(group => ({ value: group.key, label: `${group.scope} · ${CUSTOMER_PROGRESS_LABELS[group.state]} · ${group.criterion.length > 90 ? `${group.criterion.slice(0, 90)}…` : group.criterion}` }))} /></Field>
           {audiencePreview && !audiencePreview.progressOptions.length ? <p className="text-sm text-ink-2">No usable groups in this opted-in audience. Record customer progress in Connections first; unknown progress does not qualify.</p> : null}
           {audiencePreview?.omittedGroups ? <p className="text-xs text-ink-3">Showing 30 groups; {audiencePreview.omittedGroups} more are not shown. Choose a narrower contact segment to review them.</p> : null}
           {progressGroup ? <p className="text-sm text-ink-2">Selected definition: {progressGroup.criterion}</p> : null}
-          <Field label="Oldest acceptable observation (days)" hint="Choose 1–365. Age uses UTC calendar dates; a report exactly this many days old qualifies. No age is assumed."><Input type="number" min={1} max={365} step={1} value={observationAge} onChange={event => setObservationAge(event.target.value)} /></Field>
+          <Field label="Oldest acceptable observation (days)" hint="Choose 1–365. Age uses UTC calendar dates; a report exactly this many days old qualifies. No age is assumed."><Input disabled={Boolean(journey)} type="number" min={1} max={365} step={1} value={observationAge} onChange={event => setObservationAge(event.target.value)} /></Field>
           {audiencePreview?.rule && progressReady ? <Callout tone="info" title={`${audiencePreview.eligible} of ${audiencePreview.total} opted-in contacts qualify`}>
-            Excluded: {audiencePreview.excluded.different_progress} with different progress or a different definition; {audiencePreview.excluded.outdated} with outdated reports; {audiencePreview.excluded.unknown} with missing, unknown or conflicting evidence. Checked on {audiencePreview.observedOnUtc} (UTC).
+            Excluded: {audiencePreview.excluded.different_progress} with different progress or a different definition; {audiencePreview.excluded.outdated} with outdated reports; {audiencePreview.excluded.unknown} with missing, unknown or conflicting evidence. {journey ? `${audiencePreview.excluded.not_due} are not due for this follow-up step. ` : ""}Checked on {audiencePreview.observedOnUtc} (UTC).
           </Callout> : <p className="text-sm text-ink-2">Choose the group and observation age to preview recipients.</p>}
           <p className="text-xs text-ink-3">Rechecked before approval and sending. Changed evidence stops this send for a fresh review. Use a provider list that matches the filtered audience exactly; ClimbOS does not remove extra provider contacts automatically.</p>
         </> : null}
@@ -287,7 +306,7 @@ function EmailSendForm({ slug, artifact }: { slug: string; artifact: ArtifactVie
         onConfirm={async () => {
           setError(null);
           try {
-            const res = await approveSend({ slug, artifactId: artifact.id, emailIndex: Number(emailIndex), segment, providerSegmentId, from: from.trim(), ...(approvedAudience?.rule ? { lifecycleRule: approvedAudience.rule, audiencePreviewHash: approvedAudience.hash } : {}) });
+            const res = await approveSend({ slug, artifactId: artifact.id, emailIndex: Number(emailIndex), segment, providerSegmentId, from: from.trim(), ...(journey ? { journeyStep: journey.ref } : {}), ...(approvedAudience?.rule ? { lifecycleRule: approvedAudience.rule, audiencePreviewHash: approvedAudience.hash } : {}) });
             setSent({ recipients: res.recipients, subject: email?.subject ?? "" });
             toast({ tone: "info", title: "Send approved." });
           } catch (e) {

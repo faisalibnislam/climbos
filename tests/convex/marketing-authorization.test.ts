@@ -638,3 +638,128 @@ it("accepts only one overlapping recovery result and one allowance charge", asyn
   expect((await f.t.run(ctx => ctx.db.query("actionReceipts").collect())).filter(r => r.action === "reconcile_email_send")).toHaveLength(1);
   expect(provider.sends).toBe(1);
 });
+
+async function journeyFixture() {
+  const f = await fixture(); await recordProgress(f);
+  const steps = await f.t.run(async ctx => {
+    const original = (await ctx.db.get(f.artifactId))!;
+    const steps = [];
+    for (let i = 0; i < 2; i++) {
+      const artifactId = await ctx.db.insert("artifacts", { orgId: f.orgId, businessId: original.businessId, kind: "email", channel: "email", title: `Help ${i + 1}`, status: "approved", currentVersion: 1, createdAt: Date.now(), updatedAt: Date.now() });
+      const artifactVersionId = await ctx.db.insert("artifactVersions", { orgId: f.orgId, artifactId, version: 1, headline: `Helpful step ${i + 1}`, body: "Here is useful guidance.", hashtags: [], claimFactIds: [], unsupportedClaims: [], contentHash: "fixture", createdAt: Date.now() });
+      await ctx.db.patch(artifactId, { currentVersionId: artifactVersionId });
+      steps.push({ artifactId, artifactVersionId, emailIndex: 0, delayDays: i === 0 ? 0 : 2 });
+    }
+    return steps;
+  });
+  const journeyId = await f.owner.client.mutation(api.customerJourneys.create, { slug: f.slug, name: "Helpful follow-up", segment: "newsletter", rule: progressRule, steps });
+  await f.owner.client.mutation(api.customerJourneys.setStatus, { slug: f.slug, journeyId, revision: 1, status: "active" });
+  const journeyStep = { journeyId, revision: 2, stepIndex: 0 };
+  const preview = await f.owner.client.query(api.marketing.emailAudiencePreview, { slug: f.slug, segment: "newsletter", lifecycleRule: progressRule, journeyStep });
+  const approveArgs = { slug: f.slug, artifactId: steps[0].artifactId, emailIndex: 0, segment: "newsletter", providerSegmentId: "seg-news", from: f.args.from, lifecycleRule: progressRule, journeyStep, audiencePreviewHash: preview.previewHash };
+  const approve = async () => {
+    await f.owner.client.mutation(api.marketing.approveSend, approveArgs);
+    return f.t.run(async ctx => {
+      const a = (await ctx.db.query("approvals").withIndex("by_subject", q => q.eq("subjectType", "email_send").eq("subjectId", steps[0].artifactId)).first())!;
+      const s = (await ctx.db.system.query("_scheduled_functions").collect()).find(s => s.name.includes("executeSend") && (s.args[0] as { approvalId?: string }).approvalId === a._id)!;
+      await ctx.scheduler.cancel(s._id);
+      return s.args[0] as FunctionArgs<typeof internal.marketing.executeSend>;
+    });
+  };
+  const entries = () => f.t.run(ctx => ctx.db.query("journeyContacts").withIndex("by_journey", q => q.eq("journeyId", journeyId)).collect());
+  return { ...f, journeyId, journeyStep, steps, approveArgs, approve, entries };
+}
+
+it("advances a reviewed follow-up only after actual provider acceptance and only once", async () => {
+  const f = await journeyFixture(); const args = await f.approve();
+  expect((await f.entries())[0]).toMatchObject({ stepIndex: 0, accepted: [] });
+  await f.t.action(internal.marketing.executeSend, args);
+  expect(provider.sends).toBe(1);
+  const entry = (await f.entries())[0];
+  expect(entry).toMatchObject({ status: "active", stepIndex: 1, accepted: [{ stepIndex: 0, approvalId: args.approvalId, basis: "provider_accepted" }] });
+  expect(entry.dueAt).toBe(entry.accepted[0].acceptedAt + 2 * 86_400_000);
+  expect((await f.owner.client.query(api.marketing.emailAudiencePreview, { slug: f.slug, segment: "newsletter", lifecycleRule: progressRule, journeyStep: { ...f.journeyStep, stepIndex: 1 } })).eligible).toBe(0);
+  await f.t.action(internal.marketing.executeSend, args);
+  expect(await f.entries()).toEqual([entry]); expect(provider.sends).toBe(1);
+});
+
+it.each(["pause", "draft", "progress", "revision", "owner"])("invalidates a follow-up send when %s changes after approval", async change => {
+  const f = await journeyFixture(); const args = await f.approve();
+  provider.onRead = async () => {
+    if (change === "pause") await f.owner.client.mutation(api.customerJourneys.setStatus, { slug: f.slug, journeyId: f.journeyId, revision: 2, status: "paused" });
+    if (change === "draft") await f.t.run(ctx => ctx.db.patch(f.steps[0].artifactId, { currentVersion: 2 }));
+    if (change === "progress") await recordProgress(f, "ana@example.com", "activated");
+    if (change === "revision") { await f.owner.client.mutation(api.customerJourneys.setStatus, { slug: f.slug, journeyId: f.journeyId, revision: 2, status: "paused" }); await f.owner.client.mutation(api.customerJourneys.setStatus, { slug: f.slug, journeyId: f.journeyId, revision: 3, status: "active" }); }
+    if (change === "owner") await f.t.run(async ctx => { const m = (await ctx.db.query("memberships").withIndex("by_org_user", q => q.eq("orgId", f.orgId).eq("userId", f.owner.userId)).unique())!; await ctx.db.patch(m._id, { role: "viewer" }); });
+  };
+  await f.t.action(internal.marketing.executeSend, args);
+  expect(provider.sends).toBe(0); expect((await f.entries())[0].stepIndex).toBe(0);
+});
+
+it("binds follow-up identity, step content and preview; stripping the journey cannot authorize a wider send", async () => {
+  const f = await journeyFixture();
+  await expect(f.owner.client.mutation(api.marketing.approveSend, { ...f.approveArgs, journeyStep: undefined })).rejects.toThrow(/changed|previewed/);
+  await expect(f.owner.client.mutation(api.marketing.approveSend, { ...f.approveArgs, artifactId: f.steps[1].artifactId })).rejects.toThrow(/saved follow-up/);
+  await expect(f.owner.client.mutation(api.marketing.approveSend, { ...f.approveArgs, lifecycleRule: undefined })).rejects.toThrow();
+  expect(provider.sends).toBe(0);
+});
+
+it("an unbound email send cannot advance a follow-up", async () => {
+  const f = await journeyFixture(); await f.t.action(internal.marketing.executeSend, f.args);
+  expect(provider.sends).toBe(1); expect((await f.entries())[0]).toMatchObject({ stepIndex: 0, accepted: [] });
+});
+
+it("keeps uncertain steps pending; verified recovery advances the original recipients without sending again", async () => {
+  const f = await journeyFixture(); const args = await f.approve(); provider.outcome = "uncertain";
+  await f.t.action(internal.marketing.executeSend, args);
+  expect((await f.entries())[0]).toMatchObject({ stepIndex: 0, accepted: [] });
+  const dispatchedAt = Date.now() - 6 * 60_000, sentAt = Date.now() - 60_000;
+  await f.t.run(ctx => ctx.db.patch(args.approvalId, { executionStartedAt: dispatchedAt, emailSendDispatchedAt: dispatchedAt }));
+  provider.recovery = { id: "broadcast-test", name: `climbos-${args.approvalId}`, segmentId: "seg-news", subject: args.subject, html: args.html, from: args.from, text: (provider.lastDraft as { text: string }).text, status: "sent", sentAt: new Date(sentAt).toISOString() };
+  await f.owner.client.mutation(api.customerJourneys.setStatus, { slug: f.slug, journeyId: f.journeyId, revision: 2, status: "paused" });
+  await f.owner.client.action(api.marketing.checkSendResult, { slug: f.slug, artifactId: f.steps[0].artifactId, approvalId: args.approvalId });
+  await f.t.finishAllScheduledFunctions(() => undefined);
+  expect((await f.entries())[0]).toMatchObject({ stepIndex: 1, dueAt: sentAt + 2 * 86_400_000, accepted: [{ approvalId: args.approvalId, basis: "provider_reconciled" }] });
+  expect(provider.sends).toBe(1);
+});
+
+it("completes the last reviewed step without treating acceptance as customer activation or restarting the journey", async () => {
+  const f = await journeyFixture(); const first = await f.approve(); await f.t.action(internal.marketing.executeSend, first);
+  const dueAt = (await f.entries())[0].dueAt;
+  const clock = vi.spyOn(Date, "now").mockReturnValue(dueAt);
+  try {
+    const journeyStep = { ...f.journeyStep, stepIndex: 1 };
+    const preview = await f.owner.client.query(api.marketing.emailAudiencePreview, { slug: f.slug, segment: "newsletter", lifecycleRule: progressRule, journeyStep });
+    expect(preview.eligible).toBe(1);
+    await f.owner.client.mutation(api.marketing.approveSend, { ...f.approveArgs, artifactId: f.steps[1].artifactId, journeyStep, audiencePreviewHash: preview.previewHash });
+    const second = await f.t.run(async ctx => {
+      const a = (await ctx.db.query("approvals").withIndex("by_subject", q => q.eq("subjectType", "email_send").eq("subjectId", f.steps[1].artifactId)).first())!;
+      const s = (await ctx.db.system.query("_scheduled_functions").collect()).find(s => s.name.includes("executeSend") && (s.args[0] as { approvalId?: string }).approvalId === a._id)!;
+      await ctx.scheduler.cancel(s._id); return s.args[0] as FunctionArgs<typeof internal.marketing.executeSend>;
+    });
+    provider.synced = []; await f.t.action(internal.marketing.executeSend, second);
+    expect(provider.sends).toBe(2);
+    expect((await f.entries())[0]).toMatchObject({ status: "completed", stepIndex: 2, reason: expect.stringContaining("customer outcomes remain unknown") });
+    await f.owner.client.mutation(api.customerJourneys.refresh, { slug: f.slug, journeyId: f.journeyId });
+    expect(await f.entries()).toHaveLength(1);
+    expect((await f.entries())[0].status).toBe("completed");
+    expect((await f.owner.client.query(api.marketing.contactProgress, { slug: f.slug, email: "ana@example.com" }))!.progress.current[0].state).toBe("started");
+  } finally { clock.mockRestore(); }
+});
+
+it("a late provider receipt cannot advance a replacement enrollment with the same email", async () => {
+  const f = await journeyFixture(); const args = await f.approve();
+  expect((await f.t.mutation(internal.marketing.claimSend, args))?.error).toBeNull();
+  expect(await f.t.mutation(internal.marketing.authorizeSendDispatch, { ...args, externalId: "broadcast-test" })).toMatchObject({ ok: true });
+  const original = (await f.entries())[0];
+  const emailHash = await sha256Hex("ana@example.com");
+  await f.owner.client.mutation(api.settings.deleteContact, { slug: f.slug, email: "ana@example.com" });
+  await f.importContact("ana@example.com");
+  // Simulate a separately established fresh opt-in after the erasure; no real customer is contacted.
+  await f.t.run(async ctx => { for (const r of await ctx.db.query("suppressions").collect()) if (r.orgId === f.orgId && r.emailHash === emailHash) await ctx.db.delete(r._id); });
+  await recordProgress(f);
+  await f.owner.client.mutation(api.customerJourneys.refresh, { slug: f.slug, journeyId: f.journeyId });
+  expect((await f.entries())[0]._id).not.toBe(original._id);
+  await f.t.mutation(internal.marketing.finishSend, { approvalId: args.approvalId, reservationId: args.reservationId, status: "verified", sent: 1, externalId: "broadcast-test", summary: "Original provider acceptance fixture", recipientHashes: [emailHash] });
+  expect((await f.entries())[0]).toMatchObject({ stepIndex: 0, accepted: [] });
+});

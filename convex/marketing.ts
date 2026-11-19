@@ -1,3 +1,4 @@
+import { checkedJourneyStep, journeyRecipientEvidence, journeyStepRefV, recordJourneyAcceptance, type JourneyStepRef } from "./lib/customerJourneys";
 import { customerProgressStateV, customerProgressRuleV } from "./lib/customerProgress";
 import { progressScopeKey, validProgressDate, normalizeProgressRule, progressEligibility, type CustomerProgressRule } from "../shared/growth/customerProgress";
 import { emailReadinessValidator, recordedEmailReadiness } from "./lib/emailReadiness";
@@ -149,6 +150,15 @@ export const recordContactProgress = mutation({
     const progress = { current: [...previous.current.filter(r => progressScopeKey(r.scope) !== key), report], history: [...previous.history, report].slice(-20), revision };
     if (record) await ctx.db.patch(record._id, { progress });
     else await ctx.db.insert("contactProgress", { orgId: org._id, contactId: contact._id, progress });
+    const enrolled = await ctx.db.query("journeyContacts").withIndex("by_org_contact", q => q.eq("orgId", org._id).eq("contactId", contact._id)).take(21);
+    if (enrolled.length > 20) throw appError("LIMIT_REACHED", "This contact's follow-up history needs review.");
+    for (const entry of enrolled) {
+      if (entry.status !== "active" && entry.status !== "held") continue;
+      const journey = await ctx.db.get(entry.journeyId);
+      if (!journey || journey.orgId !== org._id) continue;
+      const result = progressEligibility(progress, journey.rule, Date.now());
+      if (result.status !== "eligible") await ctx.db.patch(entry._id, { status: result.status === "different_progress" ? "exited" : "held", reason: result.status === "different_progress" ? "The reported progress or its definition changed." : "A recent matching progress report is needed.", updatedAt: Date.now() });
+    }
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "contact.progress_recorded", subjectType: "contact", subjectId: contact._id, summary: `Owner recorded customer progress, revision ${revision}. No message, enrollment or consent change.` });
     return progress;
   },
@@ -355,7 +365,7 @@ export const providerSegments = action({
   },
 });
 
-function splitSequence(body: string): { subject: string; text: string }[] {
+export function splitSequence(body: string): { subject: string; text: string }[] {
   return body
     .split(/\n\s*———\s*\n/)
     .map((block) => {
@@ -390,17 +400,18 @@ async function baseEligibleRecipients(ctx: QueryCtx, orgId: Id<"organizations">,
   }
   return recipients.sort((a, b) => a.emailHash.localeCompare(b.emailHash) || a.contactId.localeCompare(b.contactId));
 }
-type EmailRecipient = Awaited<ReturnType<typeof baseEligibleRecipients>>[number] & { progressEvidence?: { recordId: Id<"contactProgress">; observationHash: string } };
+type EmailRecipient = Awaited<ReturnType<typeof baseEligibleRecipients>>[number] & { progressEvidence?: { recordId: Id<"contactProgress">; observationHash: string }; journeyEvidence?: { enrollmentId: Id<"journeyContacts">; stepIndex: number; dueAt: number } };
 function checkedProgressRule(rule?: CustomerProgressRule) {
   if (!rule) return undefined;
   const normalized = normalizeProgressRule(rule);
   if (!normalized) throw appError("INVALID", "Choose a known customer-progress group and how recent its observations must be (1–365 UTC calendar days).");
   return normalized;
 }
-async function selectedEmailAudience(ctx: QueryCtx, orgId: Id<"organizations">, segment: string, rule?: CustomerProgressRule, includeProgressOptions = false) {
+async function selectedEmailAudience(ctx: QueryCtx, orgId: Id<"organizations">, segment: string, rule?: CustomerProgressRule, includeProgressOptions = false, journeyStep?: JourneyStepRef) {
+  if (journeyStep) await checkedJourneyStep(ctx, orgId, journeyStep, segment, rule);
   const base = await baseEligibleRecipients(ctx, orgId, segment), now = Date.now();
   const recipients: EmailRecipient[] = [];
-  const excluded = { unknown: 0, different_progress: 0, outdated: 0 };
+  const excluded = { unknown: 0, different_progress: 0, outdated: 0, not_due: 0 };
   const groups = new Map<string, { key: string; scope: string; state: CustomerProgressRule["state"]; criterion: string; contacts: number }>();
   if (!rule && !includeProgressOptions) return { recipients: base as EmailRecipient[], total: base.length, excluded, progressOptions: [], omittedGroups: 0 };
   for (const recipient of base) {
@@ -417,26 +428,28 @@ async function selectedEmailAudience(ctx: QueryCtx, orgId: Id<"organizations">, 
     if (!rule) { recipients.push(recipient); continue; }
     const result = progressEligibility(row?.progress, rule, now);
     if (result.status !== "eligible") { excluded[result.status]++; continue; }
-    recipients.push({ ...recipient, progressEvidence: { recordId: row!._id, observationHash: await sha256Hex(canonicalJson({ ...result.observation! })) } });
+    const journeyEvidence = journeyStep ? await journeyRecipientEvidence(ctx, orgId, journeyStep, recipient.contactId, now) : null;
+    if (journeyStep && !journeyEvidence) { excluded.not_due++; continue; }
+    recipients.push({ ...recipient, ...(journeyEvidence ? { journeyEvidence } : {}), progressEvidence: { recordId: row!._id, observationHash: await sha256Hex(canonicalJson({ ...result.observation! })) } });
   }
   const options = [...groups.values()].sort((a, b) => a.key.localeCompare(b.key));
   return { recipients, total: base.length, excluded, progressOptions: options.slice(0, 30), omittedGroups: Math.max(0, options.length - 30) };
 }
-async function eligibleRecipients(ctx: QueryCtx, orgId: Id<"organizations">, segment: string, rule?: CustomerProgressRule) {
-  return (await selectedEmailAudience(ctx, orgId, segment, rule)).recipients;
+async function eligibleRecipients(ctx: QueryCtx, orgId: Id<"organizations">, segment: string, rule?: CustomerProgressRule, journeyStep?: JourneyStepRef) {
+  return (await selectedEmailAudience(ctx, orgId, segment, rule, false, journeyStep)).recipients;
 }
-async function lifecyclePreviewHash(orgId: Id<"organizations">, segment: string, rule: CustomerProgressRule | undefined, recipients: EmailRecipient[]) {
-  return sha256Hex(canonicalJson({ orgId, segment, rule: rule ? { ...rule } : undefined, recipientSetHash: await recipientSetHash(recipients) }));
+async function lifecyclePreviewHash(orgId: Id<"organizations">, segment: string, rule: CustomerProgressRule | undefined, recipients: EmailRecipient[], journeyStep?: JourneyStepRef) {
+  return sha256Hex(canonicalJson({ ...(journeyStep ? { journeyStep } : {}), orgId, segment, rule: rule ? { ...rule } : undefined, recipientSetHash: await recipientSetHash(recipients) }));
 }
 /** Exact per-send review. Recorded progress does not create consent, schedule a message or infer a missing milestone. */
 export const emailAudiencePreview = query({
-  args: { slug: v.string(), segment: v.string(), lifecycleRule: v.optional(customerProgressRuleV), includeProgressOptions: v.optional(v.boolean()) },
+  args: { slug: v.string(), segment: v.string(), lifecycleRule: v.optional(customerProgressRuleV), includeProgressOptions: v.optional(v.boolean()), journeyStep: v.optional(journeyStepRefV) },
   handler: async (ctx, args) => {
     const { org } = await requireOrgAccess(ctx, { slug: args.slug }, "view");
     const rule = checkedProgressRule(args.lifecycleRule);
-    const result = await selectedEmailAudience(ctx, org._id, args.segment, rule, args.includeProgressOptions);
+    const result = await selectedEmailAudience(ctx, org._id, args.segment, rule, args.includeProgressOptions, args.journeyStep);
     const check = await segmentFrequency(ctx, org._id, args.segment, org.contactFrequencyDays, result.recipients);
-    return { total: result.total, eligible: result.recipients.length, excluded: result.excluded, progressOptions: result.progressOptions, omittedGroups: result.omittedGroups, rule: rule ?? null, previewHash: await lifecyclePreviewHash(org._id, args.segment, rule, result.recipients), observedOnUtc: new Date(Date.now()).toISOString().slice(0, 10), frequency: check ? { ...check, message: frequencyBlockMessage(check, org.contactFrequencyDays!) } : null };
+    return { total: result.total, eligible: result.recipients.length, excluded: result.excluded, progressOptions: result.progressOptions, omittedGroups: result.omittedGroups, rule: rule ?? null, previewHash: await lifecyclePreviewHash(org._id, args.segment, rule, result.recipients, args.journeyStep), observedOnUtc: new Date(Date.now()).toISOString().slice(0, 10), frequency: check ? { ...check, message: frequencyBlockMessage(check, org.contactFrequencyDays!) } : null };
   },
 });
 async function recipientSetHash(recipients: EmailRecipient[]) {
@@ -463,6 +476,7 @@ export const approveSend = mutation({
     from: v.string(),
     lifecycleRule: v.optional(customerProgressRuleV),
     audiencePreviewHash: v.optional(v.string()),
+    journeyStep: v.optional(journeyStepRefV),
   },
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "approve");
@@ -486,8 +500,12 @@ export const approveSend = mutation({
     const email = emails[args.emailIndex] ?? (a.kind === "email" ? { subject: ver.headline ?? a.title, text: ver.body.trim() } : undefined);
     if (!email) throw appError("INVALID", "We couldn't find that email in the draft.");
     const lifecycleRule = checkedProgressRule(args.lifecycleRule);
-    const recipients = await eligibleRecipients(ctx, org._id, args.segment, lifecycleRule);
-    if (lifecycleRule && args.audiencePreviewHash !== await lifecyclePreviewHash(org._id, args.segment, lifecycleRule, recipients)) throw appError("INVALID", "The customer-progress audience changed or was not previewed. Review its current count and rule before approving.");
+    if (args.journeyStep) {
+      const { step } = await checkedJourneyStep(ctx, org._id, args.journeyStep, args.segment, lifecycleRule);
+      if (step.artifactId !== a._id || step.artifactVersionId !== ver._id || step.emailIndex !== args.emailIndex) throw appError("INVALID", "This email does not match the saved follow-up step.");
+    }
+    const recipients = await eligibleRecipients(ctx, org._id, args.segment, lifecycleRule, args.journeyStep);
+    if (lifecycleRule && args.audiencePreviewHash !== await lifecyclePreviewHash(org._id, args.segment, lifecycleRule, recipients, args.journeyStep)) throw appError("INVALID", "The customer-progress audience changed or was not previewed. Review its current count and rule before approving.");
     const stats = { sendable: recipients.length };
     if (stats.sendable === 0) throw appError("INVALID", lifecycleRule ? "No opted-in contacts match this customer-progress rule with recent usable evidence. Review the reports or choose a different purpose." : "Nobody in this segment has a recorded marketing opt-in. ClimbOS won't send without one.");
     // The owner's contact frequency limit holds the whole send rather than silently dropping people from an approved segment.
@@ -506,7 +524,7 @@ export const approveSend = mutation({
     const contentHash = await sha256Hex(canonicalJson({ subject: email.subject, html, from: args.from.trim() }));
     const { connection, credentialId } = await marketingConnection(ctx, org._id);
     const reservationId = await ctx.db.insert("usageReservations", { orgId: org._id, periodId: period._id, purpose: "email_send", walletMicros: 0, topupMicros: 0, meters: { byoMarketingSends: stats.sendable }, status: "held", createdAt: now });
-    const scope = { ...(lifecycleRule ? { lifecycleRule } : {}), destination: args.providerSegmentId, audience: args.segment, spendLimitMinor: stats.sendable, recipientSetHash: await recipientSetHash(recipients), artifactVersionId: ver._id, reservationId, connectionId: connection?.status === "connected" ? connection._id : undefined, credentialId };
+    const scope = { ...(args.journeyStep ? { journeyStep: args.journeyStep } : {}), ...(lifecycleRule ? { lifecycleRule } : {}), destination: args.providerSegmentId, audience: args.segment, spendLimitMinor: stats.sendable, recipientSetHash: await recipientSetHash(recipients), artifactVersionId: ver._id, reservationId, connectionId: connection?.status === "connected" ? connection._id : undefined, credentialId };
     const binding = { orgId: org._id, subjectType: "email_send", subjectId: a._id, actionKind: `send:${args.emailIndex}`, contentHash, scope, policyVersion, expiresAt };
     const approvalId = await ctx.db.insert("approvals", {
       orgId: org._id,
@@ -544,7 +562,8 @@ async function readSendContext(ctx: QueryCtx, approvalId: Id<"approvals">, segme
   let recipients: Awaited<ReturnType<typeof eligibleRecipients>> = [];
   let audienceProblem: string | null = null;
   let lifecycleRule: CustomerProgressRule | undefined;
-  try { lifecycleRule = checkedProgressRule(approval.scope.lifecycleRule); recipients = await eligibleRecipients(ctx, org._id, segment, lifecycleRule); } catch { audienceProblem = "The complete audience, progress or consent history could not be verified. Review it before sending."; }
+  try { lifecycleRule = checkedProgressRule(approval.scope.lifecycleRule); recipients = await eligibleRecipients(ctx, org._id, segment, lifecycleRule, approval.scope.journeyStep);
+    if (approval.scope.journeyStep) { const { step } = await checkedJourneyStep(ctx, org._id, approval.scope.journeyStep, segment, lifecycleRule); if (step.artifactId !== approval.subjectId || step.artifactVersionId !== approval.scope.artifactVersionId || approval.actionKind !== `send:${step.emailIndex}`) throw appError("INVALID", "Follow-up content changed."); } } catch { audienceProblem = "The complete audience, progress or consent history could not be verified. Review it before sending."; }
   const artifactId = ctx.db.normalizeId("artifacts", approval.subjectId);
   const artifact = artifactId ? await ctx.db.get(artifactId) : null;
   const version = artifact?.currentVersionId ? await ctx.db.get(artifact.currentVersionId) : null;
@@ -574,12 +593,12 @@ async function sendProblem(ctx: MutationCtx, c: NonNullable<Awaited<ReturnType<t
   const frequency = await segmentFrequency(ctx, org._id, args.segment, org.contactFrequencyDays, c.recipients, a._id);
   const frequencyIssue = frequency ? frequencyBlockMessage(frequency, org.contactFrequencyDays!) : null;
   if (frequencyIssue) return frequencyIssue;
-  const scope = { ...(c.lifecycleRule ? { lifecycleRule: c.lifecycleRule } : {}), destination: args.providerSegmentId, audience: args.segment, spendLimitMinor: c.recipients.length, recipientSetHash: await recipientSetHash(c.recipients), artifactVersionId: version._id, reservationId: args.reservationId, connectionId: c.connectionId, credentialId: c.credentialId };
+  const scope = { ...(a.scope.journeyStep ? { journeyStep: a.scope.journeyStep } : {}), ...(c.lifecycleRule ? { lifecycleRule: c.lifecycleRule } : {}), destination: args.providerSegmentId, audience: args.segment, spendLimitMinor: c.recipients.length, recipientSetHash: await recipientSetHash(c.recipients), artifactVersionId: version._id, reservationId: args.reservationId, connectionId: c.connectionId, credentialId: c.credentialId };
   const check = await checkApprovalForExecution({ approval: a, current: { orgId: org._id, subjectType: "email_send", subjectId: artifact._id, actionKind: a.actionKind, contentHash: await sha256Hex(canonicalJson({ subject: args.subject, html: args.html, from: args.from })), scope, policyVersion: await activePolicyVersion(ctx, org._id), expiresAt: a.expiresAt }, now: Date.now(), emergencyStop: Boolean(org.emergencyStop?.active), capabilityReady: true });
   return check.ok ? null : check.message;
 }
 
-function selectedEmail(artifact: Doc<"artifacts">, version: Doc<"artifactVersions">, index: number) {
+export function selectedEmail(artifact: Doc<"artifacts">, version: Doc<"artifactVersions">, index: number) {
   return artifact.kind === "email" && index === 0 ? splitSequence(version.body)[0] ?? { subject: version.headline ?? artifact.title, text: version.body.trim() } : artifact.kind === "email_sequence" ? splitSequence(version.body)[index] : null;
 }
 function approvedBroadcastDraft(c: NonNullable<Awaited<ReturnType<typeof readSendContext>>>, args: SendArgs): BroadcastDraft {
@@ -618,7 +637,7 @@ export const authorizeSendDispatch = internalMutation({
     const error = await sendProblem(ctx, c, args);
     if (error) return { ok: false, message: error };
     if (!args.externalId.trim()) return { ok: false, message: "The provider draft identity is missing." };
-    await ctx.db.patch(c.approval._id, { emailSendDispatchedAt: Date.now(), emailProviderPayloadHash: await sha256Hex(canonicalJson(broadcastPayload(approvedBroadcastDraft(c, args)))), executionExternalId: args.externalId, emailRecipientHashBatches: Array.from({ length: Math.ceil(c.recipients.length / 200) }, (_, i) => c.recipients.slice(i * 200, (i + 1) * 200).map(r => r.emailHash)) });
+    await ctx.db.patch(c.approval._id, { emailSendDispatchedAt: Date.now(), emailProviderPayloadHash: await sha256Hex(canonicalJson(broadcastPayload(approvedBroadcastDraft(c, args)))), executionExternalId: args.externalId, emailRecipientHashBatches: Array.from({ length: Math.ceil(c.recipients.length / 200) }, (_, i) => c.recipients.slice(i * 200, (i + 1) * 200).map(r => r.emailHash)), ...(c.approval.scope.journeyStep ? { emailJourneyRecipients: c.recipients.flatMap(r => r.journeyEvidence ? [{ emailHash: r.emailHash, ...r.journeyEvidence }] : []) } : {}) });
     return { ok: true, message: "" };
   },
 });
@@ -643,6 +662,7 @@ export const finishSend = internalMutation({
     await ctx.db.patch(approval._id, { executionFinishedAt: Date.now(), executionOutcome: args.status, ...(args.externalId ? { executionExternalId: args.externalId } : {}) });
     if (args.status === "verified" && args.recipientHashes?.length) {
       const now = Date.now();
+      await recordJourneyAcceptance(ctx, approval, args.recipientHashes, now, "provider_accepted");
       for (const emailHash of args.recipientHashes.slice(0, 10_000)) {
         const contact = await ctx.db.query("contacts").withIndex("by_org_email", (q) => q.eq("orgId", approval.orgId).eq("emailHash", emailHash)).first();
         if (contact) await ctx.db.patch(contact._id, { lastMarketingEmailAt: now });
@@ -819,6 +839,7 @@ export const finishEmailRecovery = internalMutation({
     const a = await ctx.db.get(args.approvalId);
     if (!a || !unresolvedEmail(a) || !a.emailRecovery || a.emailRecovery.checkedAt !== args.checkedAt || a.emailRecovery.nextOffset !== args.offset || !a.emailRecipientHashBatches?.length) return;
     const hashes = a.emailRecipientHashBatches.flat();
+    await recordJourneyAcceptance(ctx, a, hashes.slice(args.offset, args.offset + 200), a.emailRecovery.sentAt, "provider_reconciled");
     for (const hash of hashes.slice(args.offset, args.offset + 200)) {
       const contact = await ctx.db.query("contacts").withIndex("by_org_email", q => q.eq("orgId", a.orgId).eq("emailHash", hash)).first();
       if (contact && !contact.deletedAt) await ctx.db.patch(contact._id, { lastMarketingEmailAt: Math.max(contact.lastMarketingEmailAt ?? 0, a.emailRecovery.sentAt) });

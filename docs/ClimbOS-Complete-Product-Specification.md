@@ -1,5 +1,7 @@
 # ClimbOS — Consolidated Product Requirements and Claude Code Cross-Check
 
+**19 November — saved customer follow-ups:** Customers → Follow-ups now retains owner-configured progress rules, versioned email steps, explicit waiting times, enrollment/hold/exit state and accepted-step history. Every send still uses exact existing approval and provider checks; this is not live product telemetry or unattended sending. [Implementation, tests and limits](growth-engine/customer-followup-journeys-audit.md). Paid calls remain paused and runtime models unchanged.
+
 **Purpose:** one owner-facing reference for the product direction, requirements, capability boundaries, supplied libraries, engineering rules, and current implementation evidence. Use it to cross-check ClimbOS before continuing development in Claude Code.
 
 **Current audit — 18 November 2026:** see [all 410 original requirements](growth-engine/requirements-reconciliation-2026-11-18.md), [later contracts and library quality](growth-engine/requirements-scope-2026-11-18.md), and [executed offline verification](growth-engine/offline-acceptance-audit-2026-11-18.md). Current branch: `codex/trend-evidence-freshness`; verified pushes are authorized. Paid API testing remains paused, runtime models unchanged, and deployment/customer actions unauthorized. These current instructions supersede historical branch, cost and release statements below. The older specification remains a scope record, not proof of completion.

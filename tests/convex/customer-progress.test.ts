@@ -111,6 +111,8 @@ it("passes scoped dated owner reports as citable facts to the actual retention w
   expect(input.facts[index]).toContain("as of 2026-11-16");
   expect(input.brief).toContain("broadcast review can apply an owner-selected product/journey");
   expect(input.brief).toContain("not automatic enrollment or live event tracking");
+  expect(input.brief).toContain("Customers → Follow-ups");
+  expect(input.brief).toContain("every due step still requires the existing exact-content, recipient and destination approval");
   expect(input.brief).toContain("Missing reports mean unknown, not inactive");
   expect(input.brief).not.toContain("ana@example.com");
   for (const table of ["approvals", "actionReceipts", "artifacts"] as const) expect(await f.t.run(ctx => ctx.db.query(table).collect())).toEqual([]);

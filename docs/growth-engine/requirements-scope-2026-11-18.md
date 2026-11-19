@@ -1,5 +1,7 @@
 # Full scope audit — 18 November 2026
 
+**19 November implementation addendum:** [Saved customer follow-ups](customer-followup-journeys-audit.md) closes the bounded enrollment, cadence, exit-state and next-email review gap using existing owner progress and exact email approvals. Full live lifecycle telemetry and unattended sending remain unbuilt; the broad requirements are not reclassified as complete.
+
 ## Read this first
 
 This closes the **offline audit work**, not the claim that ClimbOS is a proven expert marketing director or that every broad feature is complete. The [410-row reconciliation](requirements-reconciliation-2026-11-18.md) retains every original requirement, its code references and outstanding boundary. This companion covers later owner contracts, the actual recommendation path, data-library quality and remaining acceptance work. [Offline verification and commands](offline-acceptance-audit-2026-11-18.md) records the fixes and executed checks.

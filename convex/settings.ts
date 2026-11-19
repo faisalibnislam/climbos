@@ -492,6 +492,8 @@ export const exportData = internalQuery({
     const weeklyRevisions = await ctx.db.query("playResultRevisions").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
     const outcomeRevisions = await ctx.db.query("experimentOutcomeRevisions").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
     const deals = await ctx.db.query("deals").withIndex("by_org_updated", q => q.eq("orgId", orgId)).order("desc").paginate({ cursor: null, numItems: 500, maximumBytesRead: 1_000_000 });
+    const customerJourneys = await ctx.db.query("customerJourneys").withIndex("by_org", q => q.eq("orgId", orgId)).take(21);
+    const journeyContacts = await ctx.db.query("journeyContacts").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
     const contactProgress = await ctx.db.query("contactProgress").withIndex("by_org", q => q.eq("orgId", orgId)).take(101);
     const reviewRequests = await ctx.db.query("reviewRequests").withIndex("by_org_created", q => q.eq("orgId", orgId)).order("desc").take(101);
     const reviewBatches = await ctx.db.query("reviewInvitationBatches").withIndex("by_org_created", q => q.eq("orgId", orgId)).order("desc").take(101);
@@ -533,6 +535,9 @@ export const exportData = internalQuery({
         deals: strip(deals.page),
         dealHistoryLimited: !deals.isDone,
         dealCoverage: "Newest deals, bounded to 500 records or approximately 1 MB read; buying-context history retains the most recent 20 observations per deal.",
+        customerJourneys: strip(customerJourneys.slice(0, 20)),
+        journeyContacts: strip(journeyContacts.slice(0, 1000)),
+        customerJourneysLimited: customerJourneys.length > 20 || journeyContacts.length > 1000,
         customerProgress: strip(contactProgress.slice(0, 100)),
         customerProgressLimited: contactProgress.length > 100,
         brandPatternDecisions: strip(brandPatterns.slice(0, 100)),
@@ -625,6 +630,9 @@ export const deleteContact = mutation({
       for (const r of consents) await ctx.db.delete(r._id);
       const progress = await ctx.db.query("contactProgress").withIndex("by_org_contact", q => q.eq("orgId", org._id).eq("contactId", c._id)).unique();
       if (progress) await ctx.db.delete(progress._id);
+      const entries = await ctx.db.query("journeyContacts").withIndex("by_org_contact", q => q.eq("orgId", org._id).eq("contactId", c._id)).take(21);
+      if (entries.length > 20) throw appError("LIMIT_REACHED", "The complete follow-up history must be removed before completing this privacy request.");
+      for (const entry of entries) await ctx.db.delete(entry._id);
       await ctx.db.delete(c._id);
     }
     const existing = await ctx.db
@@ -805,6 +813,8 @@ const PURGE_BY_ORG: { table: string; index: string }[] = [
   { table: "connectionCapabilities", index: "by_org" },
   { table: "followerSnapshots", index: "by_org_provider_day" },
   { table: "connections", index: "by_org" },
+  { table: "journeyContacts", index: "by_org" },
+  { table: "customerJourneys", index: "by_org" },
   { table: "contactProgress", index: "by_org" },
   { table: "contacts", index: "by_org" },
   { table: "experimentOutcomeRevisions", index: "by_org" },
