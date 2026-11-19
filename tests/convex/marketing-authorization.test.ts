@@ -763,3 +763,61 @@ it("a late provider receipt cannot advance a replacement enrollment with the sam
   await f.t.mutation(internal.marketing.finishSend, { approvalId: args.approvalId, reservationId: args.reservationId, status: "verified", sent: 1, externalId: "broadcast-test", summary: "Original provider acceptance fixture", recipientHashes: [emailHash] });
   expect((await f.entries())[0]).toMatchObject({ stepIndex: 0, accepted: [] });
 });
+
+it("privately reviews all pages of the exact recipient set without touching providers or approvals", async () => {
+  const f = await fixture(undefined, 52);
+  const preview = await f.owner.client.query(api.marketing.emailAudiencePreview, { slug: f.slug, segment: "newsletter" });
+  const before = await f.t.run(ctx => ctx.db.query("approvals").collect());
+  const args = { slug: f.slug, segment: "newsletter", previewHash: preview.previewHash, offset: 0 };
+  const first = await f.owner.client.query(api.marketing.emailRecipientReview, args);
+  expect(first.ready).toBe(true); if (!first.ready) throw new Error("Expected private audience review");
+  expect(first.items).toHaveLength(50); expect(first.nextOffset).toBe(50); expect(first.total).toBe(52);
+  const last = await f.owner.client.query(api.marketing.emailRecipientReview, { ...args, offset: first.nextOffset! });
+  expect(last.ready).toBe(true); if (!last.ready) throw new Error("Expected final page");
+  expect(last.items).toHaveLength(2); expect(last.nextOffset).toBeNull();
+  expect(new Set([...first.items, ...last.items].map(r => r.email)).size).toBe(52);
+  expect(JSON.stringify(first)).not.toContain("ciphertext");
+  expect(provider.synced).toEqual([]); expect(provider.sends).toBe(0);
+  expect(await f.t.run(ctx => ctx.db.query("approvals").collect())).toEqual(before);
+});
+
+it("recipient review excludes other progress and clears when the exact evidence changes", async () => {
+  const f = await fixture(undefined, 3); await recordProgress(f); await recordProgress(f, "extra-0@example.com", "activated");
+  const preview = await f.owner.client.query(api.marketing.emailAudiencePreview, { slug: f.slug, segment: "newsletter", lifecycleRule: progressRule });
+  const args = { slug: f.slug, segment: "newsletter", lifecycleRule: progressRule, previewHash: preview.previewHash, offset: 0 };
+  expect(await f.owner.client.query(api.marketing.emailRecipientReview, args)).toMatchObject({ ready: true, total: 1, items: [{ email: "ana@example.com" }] });
+  await recordProgress(f, "ana@example.com", "activated");
+  const stale = await f.owner.client.query(api.marketing.emailRecipientReview, args);
+  expect(stale).toMatchObject({ ready: false }); expect(stale).not.toHaveProperty("items");
+});
+
+it("recipient review stays within the current follow-up step and blocks a paused journey", async () => {
+  const f = await journeyFixture();
+  const args = { slug: f.slug, segment: "newsletter", lifecycleRule: progressRule, journeyStep: f.journeyStep, previewHash: f.approveArgs.audiencePreviewHash, offset: 0 };
+  expect(await f.owner.client.query(api.marketing.emailRecipientReview, args)).toMatchObject({ ready: true, items: [{ email: "ana@example.com" }] });
+  await f.owner.client.mutation(api.customerJourneys.setStatus, { slug: f.slug, journeyId: f.journeyId, revision: 2, status: "paused" });
+  expect(await f.owner.client.query(api.marketing.emailRecipientReview, args)).toMatchObject({ ready: false });
+  expect(provider.sends).toBe(0);
+});
+
+it.each(["viewer", "editor", "reviewer"] as const)("does not expand raw recipient access to a %s", async role => {
+  const f = await fixture(); const member = await asNewUser(f.t, `private-${role}@example.com`);
+  await f.t.run(ctx => ctx.db.insert("memberships", { orgId: f.orgId, userId: member.userId, role, status: "active", createdAt: Date.now() }));
+  const preview = await f.owner.client.query(api.marketing.emailAudiencePreview, { slug: f.slug, segment: "newsletter" });
+  expect((await member.client.query(api.marketing.audience, { slug: f.slug })).canReviewRecipients).toBe(false);
+  await expect(member.client.query(api.marketing.emailRecipientReview, { slug: f.slug, segment: "newsletter", previewHash: preview.previewHash, offset: 0 })).rejects.toThrow();
+});
+
+it("rejects foreign workspace previews, invalid pages and address/identity mismatches", async () => {
+  const f = await fixture(); const other = await asNewUser(f.t, "foreign-recipient@example.com");
+  const foreign = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Foreign recipients" });
+  const preview = await f.owner.client.query(api.marketing.emailAudiencePreview, { slug: f.slug, segment: "newsletter" });
+  const args = { slug: f.slug, segment: "newsletter", previewHash: preview.previewHash, offset: 0 };
+  await expect(other.client.query(api.marketing.emailRecipientReview, args)).rejects.toThrow();
+  expect(await other.client.query(api.marketing.emailRecipientReview, { ...args, slug: foreign.slug })).toMatchObject({ ready: false });
+  for (const offset of [-1, 0.5, 10001]) await expect(f.owner.client.query(api.marketing.emailRecipientReview, { ...args, offset })).rejects.toThrow();
+  await f.t.run(async ctx => { const contact = (await ctx.db.query("contacts").first())!; await ctx.db.patch(contact._id, { emailHash: "b".repeat(64) }); });
+  const updated = await f.owner.client.query(api.marketing.emailAudiencePreview, { slug: f.slug, segment: "newsletter" });
+  const result = await f.owner.client.query(api.marketing.emailRecipientReview, { ...args, previewHash: updated.previewHash });
+  expect(result).toMatchObject({ ready: false }); expect(result).not.toHaveProperty("items");
+});

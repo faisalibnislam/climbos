@@ -304,7 +304,7 @@ async function segmentStats(ctx: { db: import("./_generated/server").QueryCtx["d
 export const audience = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
     const resend = await ctx.db
       .query("connections")
       .withIndex("by_org_provider", (q) => q.eq("orgId", org._id).eq("provider", "email_resend"))
@@ -312,6 +312,7 @@ export const audience = query({
     return {
       segments: await segmentStats(ctx, org._id),
       providerConnected: resend?.status === "connected",
+      canReviewRecipients: can(role, "manage_connections"),
       senderReadiness: await recordedEmailReadiness(ctx, resend),
       note: "Only people with a recorded marketing opt-in can be emailed. Unsubscribes, bounces and complaints are always excluded.",
     };
@@ -450,6 +451,30 @@ export const emailAudiencePreview = query({
     const result = await selectedEmailAudience(ctx, org._id, args.segment, rule, args.includeProgressOptions, args.journeyStep);
     const check = await segmentFrequency(ctx, org._id, args.segment, org.contactFrequencyDays, result.recipients);
     return { total: result.total, eligible: result.recipients.length, excluded: result.excluded, progressOptions: result.progressOptions, omittedGroups: result.omittedGroups, rule: rule ?? null, previewHash: await lifecyclePreviewHash(org._id, args.segment, rule, result.recipients, args.journeyStep), observedOnUtc: new Date(Date.now()).toISOString().slice(0, 10), frequency: check ? { ...check, message: frequencyBlockMessage(check, org.contactFrequencyDays!) } : null };
+  },
+});
+
+/** Purpose-bound private review for contact managers. No provider calls, list writes or send authority. */
+export const emailRecipientReview = query({
+  args: { slug: v.string(), segment: v.string(), lifecycleRule: v.optional(customerProgressRuleV), journeyStep: v.optional(journeyStepRefV), previewHash: v.string(), offset: v.number() },
+  handler: async (ctx, args) => {
+    const { org } = await requireOrgAccess(ctx, { slug: args.slug }, "manage_connections");
+    if (!Number.isSafeInteger(args.offset) || args.offset < 0 || args.offset > MAX_MARKETING_CONTACTS || !/^[a-f0-9]{64}$/.test(args.previewHash)) throw appError("INVALID", "Open a current audience preview before reviewing its recipients.");
+    try {
+      const rule = checkedProgressRule(args.lifecycleRule);
+      const recipients = await eligibleRecipients(ctx, org._id, args.segment, rule, args.journeyStep);
+      const hash = await lifecyclePreviewHash(org._id, args.segment, rule, recipients, args.journeyStep);
+      if (hash !== args.previewHash) return { ready: false as const, message: "The audience changed. Close this review and open the current recipient list." };
+      if (args.offset > recipients.length) throw appError("INVALID", "That page is no longer available.");
+      const items = [];
+      for (const recipient of recipients.slice(args.offset, args.offset + 50)) {
+        const [keyId, iv] = recipient.iv.split(":");
+        const email = (await decryptSecret({ keyId, iv, ciphertext: recipient.ciphertext }, contactAad(org._id))).trim().toLowerCase();
+        if (!EMAIL_RE.test(email) || await sha256Hex(email) !== recipient.emailHash) throw appError("INVALID", "A recipient identity could not be verified.");
+        items.push({ email, name: recipient.firstName ?? null });
+      }
+      return { ready: true as const, items, total: recipients.length, start: args.offset, nextOffset: args.offset + items.length < recipients.length ? args.offset + items.length : null };
+    } catch { return { ready: false as const, message: "The complete audience or a recipient address could not be verified. Check the current progress, contact data and follow-up state before continuing." }; }
   },
 });
 async function recipientSetHash(recipients: EmailRecipient[]) {

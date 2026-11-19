@@ -54,6 +54,9 @@ test("owner saves, starts, reviews and pauses a follow-up without authorizing a 
   await expect(page.getByLabel("Oldest acceptable observation (days)")).toBeDisabled();
   await expect(page.getByText("1 of 1 opted-in contacts qualify", { exact: true })).toBeVisible();
   await expectAccessible(page, "Saved follow-up send review"); await expectNoHorizontalScroll(page);
+  await page.getByRole("button", { name: "Review recipients", exact: true }).click();
+  const recipientReview = page.getByRole("dialog", { name: "Review recipients", exact: true });
+  await expect(recipientReview.getByText("journey@example.com", { exact: true })).toBeVisible();
   const stepUrl = page.url();
   const saved = (await rows("customerJourneys")).find(row => row.orgId === org._id)!;
   // Another owner window can pause while this exact review remains open.

@@ -1,3 +1,7 @@
+## 19 November — inspect the exact private recipient set
+
+Owners/admins can inspect the consent/progress/due-step matches for an exact current email preview, 50 at a time. Changed evidence clears the list; other roles and foreign previews cannot expose addresses. No provider call, consent write or send authority is added. Final combined regression: **238 tests across 10 related files** passed (10.30 seconds); **four distinct desktop/mobile workflow cases** passed across the initial run and the settled-dialog accessibility recheck. Typecheck, scoped lint and whitespace checks passed. Paid calls stay paused and runtime models unchanged. [Audit, commands and remaining limits](customer-followup-journeys-audit.md#exact-recipient-review-follow-up).
+
 ## 19 November — give planning the saved follow-up state
 
 The existing strategy/lifecycle context now receives bounded owner configuration and tracker bookkeeping, with incomplete totals unknown and no contact identities. Retention retries preserve the original snapshot; channel-cache identity ignores only repeat-check clocks, retaining changed configuration/holds. **191 focused tests across six files**, types and scoped lint passed. Counts are not distinct customers or business outcomes; paid calls stay paused and runtime models unchanged. [Audit](customer-followup-journeys-audit.md#planning-integration-follow-up).

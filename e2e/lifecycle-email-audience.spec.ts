@@ -42,7 +42,17 @@ test("owner previews dated progress eligibility and sees a completed milestone l
   await expect(send).toBeEnabled();
   await expectAccessible(page, "Lifecycle email audience preview"); await expectNoHorizontalScroll(page);
   await page.screenshot({ path: testInfo.outputPath("lifecycle-audience-preview.png"), fullPage: true });
+  await page.getByRole("button", { name: "Review recipients", exact: true }).click();
+  const recipientReview = page.getByRole("dialog", { name: "Review recipients", exact: true });
+  await expect(recipientReview.getByText("ana@example.com", { exact: true })).toBeVisible();
+  await expect(recipientReview.getByText("bea@example.com", { exact: true })).toHaveCount(0);
+  await recipientReview.evaluate(async el => { await Promise.all(el.getAnimations({ subtree: true }).map(a => a.finished.catch(() => undefined))); });
+  await expectAccessible(page, "Private recipient review"); await expectNoHorizontalScroll(page);
+  await page.screenshot({ path: testInfo.outputPath("recipient-review.png"), fullPage: false });
   await progress("ana@example.com", "activated", 1);
+  await expect(recipientReview.getByText(/The audience changed/)).toBeVisible();
+  await expect(recipientReview.getByText("ana@example.com", { exact: true })).toHaveCount(0);
+  await recipientReview.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByText("0 of 3 opted-in contacts qualify", { exact: true })).toBeVisible();
   await expect(send).toBeDisabled();
   expect(await effects()).toEqual(before); expect(errors).toEqual([]);

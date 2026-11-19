@@ -10,6 +10,7 @@ import { Button, Callout, Checkbox, ConfirmDialog, Field, Input, Select, Skeleto
 import { CUSTOMER_PROGRESS_LABELS, type CustomerProgressRule } from "@shared/growth/customerProgress";
 import { ErrorCallout, FactList, MessageText, NoteList, PERMISSION_WHO } from "../shared";
 import { EmailSenderCheck } from "./EmailSenderCheck";
+import { EmailRecipientReview } from "./EmailRecipientReview";
 import type { ArtifactView } from "./model";
 
 export interface ParsedEmail {
@@ -256,6 +257,7 @@ function EmailSendForm({ slug, artifact, journey }: { slug: string; artifact: Ar
           <p className="text-xs text-ink-3">Rechecked before approval and sending. Changed evidence stops this send for a fresh review. Use a provider list that matches the filtered audience exactly; ClimbOS does not remove extra provider contacts automatically.</p>
         </> : null}
       </div> : null}
+      {audience.canReviewRecipients && audiencePreview && progressReady ? <EmailRecipientReview review={{ slug, segment, previewHash: audiencePreview.previewHash, ...(lifecycleRule ? { lifecycleRule } : {}), ...(journey ? { journeyStep: journey.ref } : {}) }} /> : null}
       {frequency?.message ? <Callout tone="warning" title="Your contact limit will hold this send">{frequency.message}</Callout> : null}
       {chosen && chosen.total > chosen.sendable ? (
         <p className="-mt-2 text-sm text-ink-3">
