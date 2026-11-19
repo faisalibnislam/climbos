@@ -1,3 +1,7 @@
+## 19 November — recover from manual progress corrections
+
+Owners can explicitly select future events for a corrected contact/product. Prior observations stay in history, current progress becomes Unknown, and only events occurring strictly after that choice may update it. Duplicate/delayed deliveries cannot revive disputed progress. Role, tenant, source availability and revision checks apply; another manual correction cancels the selection. **234 focused tests/8 files** and **2 extended desktop/mobile cases** passed, plus types and scoped lint. The paid-test pause and runtime model are unchanged. [Recovery audit](product-tracking-audit.md#owner-recovery-return-from-a-correction-to-future-events).
+
 ## 19 November — authenticated product milestone tracking
 
 Built owner-defined, source-attributed server events through existing customer progress, planning and follow-ups. Added write-only keys, ordering/deduplication/conflict handling, bounded retention, privacy cleanup and owner setup/receipt UI. Every email retains the exact approval boundary. **270 focused tests/11 files**, typechecks, scoped lint and **6 desktop/mobile workflow cases** passed. No paid call, runtime model change or hosted deployment. Requires real product-server setup; no complete cohort or revenue inference. [Audit and limits](product-tracking-audit.md).

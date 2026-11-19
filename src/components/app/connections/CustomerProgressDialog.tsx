@@ -4,7 +4,7 @@ import { useConvex, useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
 import { useState, type FormEvent } from "react";
-import { CUSTOMER_PROGRESS_LABELS, CUSTOMER_PROGRESS_STATES, type CustomerProgressObservation, type CustomerProgressState } from "@shared/growth/customerProgress";
+import { CUSTOMER_PROGRESS_LABELS, CUSTOMER_PROGRESS_STATES, progressScopeKey, type CustomerProgressObservation, type CustomerProgressState } from "@shared/growth/customerProgress";
 import { Button, Callout, DatePicker, Dialog, DialogContent, DialogTrigger, Field, Input, Select, Textarea, toast } from "@/components/ui";
 import { errorMessage } from "../errors";
 
@@ -48,6 +48,7 @@ function ProgressLookup({ slug }: { slug: string }) {
 
 function ProgressEditor({ slug, contact, onSaved }: { slug: string; contact: Contact; onSaved: (contact: Contact) => void }) {
   const record = useMutation(api.marketing.recordContactProgress);
+  const selectFutureEvents = useMutation(api.productTracking.useFutureEvents);
   const [scope, setScope] = useState("");
   const [state, setState] = useState<CustomerProgressState>("unknown");
   const [criterion, setCriterion] = useState("");
@@ -67,11 +68,24 @@ function ProgressEditor({ slug, contact, onSaved }: { slug: string; contact: Con
     } catch (e) { setError(errorMessage(e)); }
     finally { setBusy(false); }
   }
+  async function resumeEvents(r: CustomerProgressObservation) {
+    const source = contact.eventSources.find(s => progressScopeKey(s.scope) === progressScopeKey(r.scope));
+    if (!source) return;
+    setBusy(true); setError(null);
+    try {
+      const progress = await selectFutureEvents({ slug, contactId: contact.contactId, sourceId: source.id, expectedRevision: contact.progress.revision });
+      onSaved({ ...contact, progress });
+      toast({ tone: "success", title: "Waiting for a new product event" });
+    } catch (e) { setError(errorMessage(e)); }
+    finally { setBusy(false); }
+  }
   return <div className="flex flex-col gap-4">
     <h3 className="heading-card">{contact.name}</h3>
     {contact.progress.current.length ? <ul className="flex flex-col gap-2">{contact.progress.current.map(r => <li key={r.scope} className="rounded-lg border border-line p-3 text-sm">
       <p className="font-medium">{r.scope}: {CUSTOMER_PROGRESS_LABELS[r.state]}</p><p className="text-ink-2">{r.source ? `Source-reported by ${r.source.name}` : "Owner-reported"} as of {r.observedOn}. {r.criterion}</p><p>{r.evidence}</p>{r.source ? <p className="text-xs text-ink-3">Event {r.source.event} · occurred {new Date(r.source.occurredAt).toISOString()} · received {new Date(r.recordedAt).toISOString()}. Source report, not independently verified value.</p> : null}
       {contact.canEdit ? <Button size="sm" variant="ghost" disabled={busy} onClick={() => edit(r)}>Update {r.scope}</Button> : null}
+      {r.tracking ? <p className="text-xs text-ink-3">Waiting for an event that occurred after {new Date(r.tracking.after).toISOString()}. Earlier events cannot replace this choice.</p> : null}
+      {contact.canEdit && !r.source && contact.eventSources.some(s => progressScopeKey(s.scope) === progressScopeKey(r.scope) && s.id !== r.tracking?.sourceId) ? <div className="mt-2 space-y-1"><p className="text-xs text-ink-3">Keep this observation in history and set current progress to Unknown until a newer event arrives from your connected source.</p><Button size="sm" variant="secondary" disabled={busy} onClick={() => resumeEvents(r)}>Use future events for {r.scope}</Button></div> : null}
     </li>)}</ul> : <p className="text-sm text-ink-2">No progress observations yet. A segment name does not establish customer progress.</p>}
     {contact.canEdit ? <form onSubmit={save} className="flex flex-col gap-3">
       <Field label="Product or journey" hint="Use the same name to update that scope; a different product can have a different state."><Input required maxLength={80} value={scope} onChange={e => setScope(e.target.value)} /></Field>

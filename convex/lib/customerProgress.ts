@@ -6,6 +6,7 @@ export const customerProgressObservationV = v.object({
   scope: v.string(), state: customerProgressStateV, criterion: v.string(), evidence: v.string(), observedOn: v.string(),
   recordedAt: v.number(), recordedBy: v.id("users"), revision: v.number(),
   source: v.optional(v.object({ id: v.id("productTrackingSources"), name: v.string(), event: v.string(), occurredAt: v.number(), conflict: v.optional(v.boolean()) })),
+  tracking: v.optional(v.object({ sourceId: v.id("productTrackingSources"), after: v.number() })),
 });
 export const customerProgressRecordV = v.object({
   current: v.array(customerProgressObservationV), history: v.array(customerProgressObservationV), revision: v.number(),

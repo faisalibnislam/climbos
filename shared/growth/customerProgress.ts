@@ -15,6 +15,7 @@ export interface CustomerProgressObservation {
   recordedBy: string;
   revision: number;
   source?: { id: string; name: string; event: string; occurredAt: number; conflict?: boolean };
+  tracking?: { sourceId: string; after: number };
 }
 export interface CustomerProgressRecord {
   current: CustomerProgressObservation[];

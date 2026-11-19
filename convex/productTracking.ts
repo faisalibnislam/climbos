@@ -17,7 +17,7 @@ async function newCredential() {
   const token = `climb_events_${Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("")}`;
   return { token, tokenHash: await sha256Hex(token), prefix: token.slice(0, 20) };
 }
-async function available(ctx: QueryCtx, source: Doc<"productTrackingSources">, now: number) {
+export async function productSourceAvailable(ctx: QueryCtx, source: Doc<"productTrackingSources">, now: number) {
   if (source.revokedAt !== undefined || source.expiresAt <= now) return false;
   const org = await ctx.db.get(source.orgId);
   if (!org || org.deletedAt !== undefined || org.suspendedAt !== undefined || org.emergencyStop?.active || await fleetStopped(ctx)) return false;
@@ -33,7 +33,7 @@ export const list = query({
     const receipts = await ctx.db.query("productEvents").withIndex("by_org", q => q.eq("orgId", org._id)).order("desc").take(PRODUCT_EVENT_LIMIT + 1);
     return {
       canManage: can(role, "manage_connections"), endpoint: process.env.CONVEX_SITE_URL ? `${process.env.CONVEX_SITE_URL}/product-events` : null,
-      sources: await Promise.all(sources.slice(0, PRODUCT_SOURCE_LIMIT).map(async s => ({ id: s._id, name: s.name, scope: s.scope, mappings: s.mappings, prefix: s.prefix, createdAt: s.createdAt, expiresAt: s.expiresAt, revoked: s.revokedAt !== undefined, receivingAllowed: await available(ctx, s, Date.now()), lastReceivedAt: s.lastReceivedAt ?? null }))),
+      sources: await Promise.all(sources.slice(0, PRODUCT_SOURCE_LIMIT).map(async s => ({ id: s._id, name: s.name, scope: s.scope, mappings: s.mappings, prefix: s.prefix, createdAt: s.createdAt, expiresAt: s.expiresAt, revoked: s.revokedAt !== undefined, receivingAllowed: await productSourceAvailable(ctx, s, Date.now()), lastReceivedAt: s.lastReceivedAt ?? null }))),
       canCreate: can(role, "manage_connections") && sources.length < PRODUCT_SOURCE_LIMIT,
       retainedReceipts: Math.min(receipts.length, PRODUCT_EVENT_LIMIT), receiptLimit: PRODUCT_EVENT_LIMIT,
       recent: receipts.slice(0, 10).map(r => ({ id: r._id, source: sources.find(s => s._id === r.sourceId)?.name ?? "Recorded source", event: r.event, occurredAt: r.occurredAt, receivedAt: r.receivedAt, outcome: r.outcome })),
@@ -86,7 +86,7 @@ export const ingest = internalMutation({
   handler: async (ctx, a) => {
     const now = Date.now();
     const source = await ctx.db.query("productTrackingSources").withIndex("by_hash", q => q.eq("tokenHash", a.tokenHash)).unique();
-    if (!source || !await available(ctx, source, now)) return { status: 401, result: "unauthorized" };
+    if (!source || !await productSourceAvailable(ctx, source, now)) return { status: 401, result: "unauthorized" };
     const minute = Math.floor(now / 60_000), count = source.rateMinute === minute ? source.rateCount ?? 0 : 0;
     if (count >= 120) return { status: 429, result: "rate_limited" };
     await ctx.db.patch(source._id, { rateMinute: minute, rateCount: count + 1 });
@@ -107,7 +107,10 @@ export const ingest = internalMutation({
     const existing = previous.current.find(r => progressScopeKey(r.scope) === source.scopeKey);
     if (!existing && previous.current.length >= 20) return { status: 409, result: "contact_scope_limit" };
     let outcome: "applied" | "owner_override" | "older" | "conflict" = "applied";
-    if (existing && !existing.source) outcome = "owner_override";
+    if (existing && !existing.source) {
+      if (existing.tracking?.sourceId !== source._id) outcome = "owner_override";
+      else if (a.occurredAt <= existing.tracking.after) outcome = "older";
+    }
     else if (existing?.source && existing.source.occurredAt > a.occurredAt) outcome = "older";
     else if (existing?.source && existing.source.occurredAt === a.occurredAt && (existing.source.conflict || existing.state !== mapping.state || existing.criterion !== mapping.criterion)) outcome = "conflict";
     if (outcome === "applied" || outcome === "conflict") {
@@ -121,6 +124,29 @@ export const ingest = internalMutation({
     await ctx.db.insert("productEvents", { orgId: source.orgId, sourceId: source._id, contactId: contact._id, eventIdHash: a.eventIdHash, payloadHash, event: a.event, occurredAt: a.occurredAt, receivedAt: now, outcome });
     await ctx.db.patch(source._id, { lastReceivedAt: now });
     return { status: 200, result: outcome, duplicate: false };
+  },
+});
+
+/** Explicitly release a manual override; old/queued events must never resurrect the corrected state. */
+export const useFutureEvents = mutation({
+  args: { slug: v.string(), contactId: v.id("contacts"), sourceId: v.id("productTrackingSources"), expectedRevision: v.number() },
+  handler: async (ctx, { slug, contactId, sourceId, expectedRevision }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "manage_connections");
+    const contact = assertSameOrg(await ctx.db.get(contactId), org._id, "contact");
+    const source = assertSameOrg(await ctx.db.get(sourceId), org._id, "product source");
+    const now = Date.now();
+    if (contact.deletedAt !== undefined || !await productSourceAvailable(ctx, source, now)) throw appError("INVALID", "This contact or product source is unavailable. Review the connection first.");
+    const record = await ctx.db.query("contactProgress").withIndex("by_org_contact", q => q.eq("orgId", org._id).eq("contactId", contactId)).unique();
+    if (!record || record.progress.revision !== expectedRevision) throw appError("INVALID", "Progress changed. Look up the contact again before choosing future events.");
+    const previous = record.progress, existing = previous.current.find(r => progressScopeKey(r.scope) === source.scopeKey);
+    if (!existing || existing.source || existing.tracking?.sourceId === sourceId) throw appError("INVALID", "Choose a current manual observation that is not already waiting for this source.");
+    const revision = previous.revision + 1;
+    const report = { scope: existing.scope, state: "unknown" as const, criterion: "Waiting for a new product milestone", evidence: `Owner chose future reports from ${source.name}. No newer event has been observed yet.`, observedOn: new Date(now).toISOString().slice(0, 10), recordedAt: now, recordedBy: user._id, revision, tracking: { sourceId, after: now } };
+    const progress = { current: [...previous.current.filter(r => progressScopeKey(r.scope) !== source.scopeKey), report], history: [...previous.history, report].slice(-20), revision };
+    await ctx.db.patch(record._id, { progress });
+    await reconcileProgressJourneys(ctx, org._id, contactId, progress);
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "contact.future_events_selected", subjectType: "contact", subjectId: contactId, summary: `Owner selected future product events, revision ${revision}; progress remains unknown pending a newer event. No consent or send authorization.` });
+    return progress;
   },
 });
 

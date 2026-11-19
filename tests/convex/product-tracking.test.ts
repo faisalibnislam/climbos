@@ -60,6 +60,55 @@ it("keeps owner corrections, even Unknown, instead of letting telemetry overwrit
   expect(p.current[0].state).toBe("unknown"); expect(p.current[0].source).toBeUndefined(); expect(p.revision).toBe(2);
   expect(p.history[0].source!.id).toBe(f.sourceId);
 });
+it("resumes only explicitly selected future events, preserving the correction and rejecting queued old state", async () => {
+  const f = await fixture(true); await f.post();
+  await f.owner.client.mutation(api.marketing.recordContactProgress, { slug: f.slug, contactId: f.contactId, expectedRevision: 1, scope: f.config.scope, state: "unknown", criterion: "Check a suspected demo export", evidence: "Owner correction", observedOn: "2026-11-19" });
+  const args = { slug: f.slug, sourceId: f.sourceId, contactId: f.contactId, expectedRevision: 2 };
+  const selected = await f.owner.client.mutation(api.productTracking.useFutureEvents, args);
+  expect(selected.current[0]).toMatchObject({ state: "unknown", tracking: { sourceId: f.sourceId, after: NOW } });
+  expect(selected.current[0]).not.toHaveProperty("source");
+  expect(selected.history[1].evidence).toBe("Owner correction");
+  await expect(f.owner.client.mutation(api.productTracking.useFutureEvents, args)).rejects.toThrow(/changed/);
+  await expect(f.owner.client.mutation(api.productTracking.useFutureEvents, { ...args, expectedRevision: 3 })).rejects.toThrow(/already waiting/);
+  expect(await (await f.post({ eventId: "delayed", event: "real_export", occurredAt: new Date(NOW).toISOString() })).json()).toMatchObject({ result: "older" });
+  expect((await f.read())!.progress.current[0].state).toBe("unknown");
+  vi.setSystemTime(NOW + 1000);
+  await f.post({ eventId: "new-value", event: "real_export", occurredAt: new Date(NOW + 1).toISOString() });
+  const current = (await f.read())!.progress.current[0];
+  expect(current.state).toBe("activated"); expect(current.source?.id).toBe(f.sourceId); expect(current.tracking).toBeUndefined();
+  for (const table of ["approvals", "actionReceipts", "emailLog", "workflowRuns"] as const) expect(await f.t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+});
+it("requires a current manual observation, matching tenant scope, available source and manage permission to resume", async () => {
+  const f = await fixture(), viewer = await asNewUser(f.t, "viewer@example.com"), other = await asNewUser(f.t, "other@example.com");
+  const foreign = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other" });
+  await f.t.run(ctx => ctx.db.insert("memberships", { orgId: f.orgId, userId: viewer.userId, role: "viewer", status: "active", createdAt: NOW }));
+  const args = { slug: f.slug, sourceId: f.sourceId, contactId: f.contactId, expectedRevision: 0 };
+  await expect(f.owner.client.mutation(api.productTracking.useFutureEvents, args)).rejects.toThrow();
+  await f.post();
+  await expect(f.owner.client.mutation(api.productTracking.useFutureEvents, { ...args, expectedRevision: 1 })).rejects.toThrow(/manual observation/);
+  await f.owner.client.mutation(api.marketing.recordContactProgress, { slug: f.slug, contactId: f.contactId, expectedRevision: 1, scope: f.config.scope, state: "unknown", criterion: "Needs review", evidence: "Owner correction", observedOn: "2026-11-19" });
+  for (const client of [viewer.client, f.t]) await expect(client.mutation(api.productTracking.useFutureEvents, { ...args, expectedRevision: 2 })).rejects.toThrow();
+  await expect(other.client.mutation(api.productTracking.useFutureEvents, { ...args, slug: foreign.slug, expectedRevision: 2 })).rejects.toThrow();
+  const different = await f.owner.client.mutation(api.productTracking.create, { ...f.config, scope: "Another product" });
+  await expect(f.owner.client.mutation(api.productTracking.useFutureEvents, { ...args, sourceId: different.sourceId, expectedRevision: 2 })).rejects.toThrow();
+  await f.owner.client.mutation(api.productTracking.revoke, { slug: f.slug, sourceId: f.sourceId });
+  await expect(f.owner.client.mutation(api.productTracking.useFutureEvents, { ...args, expectedRevision: 2 })).rejects.toThrow(/unavailable/);
+  expect((await f.read())!.progress.revision).toBe(2);
+});
+it("allows replacing a revoked waiting source but never removes a subsequent manual override", async () => {
+  const f = await fixture();
+  const report = { slug: f.slug, contactId: f.contactId, expectedRevision: 0, scope: f.config.scope, state: "unknown" as const, criterion: "Not yet known", evidence: "Owner is checking", observedOn: "2026-11-19" };
+  await f.owner.client.mutation(api.marketing.recordContactProgress, report);
+  await f.owner.client.mutation(api.productTracking.useFutureEvents, { slug: f.slug, contactId: f.contactId, sourceId: f.sourceId, expectedRevision: 1 });
+  await f.owner.client.mutation(api.productTracking.revoke, { slug: f.slug, sourceId: f.sourceId });
+  const replacement = await f.owner.client.mutation(api.productTracking.create, f.config);
+  await f.owner.client.mutation(api.productTracking.useFutureEvents, { slug: f.slug, contactId: f.contactId, sourceId: replacement.sourceId, expectedRevision: 2 });
+  expect((await f.read())!.progress.current[0].tracking?.sourceId).toBe(replacement.sourceId);
+  await f.owner.client.mutation(api.marketing.recordContactProgress, { ...report, expectedRevision: 3 });
+  vi.setSystemTime(NOW + 1000);
+  expect(await (await f.post({ occurredAt: new Date(NOW + 1).toISOString() }, replacement.token)).json()).toMatchObject({ result: "owner_override" });
+  expect((await f.read())!.progress.current[0].tracking).toBeUndefined();
+});
 it.each([
   { occurredAt: "2026-11-19T09:00:00" }, { occurredAt: "2026-02-30T00:00:00Z" },
   { occurredAt: new Date(NOW + 1).toISOString() }, { occurredAt: new Date(NOW - 7 * DAY - 1).toISOString() },

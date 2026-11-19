@@ -44,6 +44,22 @@ test("owner connects product milestones, sees attributed progress and revokes se
   await dialog.getByRole("button", { name: "Look up", exact: true }).click();
   await expect(dialog.getByText(/Source-reported by Synthetic product server/)).toBeVisible();
   await expect(dialog.getByText("Real export onboarding: Reached first value", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Update Real export onboarding", exact: true }).click();
+  await dialog.getByLabel("Reported progress", { exact: true }).click();
+  await page.getByRole("option", { name: "Unknown", exact: true }).click();
+  await dialog.getByLabel("What this state means", { exact: true }).fill("Review a suspected demo export");
+  await dialog.getByLabel("What you observed", { exact: true }).fill("Owner correction in an isolated test");
+  await dialog.getByRole("button", { name: "Save observation", exact: true }).click();
+  await expect(dialog.getByText("Real export onboarding: Unknown", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Use future events for Real export onboarding", exact: true }).click();
+  await expect(dialog.getByText(/Waiting for an event that occurred after/)).toBeVisible();
+  expect((await send()).status()).toBe(200); // Old duplicate cannot restore corrected progress.
+  await dialog.getByRole("button", { name: "Look up", exact: true }).click();
+  await expect(dialog.getByText("Real export onboarding: Unknown", { exact: true })).toBeVisible();
+  expect((await request.post(endpoint, { headers: { authorization: `Bearer ${token}` }, data: { ...data, eventId: "browser-fixture-2", occurredAt: new Date().toISOString() } })).status()).toBe(200);
+  await dialog.getByRole("button", { name: "Look up", exact: true }).click();
+  await expect(dialog.getByText("Real export onboarding: Reached first value", { exact: true })).toBeVisible();
+  await expect(dialog.getByText(/Source-reported by Synthetic product server/)).toBeVisible();
   await dialog.evaluate(async element => { await Promise.all(element.getAnimations({ subtree: true }).map(a => a.finished.catch(() => undefined))); });
   await expectAccessible(page, "Product tracking"); await expectNoHorizontalScroll(page);
   await page.keyboard.press("Escape");

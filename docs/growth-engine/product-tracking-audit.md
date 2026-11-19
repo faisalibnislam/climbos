@@ -61,3 +61,11 @@ E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE="$PWD/bench/cache
 ```
 
 **All six cases passed** (43.2 seconds): three desktop and three mobile, including the new no-false-error assertion. The settled desktop and mobile layouts were inspected.
+
+## Owner recovery: return from a correction to future events
+
+A manual correction intentionally blocks telemetry replacement. The audit found it lacked a recovery control. **Customer progress → Use future events for [product]** now explicitly releases that override for one available same-tenant source, retains the correction in history, and records an owner-reported Unknown state. Only a new event whose occurrence is strictly after the choice can replace it. Queued earlier events and duplicate old deliveries cannot restore a corrected value. A later manual correction cancels this selection again. A revoked waiting source can be replaced with a newly configured source without changing historical attribution.
+
+The mutation checks current management permission, contact/source tenant, source availability, exact progress revision and matching product scope. It holds existing follow-up entries through the same reconciliation helper and creates an audit record, never consent or execution authorization. The existing progress dialog shows the boundary time and preserves separate source/owner labels. No new schema table, runtime model or provider was added.
+
+The extended desktop/mobile browser scenario passed both cases (12.6 seconds), exercising correction → Unknown → future-event selection → harmless old duplicate → fresh source milestone → revocation, with no approval/send/job changes. Focused test totals are recorded in the ledger.

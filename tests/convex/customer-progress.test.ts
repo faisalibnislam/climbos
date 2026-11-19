@@ -168,7 +168,7 @@ it("bounds observation reads and never folds foreign or deleted contacts into pl
     await ctx.db.patch(f.contactId, { deletedAt: undefined });
     for (let i = 0; i < 100; i++) {
       const id = await ctx.db.insert("contacts", { orgId: f.orgId, emailHash: `extra-${i}`, emailDomain: "example.com", source: "csv_import", segments: [], createdAt: NOW });
-      await ctx.db.insert("contactProgress", { orgId: f.orgId, contactId: id, progress: { revision: 1, history: [], current: [{ ...report, source: undefined, recordedBy: f.owner.userId }] } });
+      await ctx.db.insert("contactProgress", { orgId: f.orgId, contactId: id, progress: { revision: 1, history: [], current: [{ ...report, source: undefined, tracking: undefined, recordedBy: f.owner.userId }] } });
     }
   });
   expect((await f.t.run(ctx => planningEmailAudience(ctx, f.orgId))).customerProgress).toMatchObject({ contactCoverage: "partial", sampledContacts: 101, contactsWithReports: 100, contactsWithoutReports: 1 });

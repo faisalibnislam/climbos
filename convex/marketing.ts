@@ -1,4 +1,5 @@
 import { reconcileProgressJourneys } from "./lib/progressJourneys";
+import { productSourceAvailable } from "./productTracking";
 import { checkedJourneyStep, journeyRecipientEvidence, journeyStepRefV, recordJourneyAcceptance, type JourneyStepRef } from "./lib/customerJourneys";
 import { customerProgressStateV, customerProgressRuleV } from "./lib/customerProgress";
 import { progressScopeKey, validProgressDate, normalizeProgressRule, progressEligibility, type CustomerProgressRule } from "../shared/growth/customerProgress";
@@ -126,7 +127,9 @@ export const contactProgress = query({
     if (matches.length !== 1 || matches[0].deletedAt !== undefined) return null;
     const contact = matches[0];
     const record = await ctx.db.query("contactProgress").withIndex("by_org_contact", q => q.eq("orgId", org._id).eq("contactId", contact._id)).unique();
-    return { contactId: contact._id, name: contact.displayName ?? "Uploaded contact", canEdit: can(role, "manage_connections"), progress: record?.progress ?? { current: [], history: [], revision: 0 } };
+    const sources = can(role, "manage_connections") ? await ctx.db.query("productTrackingSources").withIndex("by_org", q => q.eq("orgId", org._id)).take(21) : [];
+    const checked = sources.length <= 20 ? await Promise.all(sources.map(async s => ({ id: s._id, name: s.name, scope: s.scope, available: await productSourceAvailable(ctx, s, Date.now()) }))) : [];
+    return { contactId: contact._id, name: contact.displayName ?? "Uploaded contact", canEdit: can(role, "manage_connections"), eventSources: checked.filter(s => s.available).map(({ available: _available, ...s }) => s), progress: record?.progress ?? { current: [], history: [], revision: 0 } };
   },
 });
 
