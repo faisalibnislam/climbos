@@ -1,5 +1,8 @@
 # ClimbOS — Consolidated Product Requirements and Claude Code Cross-Check
 
+**19 November — authenticated product milestones:** Customers → Product tracking now connects owner-defined events from a product server to existing contact progress, follow-up eligibility, exact email review and lifecycle planning. Source reports remain distinct from owner observations and measured outcomes. Keys are write-only, revocable and tenant-bound; events cannot send messages or create consent. Requires product-server setup; no automatic browser tracking, inactivity inference or cohort/revenue claims. [Implementation, tests and limits](growth-engine/product-tracking-audit.md). Paid calls remain paused and runtime models unchanged.
+
+
 **19 November — saved customer follow-ups:** Customers → Follow-ups now retains owner-configured progress rules, versioned email steps, explicit waiting times, enrollment/hold/exit state and accepted-step history. Every send still uses exact existing approval and provider checks; this is not live product telemetry or unattended sending. [Implementation, tests and limits](growth-engine/customer-followup-journeys-audit.md). Paid calls remain paused and runtime models unchanged.
 
 **Purpose:** one owner-facing reference for the product direction, requirements, capability boundaries, supplied libraries, engineering rules, and current implementation evidence. Use it to cross-check ClimbOS before continuing development in Claude Code.

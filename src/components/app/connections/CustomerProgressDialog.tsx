@@ -36,7 +36,7 @@ function ProgressLookup({ slug }: { slug: string }) {
     finally { setBusy(false); }
   }
   return <div className="flex flex-col gap-4">
-    <p className="text-sm text-ink-2">These are dated owner observations, not live product tracking. Missing progress stays unknown. Email permission is checked separately.</p>
+    <p className="text-sm text-ink-2">These are dated owner observations or labeled product-event reports. Your manual correction overrides future events for the same scope. Missing progress stays unknown. Email permission is checked separately.</p>
     <form onSubmit={lookup} className="flex items-end gap-2">
       <Field label="Contact email" className="min-w-0 flex-1"><Input type="email" required value={email} disabled={busy} onChange={e => { setEmail(e.target.value); setContact(null); }} /></Field>
       <Button type="submit" loading={busy}>Look up</Button>
@@ -70,7 +70,7 @@ function ProgressEditor({ slug, contact, onSaved }: { slug: string; contact: Con
   return <div className="flex flex-col gap-4">
     <h3 className="heading-card">{contact.name}</h3>
     {contact.progress.current.length ? <ul className="flex flex-col gap-2">{contact.progress.current.map(r => <li key={r.scope} className="rounded-lg border border-line p-3 text-sm">
-      <p className="font-medium">{r.scope}: {CUSTOMER_PROGRESS_LABELS[r.state]}</p><p className="text-ink-2">Owner-reported as of {r.observedOn}. {r.criterion}</p><p>{r.evidence}</p>
+      <p className="font-medium">{r.scope}: {CUSTOMER_PROGRESS_LABELS[r.state]}</p><p className="text-ink-2">{r.source ? `Source-reported by ${r.source.name}` : "Owner-reported"} as of {r.observedOn}. {r.criterion}</p><p>{r.evidence}</p>{r.source ? <p className="text-xs text-ink-3">Event {r.source.event} · occurred {new Date(r.source.occurredAt).toISOString()} · received {new Date(r.recordedAt).toISOString()}. Source report, not independently verified value.</p> : null}
       {contact.canEdit ? <Button size="sm" variant="ghost" disabled={busy} onClick={() => edit(r)}>Update {r.scope}</Button> : null}
     </li>)}</ul> : <p className="text-sm text-ink-2">No progress observations yet. A segment name does not establish customer progress.</p>}
     {contact.canEdit ? <form onSubmit={save} className="flex flex-col gap-3">
@@ -85,7 +85,7 @@ function ProgressEditor({ slug, contact, onSaved }: { slug: string; contact: Con
     </form> : <p className="text-sm text-ink-2">A workspace member who can manage connections can record or correct observations.</p>}
     {contact.progress.history.length ? <details className="text-sm"><summary className="cursor-pointer font-medium">Observation history</summary>
       <p className="mt-2 text-ink-2">Showing the latest {contact.progress.history.length} of {contact.progress.revision} saved observations. Latest observations for each scope are retained separately. Earlier history may be omitted.</p>
-      <ol className="mt-2 flex flex-col gap-2">{[...contact.progress.history].reverse().map(r => <li key={r.revision} className="border-t border-line pt-2"><p>Revision {r.revision} · {r.scope} · {CUSTOMER_PROGRESS_LABELS[r.state]} · as of {r.observedOn}</p><p>{r.criterion} — {r.evidence}</p></li>)}</ol>
+      <ol className="mt-2 flex flex-col gap-2">{[...contact.progress.history].reverse().map(r => <li key={r.revision} className="border-t border-line pt-2"><p>Revision {r.revision} · {r.source ? "Source-reported" : "Owner-reported"} · {r.scope} · {CUSTOMER_PROGRESS_LABELS[r.state]} · as of {r.observedOn}</p><p>{r.criterion} — {r.evidence}</p></li>)}</ol>
     </details> : null}
   </div>;
 }

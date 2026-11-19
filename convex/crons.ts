@@ -2,6 +2,7 @@ import { cronJobs } from "convex/server";
 import { internal } from "./_generated/api";
 
 const crons = cronJobs();
+crons.daily("product event receipt retention", { hourUTC: 4, minuteUTC: 20 }, internal.productTracking.cleanup, {});
 
 // Only explicitly approved campaign monitors have a due time; legacy preferences do not enroll campaigns.
 crons.interval("approved campaign spend checks", { minutes: 5 }, internal.adMonitoring.tick, {});

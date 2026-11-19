@@ -58,7 +58,7 @@ export async function refreshJourney(ctx: MutationCtx, journey: Doc<"customerJou
       const reports = await ctx.db.query("contactProgress").withIndex("by_org_contact", q => q.eq("orgId", journey.orgId).eq("contactId", contact._id)).take(2);
       const result = progressEligibility(reports.length === 1 ? reports[0].progress : undefined, journey.rule, now);
       const status = result.status === "eligible" && contact.emailCiphertext && contact.emailIv ? "active" : result.status === "different_progress" ? "exited" : "held";
-      checks.push({ contact, status, reason: status === "active" ? "Recent owner report matches; each send still needs approval." : status === "exited" ? "The reported progress or its definition changed." : "A recent matching progress report and usable address are needed." });
+      checks.push({ contact, status, reason: status === "active" ? "Recent progress report matches; each send still needs approval." : status === "exited" ? "The reported progress or its definition changed." : "A recent matching progress report and usable address are needed." });
     }
   } catch { await ctx.db.patch(journey._id, { nextCheckAt, checkError: "The complete consent and progress history could not be checked. No new step can be approved." }); return; }
   const newEntries = checks.filter(c => c.status === "active" && !byContact.has(c.contact._id));

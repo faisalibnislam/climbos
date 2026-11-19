@@ -1,6 +1,6 @@
 # ClimbOS buildable-gap completion roadmap
 
-**19 November implementation addendum:** [Saved customer follow-ups](customer-followup-journeys-audit.md) closes the bounded enrollment, cadence, exit-state and next-email review gap using existing owner progress and exact email approvals. Full live lifecycle telemetry and unattended sending remain unbuilt; the broad requirements are not reclassified as complete.
+**19 November implementation addendum:** [Saved customer follow-ups](customer-followup-journeys-audit.md) closes the bounded enrollment, cadence, exit-state and next-email review gap using existing owner progress and exact email approvals. A subsequent [product-event increment](product-tracking-audit.md) adds authenticated milestone ingestion for existing contacts. Full behavioral/cohort analytics and unattended sending remain unbuilt; the broad requirements are not reclassified as complete.
 
 **Created:** 25 October 2026. **Reconciled:** 18 November 2026. This is the historical 22-gap code inventory, not a declaration that all 410 requirements or later owner requests are complete. Its original release sequence and branch are superseded by the current work instructions: continue on `codex/trend-evidence-freshness`, push verified batches, preserve user changes, and ask before switching Codex models. Do not infer PR, merge, deployment, customer action or paid-call authority from this document. The owner later paused all paid evaluation under the $100 cap; $99.063401 used or held remains unchanged.
 

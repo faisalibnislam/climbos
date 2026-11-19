@@ -119,6 +119,22 @@ it("passes scoped dated owner reports as citable facts to the actual retention w
 });
 
 const report: CustomerProgressObservation = { scope: "App", state: "activated", criterion: "Real export", evidence: "Owner watched", observedOn: "2026-11-16", recordedAt: NOW, recordedBy: "owner", revision: 1 };
+it("keeps telemetry source-reported in the actual retention writer and its frozen evidence", async () => {
+  const f = await fixture();
+  const { token } = await f.owner.client.mutation(api.productTracking.create, { slug: f.slug, name: "Product server", scope: "Export app", mappings: [{ event: "exported", state: "activated", criterion: "Completed a real export" }] });
+  expect((await f.t.fetch("/product-events", { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ eventId: "event-1", event: "exported", email: "ana@example.com", occurredAt: new Date(NOW - 1000).toISOString() }) })).status).toBe(200);
+  vi.stubEnv("CLIMBOS_FAKE_LLM", "");
+  const runId = await newRun(f);
+  await f.t.action(internal.jobs.simplePlanJob, { runId, task: "retention_plan" });
+  expect(capture.inputs).toHaveLength(1);
+  const input = capture.inputs[0], index = input.facts.findIndex(f => f.startsWith("Source-reported customer progress"));
+  expect(index).toBeGreaterThanOrEqual(0);
+  expect(input.constraints?.factEvidenceBases?.[index]).toBe("source_reported");
+  expect(input.constraints?.factKinds?.[index]).toBe("behavior");
+  expect(input.facts[index]).toContain("not independently measured");
+  expect(JSON.stringify(input)).not.toContain("ana@example.com");
+  expect(JSON.stringify(input)).not.toContain(token);
+});
 const contact = (current: CustomerProgressObservation[]) => ({ customerProgress: { current, history: current, revision: current.length } });
 it("keeps missing progress unknown and separates different definitions, dates and scopes", () => {
   const e = customerProgressEvidence([{}, contact([report]), contact([report]), contact([{ ...report, criterion: "First order" }]), contact([{ ...report, scope: "Other" }]), contact([{ ...report, observedOn: "2026-11-15" }])], true, NOW);
@@ -152,7 +168,7 @@ it("bounds observation reads and never folds foreign or deleted contacts into pl
     await ctx.db.patch(f.contactId, { deletedAt: undefined });
     for (let i = 0; i < 100; i++) {
       const id = await ctx.db.insert("contacts", { orgId: f.orgId, emailHash: `extra-${i}`, emailDomain: "example.com", source: "csv_import", segments: [], createdAt: NOW });
-      await ctx.db.insert("contactProgress", { orgId: f.orgId, contactId: id, progress: { revision: 1, history: [], current: [{ ...report, recordedBy: f.owner.userId }] } });
+      await ctx.db.insert("contactProgress", { orgId: f.orgId, contactId: id, progress: { revision: 1, history: [], current: [{ ...report, source: undefined, recordedBy: f.owner.userId }] } });
     }
   });
   expect((await f.t.run(ctx => planningEmailAudience(ctx, f.orgId))).customerProgress).toMatchObject({ contactCoverage: "partial", sampledContacts: 101, contactsWithReports: 100, contactsWithoutReports: 1 });

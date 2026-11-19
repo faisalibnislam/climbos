@@ -1,3 +1,4 @@
+import { reconcileProgressJourneys } from "./lib/progressJourneys";
 import { checkedJourneyStep, journeyRecipientEvidence, journeyStepRefV, recordJourneyAcceptance, type JourneyStepRef } from "./lib/customerJourneys";
 import { customerProgressStateV, customerProgressRuleV } from "./lib/customerProgress";
 import { progressScopeKey, validProgressDate, normalizeProgressRule, progressEligibility, type CustomerProgressRule } from "../shared/growth/customerProgress";
@@ -150,15 +151,7 @@ export const recordContactProgress = mutation({
     const progress = { current: [...previous.current.filter(r => progressScopeKey(r.scope) !== key), report], history: [...previous.history, report].slice(-20), revision };
     if (record) await ctx.db.patch(record._id, { progress });
     else await ctx.db.insert("contactProgress", { orgId: org._id, contactId: contact._id, progress });
-    const enrolled = await ctx.db.query("journeyContacts").withIndex("by_org_contact", q => q.eq("orgId", org._id).eq("contactId", contact._id)).take(21);
-    if (enrolled.length > 20) throw appError("LIMIT_REACHED", "This contact's follow-up history needs review.");
-    for (const entry of enrolled) {
-      if (entry.status !== "active" && entry.status !== "held") continue;
-      const journey = await ctx.db.get(entry.journeyId);
-      if (!journey || journey.orgId !== org._id) continue;
-      const result = progressEligibility(progress, journey.rule, Date.now());
-      if (result.status !== "eligible") await ctx.db.patch(entry._id, { status: result.status === "different_progress" ? "exited" : "held", reason: result.status === "different_progress" ? "The reported progress or its definition changed." : "A recent matching progress report is needed.", updatedAt: Date.now() });
-    }
+    await reconcileProgressJourneys(ctx, org._id, contact._id, progress);
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "contact.progress_recorded", subjectType: "contact", subjectId: contact._id, summary: `Owner recorded customer progress, revision ${revision}. No message, enrollment or consent change.` });
     return progress;
   },

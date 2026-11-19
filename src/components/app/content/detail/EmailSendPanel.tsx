@@ -242,7 +242,7 @@ function EmailSendForm({ slug, artifact, journey }: { slug: string; artifact: Ar
       {segment ? <div className="flex flex-col gap-3 rounded-lg border border-line p-3">
         <Checkbox disabled={Boolean(journey)} label="Limit this email by customer progress" checked={limitByProgress} onCheckedChange={checked => setLimitByProgress(checked === true)} />
         {limitByProgress ? <>
-          <p className="text-sm text-ink-2">Use dated owner reports to match this email to a particular stage. This does not establish live activity or replace email permission.</p>
+          <p className="text-sm text-ink-2">Use dated progress reports to match this email to a particular stage. This does not establish live activity or replace email permission.</p>
           <Field label="Reported customer group"><Select disabled={Boolean(journey)} value={progressGroup?.key ?? ""} placeholder="Choose a reported group…" onValueChange={key => {
             const group = audiencePreview?.progressOptions.find(option => option.key === key);
             if (group) setProgressGroup({ key, scope: group.scope, state: group.state, criterion: group.criterion });

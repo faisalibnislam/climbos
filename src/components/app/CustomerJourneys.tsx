@@ -24,7 +24,7 @@ export function CustomerJourneys({ slug }: { slug: string }) {
   if (!data) return <p role="status">Loading follow-ups…</p>;
   return <section className="space-y-5" aria-label="Customer follow-ups">
     <div className="space-y-2"><h2 className="heading-section">Customer follow-ups</h2>
-      <p className="text-sm text-ink-2">Keep track of who may need the next helpful email. Uses dated owner reports; it does not observe live product activity. Every email still needs your approval and an exactly matching Resend list.</p>
+      <p className="text-sm text-ink-2">Keep track of who may need the next helpful email. Uses dated owner reports or connected product milestones. Missing activity stays unknown. Every email still needs your approval and an exactly matching Resend list.</p>
       <p className="text-xs text-ink-3">Checks active follow-ups about every 15 minutes. Waiting days are elapsed 24-hour periods, not a scheduled delivery time.</p>
     </div>
     {data.canManage ? <div className="flex flex-wrap gap-3"><Button variant="secondary" onClick={() => setAdding(!adding)}>{adding ? "Close new follow-up" : "New follow-up"}</Button><CustomerProgressDialog slug={slug} /></div> : <p className="text-sm text-ink-2">An owner or admin can configure follow-ups.</p>}

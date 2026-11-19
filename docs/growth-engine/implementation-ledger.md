@@ -1,3 +1,7 @@
+## 19 November — authenticated product milestone tracking
+
+Built owner-defined, source-attributed server events through existing customer progress, planning and follow-ups. Added write-only keys, ordering/deduplication/conflict handling, bounded retention, privacy cleanup and owner setup/receipt UI. Every email retains the exact approval boundary. **270 focused tests/11 files**, typechecks, scoped lint and **6 desktop/mobile workflow cases** passed. No paid call, runtime model change or hosted deployment. Requires real product-server setup; no complete cohort or revenue inference. [Audit and limits](product-tracking-audit.md).
+
 ## 19 November — inspect the exact private recipient set
 
 Owners/admins can inspect the consent/progress/due-step matches for an exact current email preview, 50 at a time. Changed evidence clears the list; other roles and foreign previews cannot expose addresses. No provider call, consent write or send authority is added. Final combined regression: **238 tests across 10 related files** passed (10.30 seconds); **four distinct desktop/mobile workflow cases** passed across the initial run and the settled-dialog accessibility recheck. Typecheck, scoped lint and whitespace checks passed. Paid calls stay paused and runtime models unchanged. [Audit, commands and remaining limits](customer-followup-journeys-audit.md#exact-recipient-review-follow-up).

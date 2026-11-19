@@ -5,10 +5,12 @@ import { api, internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 import { auth } from "./auth";
 import { handle as mcpHandle } from "./mcp";
+import { receive as receiveProductEvent } from "./productTracking";
 
 const http = httpRouter();
 
 auth.addHttpRoutes(http);
+http.route({ path: "/product-events", method: "POST", handler: receiveProductEvent });
 
 const MAX_BODY = 1_000_000;
 

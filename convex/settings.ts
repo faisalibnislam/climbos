@@ -494,6 +494,8 @@ export const exportData = internalQuery({
     const deals = await ctx.db.query("deals").withIndex("by_org_updated", q => q.eq("orgId", orgId)).order("desc").paginate({ cursor: null, numItems: 500, maximumBytesRead: 1_000_000 });
     const customerJourneys = await ctx.db.query("customerJourneys").withIndex("by_org", q => q.eq("orgId", orgId)).take(21);
     const journeyContacts = await ctx.db.query("journeyContacts").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
+    const productSources = await ctx.db.query("productTrackingSources").withIndex("by_org", q => q.eq("orgId", orgId)).take(21);
+    const productEvents = await ctx.db.query("productEvents").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
     const contactProgress = await ctx.db.query("contactProgress").withIndex("by_org", q => q.eq("orgId", orgId)).take(101);
     const reviewRequests = await ctx.db.query("reviewRequests").withIndex("by_org_created", q => q.eq("orgId", orgId)).order("desc").take(101);
     const reviewBatches = await ctx.db.query("reviewInvitationBatches").withIndex("by_org_created", q => q.eq("orgId", orgId)).order("desc").take(101);
@@ -538,6 +540,9 @@ export const exportData = internalQuery({
         customerJourneys: strip(customerJourneys.slice(0, 20)),
         journeyContacts: strip(journeyContacts.slice(0, 1000)),
         customerJourneysLimited: customerJourneys.length > 20 || journeyContacts.length > 1000,
+        productTrackingSources: strip(productSources.slice(0, 20).map(({ tokenHash: _hash, ...row }) => row)),
+        productEvents: strip(productEvents.slice(0, 1000)),
+        productTrackingLimited: productSources.length > 20 || productEvents.length > 1000,
         customerProgress: strip(contactProgress.slice(0, 100)),
         customerProgressLimited: contactProgress.length > 100,
         brandPatternDecisions: strip(brandPatterns.slice(0, 100)),
@@ -633,6 +638,9 @@ export const deleteContact = mutation({
       const entries = await ctx.db.query("journeyContacts").withIndex("by_org_contact", q => q.eq("orgId", org._id).eq("contactId", c._id)).take(21);
       if (entries.length > 20) throw appError("LIMIT_REACHED", "The complete follow-up history must be removed before completing this privacy request.");
       for (const entry of entries) await ctx.db.delete(entry._id);
+      const productEvents = await ctx.db.query("productEvents").withIndex("by_org_contact", q => q.eq("orgId", org._id).eq("contactId", c._id)).take(1001);
+      if (productEvents.length > 1000) throw appError("LIMIT_REACHED", "The complete product event history must be removed before completing this privacy request.");
+      for (const event of productEvents) await ctx.db.delete(event._id);
       await ctx.db.delete(c._id);
     }
     const existing = await ctx.db
@@ -833,6 +841,8 @@ const PURGE_BY_ORG: { table: string; index: string }[] = [
   { table: "airlyLinks", index: "by_org" },
   { table: "webhookEndpoints", index: "by_org" },
   { table: "agentTokens", index: "by_org" },
+  { table: "productTrackingSources", index: "by_org" },
+  { table: "productEvents", index: "by_org" },
   { table: "inviteLinks", index: "by_org" },
   { table: "reportShares", index: "by_org" },
   // Sales, outreach and lead capture.

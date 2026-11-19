@@ -1,7 +1,7 @@
 import { journeyStepRefV } from "./lib/customerJourneys";
 import { dealStageHistoryV } from "./lib/dealHistory";
 import { dealQualificationV } from "./lib/dealQualification";
-import { customerProgressRecordV, customerProgressRuleV } from "./lib/customerProgress";
+import { customerProgressRecordV, customerProgressRuleV, customerProgressStateV } from "./lib/customerProgress";
 import { emailReadinessValidator } from "./lib/emailReadiness";
 import { ownerQuestionV } from "./lib/ownerQuestion";
 import { authTables } from "@convex-dev/auth/server";
@@ -1827,6 +1827,19 @@ export default defineSchema({
   }).index("by_state", ["stateHash"]),
 
   /* ---------------- Consent and contacts ---------------- */
+  productTrackingSources: defineTable({
+    orgId: v.id("organizations"), createdBy: v.id("users"), credentialOwnerId: v.id("users"), name: v.string(), scope: v.string(), scopeKey: v.string(),
+    mappings: v.array(v.object({ event: v.string(), state: customerProgressStateV, criterion: v.string() })),
+    tokenHash: v.string(), prefix: v.string(), createdAt: v.number(), expiresAt: v.number(), revokedAt: v.optional(v.number()),
+    lastReceivedAt: v.optional(v.number()), rateMinute: v.optional(v.number()), rateCount: v.optional(v.number()),
+  }).index("by_org", ["orgId"]).index("by_hash", ["tokenHash"]),
+  productEvents: defineTable({
+    orgId: v.id("organizations"), sourceId: v.id("productTrackingSources"), contactId: v.id("contacts"),
+    eventIdHash: v.string(), payloadHash: v.string(), event: v.string(), occurredAt: v.number(), receivedAt: v.number(),
+    outcome: v.union(v.literal("applied"), v.literal("older"), v.literal("owner_override"), v.literal("conflict")),
+  }).index("by_org", ["orgId"]).index("by_org_contact", ["orgId", "contactId"])
+    .index("by_source_event", ["sourceId", "eventIdHash"]).index("by_received", ["receivedAt"]),
+
   contacts: defineTable({
     orgId: v.id("organizations"),
     emailHash: v.string(),
