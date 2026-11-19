@@ -626,12 +626,14 @@ export const deleteContact = mutation({
     const contacts = await ctx.db
       .query("contacts")
       .withIndex("by_org_email", (q) => q.eq("orgId", org._id).eq("emailHash", emailHash))
-      .take(10);
+      .take(11);
+    if (contacts.length > 10) throw appError("LIMIT_REACHED", "The complete matching contact set must be reviewed before this deletion can finish.");
     for (const c of contacts) {
       const consents = await ctx.db
         .query("consentRecords")
         .withIndex("by_org_contact", (q) => q.eq("orgId", org._id).eq("contactId", c._id))
-        .take(50);
+        .take(101);
+      if (consents.length > 100) throw appError("LIMIT_REACHED", "The complete consent history must be reviewed before this deletion can finish.");
       for (const r of consents) await ctx.db.delete(r._id);
       const progress = await ctx.db.query("contactProgress").withIndex("by_org_contact", q => q.eq("orgId", org._id).eq("contactId", c._id)).unique();
       if (progress) await ctx.db.delete(progress._id);
@@ -648,6 +650,7 @@ export const deleteContact = mutation({
       .withIndex("by_org_email", (q) => q.eq("orgId", org._id).eq("emailHash", emailHash))
       .first();
     if (!existing) await ctx.db.insert("suppressions", { orgId: org._id, emailHash, reason: "deletion", source: "privacy request", createdAt: Date.now() });
+    else await ctx.db.patch(existing._id, { reason: "deletion", source: "privacy request" });
     await ctx.db.insert("privacyRequests", { orgId: org._id, kind: "delete_contact", status: "done", subject: emailHash.slice(0, 12), requestedBy: user._id, createdAt: Date.now(), completedAt: Date.now() });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "privacy.contact_deleted", summary: `Deleted ${contacts.length} contact record(s); address suppressed.` });
     return { deleted: contacts.length };

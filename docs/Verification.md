@@ -1,5 +1,7 @@
 ## 18 November 2026 — full offline checks, owner workflows and requirements audit
 
+**19 November final product-tracking verification:** 279 focused tests in 12 related files passed (8.88 seconds); app/Convex types, scoped lint and diff checks passed. Six distinct desktop/mobile workflow cases passed, and the two product-tracking cases were extended and passed again for correction recovery. Three local implementation batches cover authenticated events, owner-controlled resumption and complete contact erasure. No paid call, runtime-model change or hosted deployment. [Tracking evidence](growth-engine/product-tracking-audit.md) · [Deletion regression](growth-engine/contact-erasure-completeness-audit.md).
+
 **19 November — authenticated product milestones:** Customers → Product tracking now connects owner-defined events from a product server to existing contact progress, follow-up eligibility, exact email review and lifecycle planning. Source reports remain distinct from owner observations and measured outcomes. Keys are write-only, revocable and tenant-bound; events cannot send messages or create consent. After a manual correction, owners can explicitly resume future events; progress stays Unknown until a newer event arrives. Requires product-server setup; no automatic browser tracking, inactivity inference or cohort/revenue claims. [Implementation, tests and limits](growth-engine/product-tracking-audit.md). Paid calls remain paused and runtime models unchanged.
 
 

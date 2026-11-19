@@ -1,3 +1,7 @@
+## 19 November — complete contact erasure and deletion suppression
+
+Local regressions exposed partial consent-history deletion, truncated duplicate-identity deletion, and a prior unsubscribe reason that could allow telemetry after re-import. Deletion now checks complete supported sets and strengthens existing suppression to deletion; oversized history holds without partial writes or false completion. **279 focused tests/12 files**, app/Convex types, scoped lint and whitespace checks passed. The product milestone UI was verified in six distinct desktop/mobile cases, with the two product cases subsequently extended and reverified for manual correction recovery. Paid calls remain paused and runtime models unchanged. [Erasure audit](contact-erasure-completeness-audit.md); [tracking audit](product-tracking-audit.md).
+
 ## 19 November — recover from manual progress corrections
 
 Owners can explicitly select future events for a corrected contact/product. Prior observations stay in history, current progress becomes Unknown, and only events occurring strictly after that choice may update it. Duplicate/delayed deliveries cannot revive disputed progress. Role, tenant, source availability and revision checks apply; another manual correction cancels the selection. **234 focused tests/8 files** and **2 extended desktop/mobile cases** passed, plus types and scoped lint. The paid-test pause and runtime model are unchanged. [Recovery audit](product-tracking-audit.md#owner-recovery-return-from-a-correction-to-future-events).
