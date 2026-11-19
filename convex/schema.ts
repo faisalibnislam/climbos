@@ -1,5 +1,6 @@
 import { journeyStepRefV } from "./lib/customerJourneys";
 import { dealStageHistoryV } from "./lib/dealHistory";
+import { dealTranscriptFields } from "./lib/dealTranscripts";
 import { dealQualificationV } from "./lib/dealQualification";
 import { customerProgressRecordV, customerProgressRuleV, customerProgressStateV } from "./lib/customerProgress";
 import { emailReadinessValidator } from "./lib/emailReadiness";
@@ -3086,7 +3087,11 @@ export default defineSchema({
     .index("by_day", ["day"]),
 
   /** Mini-CRM: one row per person or company the owner is working with. */
+  dealTranscripts: defineTable({ orgId: v.id("organizations"), dealId: v.id("deals"), ...dealTranscriptFields })
+    .index("by_org_deal", ["orgId", "dealId"]).index("by_org", ["orgId"]),
+
   deals: defineTable({
+    transcriptRevision: v.optional(v.number()),
     stageHistory: v.optional(dealStageHistoryV),
     qualification: v.optional(dealQualificationV),
     orgId: v.id("organizations"),

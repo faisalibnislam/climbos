@@ -56,7 +56,7 @@ test("Buying context saves dated reports and prepares review without contacting 
   await page.screenshot({ path: testInfo.outputPath("buying-context.png"), fullPage: false });
   await sheet.getByRole("button", { name: "Review next step", exact: true }).click();
   const composer = page.getByRole("textbox", { name: "Message Climb AI", exact: true });
-  await expect(composer).toHaveValue(/saved notes, buying context/);
+  await expect(composer).toHaveValue(/saved notes, imported transcripts, buying context/);
   await expect(composer).toBeEditable();
   const saved = (await rows("deals")).find(row => row.orgId === org._id);
   expect(saved?.stage).toBe("talking");

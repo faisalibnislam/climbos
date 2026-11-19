@@ -102,6 +102,7 @@ import type * as lib_customerProgress from "../lib/customerProgress.js";
 import type * as lib_customerVoice from "../lib/customerVoice.js";
 import type * as lib_dealHistory from "../lib/dealHistory.js";
 import type * as lib_dealQualification from "../lib/dealQualification.js";
+import type * as lib_dealTranscripts from "../lib/dealTranscripts.js";
 import type * as lib_designLearning from "../lib/designLearning.js";
 import type * as lib_emailReadiness from "../lib/emailReadiness.js";
 import type * as lib_emailTemplates from "../lib/emailTemplates.js";
@@ -288,6 +289,7 @@ declare const fullApi: ApiFromModules<{
   "lib/customerVoice": typeof lib_customerVoice;
   "lib/dealHistory": typeof lib_dealHistory;
   "lib/dealQualification": typeof lib_dealQualification;
+  "lib/dealTranscripts": typeof lib_dealTranscripts;
   "lib/designLearning": typeof lib_designLearning;
   "lib/emailReadiness": typeof lib_emailReadiness;
   "lib/emailTemplates": typeof lib_emailTemplates;

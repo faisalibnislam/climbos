@@ -494,6 +494,7 @@ export const exportData = internalQuery({
     const deals = await ctx.db.query("deals").withIndex("by_org_updated", q => q.eq("orgId", orgId)).order("desc").paginate({ cursor: null, numItems: 500, maximumBytesRead: 1_000_000 });
     const customerJourneys = await ctx.db.query("customerJourneys").withIndex("by_org", q => q.eq("orgId", orgId)).take(21);
     const journeyContacts = await ctx.db.query("journeyContacts").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
+    const dealTranscripts = await ctx.db.query("dealTranscripts").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").take(21);
     const productFunnels = await ctx.db.query("productFunnels").withIndex("by_org", q => q.eq("orgId", orgId)).take(21);
     const productSources = await ctx.db.query("productTrackingSources").withIndex("by_org", q => q.eq("orgId", orgId)).take(21);
     const productEvents = await ctx.db.query("productEvents").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
@@ -536,6 +537,9 @@ export const exportData = internalQuery({
         reviewInvitationApprovals: strip(reviewBatches.slice(0, 100)),
         reviewInvitationApprovalHistoryLimited: reviewBatches.length > 100,
         deals: strip(deals.page),
+        dealTranscripts: strip(dealTranscripts.slice(0, 20)),
+        dealTranscriptsLimited: dealTranscripts.length > 20,
+        dealTranscriptsCoverage: "Newest 20 owner-supplied transcripts; permission and content accuracy are owner attestations. Remove individual transcripts or their deal to erase their stored text.",
         dealHistoryLimited: !deals.isDone,
         dealCoverage: "Newest deals, bounded to 500 records or approximately 1 MB read; buying-context history retains the most recent 20 observations per deal.",
         customerJourneys: strip(customerJourneys.slice(0, 20)),
@@ -850,6 +854,7 @@ const PURGE_BY_ORG: { table: string; index: string }[] = [
   { table: "productTrackingSources", index: "by_org" },
   { table: "productEvents", index: "by_org" },
   { table: "productFunnels", index: "by_org" },
+  { table: "dealTranscripts", index: "by_org" },
   { table: "inviteLinks", index: "by_org" },
   { table: "reportShares", index: "by_org" },
   // Sales, outreach and lead capture.

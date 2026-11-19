@@ -1,3 +1,7 @@
+## 19 November — permissioned conversation transcript intake
+
+Added reviewed text/file import, permission attestation, version-bound paged retrieval in the existing sales-review assistant, source/unknown labels, source removal, separate indexed storage and bounded privacy export/purge. **98 regression/permission tests in eight files** passed; both new desktop/mobile workflows passed after correcting the test to close the assistant before reopening a deal, and four existing qualification/deal-review cases passed. Types and scoped lint passed. No paid calls or runtime-model change. Recording and automatic transcription remain unavailable. [Audit](deal-transcript-review-audit.md).
+
 ## 19 November — exact scheduled email delivery
 
 Built bounded scheduling, durable pending review, cancellation and expiry cleanup on the existing approved send executor. Existing exact audience/version/destination/permission checks remain; shared-account settlement now matches reservation ownership. **189 tests/five files**, four desktop/mobile cases, types and scoped lint passed. No paid calls, runtime-model change or live sending. [Audit](scheduled-email-delivery-audit.md).

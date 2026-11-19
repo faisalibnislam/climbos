@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui";
 import { useClimb } from "@/components/climb/context";
 
-const REVIEW_REQUEST = "Review this customer's saved notes, buying context, needs, objections and next step. Explain what is supported, conflicting or unknown, then suggest the most useful next question, draft, wait or stop. Do not contact anyone or change the deal.";
+const REVIEW_REQUEST = "Review this customer's saved notes, imported transcripts, buying context, needs, objections and next step. Explain what is supported, conflicting or unknown, then suggest the most useful next question, draft, wait or stop. Do not contact anyone or change the deal.";
 
 export function DealReviewButton({ id, name, onPrepared }: { id: string; name: string; onPrepared: () => void }) {
   const climb = useClimb();
@@ -16,6 +16,6 @@ export function DealReviewButton({ id, name, onPrepared }: { id: string; name: s
       onPrepared();
       climb.setOpen(true);
     }}>Review next step</Button>
-    <p className="text-xs text-ink-3">{tooLong ? "Your unsent question is nearly full. Shorten it before adding this review." : "Prepares an editable question using saved notes and buying context. Nothing is submitted or sent yet."}</p>
+    <p className="text-xs text-ink-3">{tooLong ? "Your unsent question is nearly full. Shorten it before adding this review." : "Prepares an editable question using saved notes, imported transcripts and buying context. Nothing is submitted or sent yet."}</p>
   </div>;
 }

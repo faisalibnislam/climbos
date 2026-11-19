@@ -1,4 +1,5 @@
 import { initialDealHistory, advanceDealHistory } from "./lib/dealHistory";
+import { TranscriptInputSchema, TRANSCRIPT_LIMIT, TRANSCRIPT_PAGE_SIZE, TRANSCRIPT_LIMITATIONS } from "../shared/growth/dealTranscripts";
 import { DEAL_HISTORY_LIMITATIONS } from "../shared/growth/dealHistory";
 import { QUALIFICATION_TOPICS, QUALIFICATION_LIMITATIONS, QualificationObservationSchema } from "../shared/growth/dealQualification";
 import { validProgressDate } from "../shared/growth/customerProgress";
@@ -203,6 +204,73 @@ export const qualification = query({
   },
 });
 
+async function dealTranscriptRows(ctx: QueryCtx | MutationCtx, deal: Doc<"deals">) {
+  const items = await ctx.db.query("dealTranscripts").withIndex("by_org_deal", q => q.eq("orgId", deal.orgId).eq("dealId", deal._id)).take(TRANSCRIPT_LIMIT + 1);
+  if (items.length > TRANSCRIPT_LIMIT) throw appError("LIMIT_REACHED", "The complete transcript set needs review before continuing.");
+  return { revision: deal.transcriptRevision ?? 0, items: items.sort((a, b) => a.index - b.index) };
+}
+
+/** Pasted/imported text stays separate from notes, qualification and verified source data. */
+export const transcripts = query({
+  args: { slug: v.string(), id: v.id("deals"), expectedVersion: v.optional(v.string()), transcriptIndex: v.optional(v.number()), offset: v.optional(v.number()) },
+  handler: async (ctx, { slug, id, expectedVersion, transcriptIndex, offset }) => {
+    const { org, membership } = await requireOrgAccess(ctx, { slug }, "view");
+    const d = assertSameOrg(await ctx.db.get(id), org._id, "deal");
+    const version = await sha256Hex(JSON.stringify(d));
+    if ((offset !== undefined || transcriptIndex !== undefined) && !expectedVersion) throw appError("INVALID", "Review the transcript list before opening its text.");
+    if (expectedVersion !== undefined && version !== expectedVersion) throw appError("INVALID", "This deal changed. Reload its transcripts before continuing.");
+    const record = await dealTranscriptRows(ctx, d);
+    let page = null;
+    if (transcriptIndex !== undefined) {
+      const selected = record.items.find(t => t.index === transcriptIndex);
+      const characters = Array.from(selected?.text ?? "");
+      const start = offset ?? 0;
+      if (!selected || !Number.isSafeInteger(start) || start < 0 || start >= characters.length || start % TRANSCRIPT_PAGE_SIZE !== 0) throw appError("INVALID", "That transcript page is unavailable.");
+      const end = Math.min(start + TRANSCRIPT_PAGE_SIZE, characters.length);
+      page = { index: selected.index, start, end, text: characters.slice(start, end).join(""), nextOffset: end < characters.length ? end : null };
+    } else if (offset !== undefined) throw appError("INVALID", "Choose a transcript before a text page.");
+    return { view: "transcripts" as const, dealId: d._id, version, revision: record.revision, evidenceKind: "owner_supplied_transcript" as const,
+      canEdit: can(membership.role, "edit"),
+      items: record.items.map(({ index, title, sourceLabel, occurredOn, recordedAt, text, textHash }) => ({ index, title, sourceLabel, occurredOn: occurredOn ?? null, recordedAt, characters: Array.from(text).length, textHash })),
+      page, limitations: TRANSCRIPT_LIMITATIONS };
+  },
+});
+
+export const addTranscript = mutation({
+  args: { slug: v.string(), id: v.id("deals"), expectedRevision: v.number(), title: v.string(), sourceLabel: v.string(), text: v.string(), occurredOn: v.optional(v.string()), permissionConfirmed: v.boolean(), permissionBasis: v.string() },
+  handler: async (ctx, args) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
+    const d = assertSameOrg(await ctx.db.get(args.id), org._id, "deal");
+    const record = await dealTranscriptRows(ctx, d);
+    if (args.expectedRevision !== record.revision) throw appError("INVALID", "Transcripts changed. Review them before importing again.");
+    if (record.items.length >= TRANSCRIPT_LIMIT) throw appError("LIMIT_REACHED", "Up to six transcripts per deal. Remove an unneeded transcript before adding another.");
+    const input = TranscriptInputSchema.safeParse(args);
+    if (!input.success) throw appError("INVALID", "Add a title, source, 20–16,000 characters of reviewed text, and confirm your permission with its basis.");
+    if (args.occurredOn !== undefined && !validProgressDate(args.occurredOn, Date.now())) throw appError("INVALID", "Choose a real conversation date no later than today (UTC), or leave it unknown.");
+    const textHash = await sha256Hex(input.data.text);
+    if (record.items.some(t => t.textHash === textHash)) throw appError("INVALID", "This exact text is already saved for this deal.");
+    const revision = record.revision + 1;
+    const item = { ...input.data, index: revision, textHash, ...(args.occurredOn ? { occurredOn: args.occurredOn } : {}), recordedAt: Date.now(), recordedBy: user._id };
+    await ctx.db.insert("dealTranscripts", { orgId: org._id, dealId: d._id, ...item });
+    await ctx.db.patch(d._id, { transcriptRevision: revision, updatedAt: Date.now() });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "crm.transcript_added", subjectType: "deal", subjectId: d._id, summary: `Saved owner-supplied transcript ${revision} with permission attestation. No recording, model call or customer action.` });
+    return revision;
+  },
+});
+
+export const removeTranscript = mutation({
+  args: { slug: v.string(), id: v.id("deals"), index: v.number(), expectedRevision: v.number() },
+  handler: async (ctx, args) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
+    const d = assertSameOrg(await ctx.db.get(args.id), org._id, "deal");
+    const record = await dealTranscriptRows(ctx, d);
+    if (!record || record.revision !== args.expectedRevision || !record.items.some(t => t.index === args.index)) throw appError("INVALID", "Transcripts changed. Review the current list before removing one.");
+    await ctx.db.delete(record.items.find(t => t.index === args.index)!._id);
+    await ctx.db.patch(d._id, { transcriptRevision: record.revision + 1, updatedAt: Date.now() });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "crm.transcript_removed", subjectType: "deal", subjectId: d._id, summary: `Removed transcript ${args.index}; its text is not retained in this audit record.` });
+  },
+});
+
 export const recordQualification = mutation({
   args: { slug: v.string(), id: v.id("deals"), expectedRevision: v.number(), topic: qualificationTopicV, state: qualificationStateV, statement: v.string(), sourceLabel: v.string(), observedOn: v.string() },
   handler: async (ctx, a) => {
@@ -341,7 +409,8 @@ export const remove = mutation({
   handler: async (ctx, { slug, id }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "edit");
     const d = await ctx.db.get(id);
-    assertSameOrg(d, org._id, "deal");
+    const deal = assertSameOrg(d, org._id, "deal");
+    for (const transcript of (await dealTranscriptRows(ctx, deal)).items) await ctx.db.delete(transcript._id);
     await ctx.db.delete(id);
     await syncRevenue(ctx, { ...d!, stage: "lost" });
   },

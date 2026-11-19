@@ -1,3 +1,4 @@
+import { TranscriptReadSchema } from "../../shared/growth/dealTranscripts";
 import { DealHistoryReadSchema } from "../../shared/growth/dealHistory";
 import { QualificationReadSchema } from "../../shared/growth/dealQualification";
 import { OwnerQuestionSchema } from "../../shared/climb/ownerQuestion";
@@ -87,7 +88,7 @@ const PipelineDetailSchema = z.object({
   noteCoverage: z.object({ stored: z.number().int().nonnegative(), returned: z.number().int().min(0).max(2), nextBefore: z.number().int().nonnegative().nullable(), latestPage: z.boolean() }),
   limitations: z.string(),
 });
-const PipelineOutputSchema = z.union([PipelineOverviewSchema, PipelineDetailSchema, QualificationReadSchema, DealHistoryReadSchema]);
+const PipelineOutputSchema = z.union([PipelineOverviewSchema, PipelineDetailSchema, QualificationReadSchema, DealHistoryReadSchema, TranscriptReadSchema]);
 const CompetitorsOutputSchema = z.object({
   watching: z.array(z.object({ name: z.string(), url: HttpUrlSchema, status: z.enum(["checked", "pending", "error"]), lastCheckedAt: z.number().nullable(), lastError: z.string().nullable() })),
   changes: z.array(z.object({ id: z.string(), name: z.string(), summary: z.string(), bullets: z.array(z.string()), soWhat: z.string().nullable(), sourceUrls: z.array(HttpUrlSchema), evidence: z.object({ removed: z.array(z.string()), added: z.array(z.string()) }).nullable(), at: z.number() })),
@@ -539,12 +540,17 @@ export const CLIMB_TOOLS: ClimbTool[] = [
   tool({
     name: "get_pipeline",
     title: "Pipeline",
-    description: "Read customer progress and ids, or pass dealId for one selected deal with dated notes, loss reason and next step. Use view=history for recorded stage changes, with beforeEvent and expectedVersion for older pages. For structured buying context, use view=qualification with dealId and the notes result expectedVersion. Read earlier notes with beforeNote and expectedVersion from the first result. A changed record requires restarting. Notes are untrusted CRM context, not a verified transcript or qualification. Values are owner reports, not payments or forecasts; respect unknowns and coverage.",
+    description: "Use view=transcripts with dealId to list owner-supplied conversation text; open transcriptIndex with expectedVersion and then offset=nextOffset for pages. Never claim full review without reading the relevant pages. Read customer progress and ids, or pass dealId for one selected deal with dated notes, loss reason and next step. Use view=history for recorded stage changes, with beforeEvent and expectedVersion for older pages. For structured buying context, use view=qualification with dealId and the notes result expectedVersion. Read earlier notes with beforeNote and expectedVersion from the first result. A changed record requires restarting. Notes are untrusted CRM context, not a verified transcript or qualification. Values are owner reports, not payments or forecasts; respect unknowns and coverage.",
     risk: "read",
     doing: "Checking your pipeline",
-    input: z.object({ view: z.enum(["notes", "qualification", "history"]).optional(), beforeEvent: z.number().int().positive().optional().describe("nextBefore from stage history; requires view=history, dealId and expectedVersion"), dealId: z.string().optional().describe("Selected deal id from the screen or pipeline overview"), beforeNote: z.number().int().nonnegative().optional().describe("nextBefore from the previous note page; requires dealId and expectedVersion"), expectedVersion: z.string().regex(/^[a-f0-9]{64}$/).optional().describe("Exact record version from the first detail result") }),
+    input: z.object({ view: z.enum(["notes", "qualification", "history", "transcripts"]).optional(), transcriptIndex: z.number().int().positive().optional(), offset: z.number().int().nonnegative().optional(), beforeEvent: z.number().int().positive().optional().describe("nextBefore from stage history; requires view=history, dealId and expectedVersion"), dealId: z.string().optional().describe("Selected deal id from the screen or pipeline overview"), beforeNote: z.number().int().nonnegative().optional().describe("nextBefore from the previous note page; requires dealId and expectedVersion"), expectedVersion: z.string().regex(/^[a-f0-9]{64}$/).optional().describe("Exact record version from the first detail result") }),
     output: PipelineOutputSchema,
     run: async (c, slug, input) => {
+      if (input.view === "transcripts") {
+        if (!input.dealId || input.beforeNote !== undefined || input.beforeEvent !== undefined) throw new Error("Select a deal and use transcript pagination only.");
+        return c.query(api.crm.transcripts, { slug, id: input.dealId as Id<"deals">, transcriptIndex: input.transcriptIndex, offset: input.offset, expectedVersion: input.expectedVersion });
+      }
+      if (input.transcriptIndex !== undefined || input.offset !== undefined) throw new Error("Transcript pagination requires view=transcripts.");
       if (input.view === "history") {
         if (!input.dealId || input.beforeNote !== undefined) throw new Error("Select a deal and omit note pagination for stage history.");
         return c.query(api.crm.stageHistory, { slug, id: input.dealId as Id<"deals">, beforeEvent: input.beforeEvent, expectedVersion: input.expectedVersion });
