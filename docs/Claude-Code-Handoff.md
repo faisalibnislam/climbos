@@ -1,5 +1,8 @@
 # ClimbOS development handoff for Claude Code
 
+**21 November — local database recovery.** Run `python3 scripts/rehearse-local-restore.py` with the cached local backend and installed dependencies. It builds two temporary instances, restores a synthetic workspace snapshot and checks exact data and tenant permissions. Production recovery has separate storage, secrets and operational requirements. [Scope](growth-engine/remaining-work-execution-2026-11-19.md).
+
+
 **21 November — recurring conversation topics.** Customer progress groups repeating topics on demand and links to deal transcripts. Counts describe distinct imported texts. Desktop and mobile owner workflows passed against the loopback fixture. [Verification and limitations](growth-engine/remaining-work-execution-2026-11-19.md).
 
 
