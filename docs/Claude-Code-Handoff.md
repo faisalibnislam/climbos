@@ -1,5 +1,8 @@
 # ClimbOS development handoff for Claude Code
 
+**21 November — local conversation capture.** The existing transcript form can capture microphone audio for local playback/download and separately prepare text with an available on-device recognizer. The owner reviews and explicitly saves the transcript. Desktop/mobile checks used generated audio and simulated recognition. [Coverage and device limits](growth-engine/remaining-work-execution-2026-11-19.md).
+
+
 **21 November — creative precedent research.** Closed the 27 remaining outcome-reference gaps in the runtime case library. The 100 cases retain action evidence, an observed result and transfer limits. There are 51 organization/participant reports and 49 cases with independent outcome coverage. [Evidence and examples](growth-engine/remaining-work-execution-2026-11-19.md).
 
 

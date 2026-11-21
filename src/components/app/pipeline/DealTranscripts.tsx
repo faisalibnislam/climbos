@@ -5,6 +5,7 @@ import { useConvex, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { Button, Checkbox, ConfirmDialog, DatePicker, Field, Input, Textarea, toast } from "@/components/ui";
+import { ConversationCapture } from "./ConversationCapture";
 import { errorMessage } from "@/components/app/errors";
 import { TRANSCRIPT_LIMIT, TRANSCRIPT_TEXT_LIMIT, TRANSCRIPT_PAGE_SIZE } from "@shared/growth/dealTranscripts";
 
@@ -17,7 +18,7 @@ export function DealTranscripts({ slug, id }: { slug: string; id: Id<"deals"> })
   const [removing, setRemoving] = useState<{ index: number; revision: number; title: string } | null>(null);
   return <details className="rounded-lg border border-line p-3" open={open} onToggle={e => setOpen(e.currentTarget.open)}>
     <summary className="cursor-pointer text-sm font-medium">Conversation transcripts</summary>
-    <p className="mt-2 text-xs text-ink-2">Import a transcript you have permission to use. Review and remove personal or confidential details that are unnecessary. Speaker labels are enough. Audio recording and automatic transcription are not connected.</p>
+    <p className="mt-2 text-xs text-ink-2">Import a transcript you have permission to use. Review and remove personal or confidential details that are unnecessary. Speaker labels are enough. You can also capture microphone audio or prepare text on a supported device.</p>
     {!data ? <p className="mt-2 text-sm">Loading transcripts…</p> : <div className="mt-3 space-y-3">
       {!data.items.length ? <p className="text-sm text-ink-2">No transcript imported. Conversation evidence stays unknown.</p> : data.items.map(item => <section key={item.index} className="space-y-2 rounded-lg bg-surface-2 p-3" aria-label={item.title}>
         <h3 className="text-sm font-medium break-words">{item.title}</h3>
@@ -58,6 +59,7 @@ function TranscriptForm({ slug, id, revision, changed, onClose }: { slug: string
   const [permissionConfirmed, setPermissionConfirmed] = useState(false), [permissionBasis, setPermissionBasis] = useState("");
   const [busy, setBusy] = useState(false);
   return <section aria-label="Import conversation transcript" className="space-y-3 rounded-lg border border-line p-3">
+    <ConversationCapture remaining={TRANSCRIPT_TEXT_LIMIT - text.length - (text ? 1 : 0)} onAppend={words => setText(previous => previous ? `${previous}\n${words}` : words)} />
     <Field label="Transcript title"><Input value={title} maxLength={100} onChange={e => setTitle(e.target.value)} disabled={busy} /></Field>
     <Field label="Transcript source" hint="Describe how this text was prepared; a source label is not verification."><Input value={sourceLabel} maxLength={200} onChange={e => setSourceLabel(e.target.value)} disabled={busy} /></Field>
     <Field label="Import a text file (optional)" hint="UTF-8 .txt only, up to 64 KB. Review the text below before saving."><Input type="file" accept=".txt,text/plain" disabled={busy} onChange={async e => {

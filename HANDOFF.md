@@ -112,7 +112,7 @@ Read `AGENTS.md`, `README.md`, `docs/Claude-Code-Handoff.md` (top entries), `doc
 
 ## 9. Current state (as of 2026-11-21)
 
-All 100 creative cases now cite a source for a reported outcome. In 51 cases the source is the organization or a participant. A disposable Convex recovery drill verified a restored workspace, exact transcript text and tenant isolation. Run `python3 scripts/rehearse-local-restore.py` with local ports 3330 and 3331 free. The Customer progress page now surfaces recurring conversation topics from permissioned transcripts, with source links. Focused strategy review checks subscription eligibility quotes against the cited page read or labeled business fact. Offline replay preserves historical review failures. The Visibility page now supports opt-in repeat checklists and independently sampled citation comparisons. See the [execution record](docs/growth-engine/remaining-work-execution-2026-11-19.md) for coverage and limits. The handoff and ignore rules were committed in `8ebe0d93`.
+All 100 creative cases now cite a source for a reported outcome. In 51 cases the source is the organization or a participant. A disposable Convex recovery drill verified a restored workspace, exact transcript text and tenant isolation. Run `python3 scripts/rehearse-local-restore.py` with local ports 3330 and 3331 free. Customer progress supports local microphone recordings and optional device-only transcription. The Customer progress page also surfaces recurring conversation topics from permissioned transcripts, with source links. Focused strategy review checks subscription eligibility quotes against the cited page read or labeled business fact. Offline replay preserves historical review failures. The Visibility page now supports opt-in repeat checklists and independently sampled citation comparisons. See the [execution record](docs/growth-engine/remaining-work-execution-2026-11-19.md) for coverage and limits. The handoff and ignore rules were committed in `8ebe0d93`.
 
 **Earlier branch inventory (19 November):**
 - Unpushed: local `main` is 3 commits ahead of `origin/main` (merge of "AI-led onboarding, focused plans and local quality evaluation"); `growth-engine-v2` is 2 ahead of its remote. Both are already contained in the pushed `codex/trend-evidence-freshness`.
@@ -135,7 +135,7 @@ All 100 creative cases now cite a source for a reported outcome. In 51 cases the
 5. From `docs/ProductRoadmap.md` (older, 2026-10-18): asset library (#13), Google Business Profile API for reviews, auto top-up via Polar.
 6. Resolve the provider-direction contradiction: update `AGENTS.md` / `docs/Architecture.md` ("OpenAI-first") to match the Anthropic routing actually in use (guess: docs are stale; confirm with the owner).
 7. Confirm the production backup and key-recovery process with the operator. The disposable local drill uses synthetic records. Consider automating Convex deploys (`CONVEX_DEPLOY_KEY` in Vercel) so web and functions cannot drift.
-8. Check conversation-topic usefulness with owner-supplied records. Verify manual repeat checks with a real owner panel. Automatic provider collection requires authorized access.
+8. Verify recording and speech accuracy on real consenting users’ devices, including installed language coverage. Check conversation-topic usefulness with owner-supplied records. Verify manual repeat checks with a real owner panel. Automatic provider collection requires authorized access.
 
 ## 11. Gotchas
 
@@ -151,6 +151,8 @@ All 100 creative cases now cite a source for a reported outcome. In 51 cases the
 - The repo lives on the external Corsair drive (`~/Documents/GitHub/Airly Studio` is a symlink). Large ignored folders (`bench/cache`, reference books) will not come with a clone.
 
 ## 12. Change log
+
+- 2026-11-21 — Added consented browser-local audio capture and optional on-device transcription to the existing deal import.
 
 - 2026-11-21 — Researched the 27 remaining outcome-source gaps and added dated, attributable observations to the runtime case library.
 
