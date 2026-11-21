@@ -3883,6 +3883,10 @@ export default defineSchema({
     orgId: v.id("organizations"),
     name: v.string(),
     status: v.union(v.literal("active"), v.literal("archived")),
+    repeatChecks: v.optional(v.object({
+      days: v.union(v.literal(7), v.literal(30)),
+      startedAt: v.number(),
+    })),
     /** Query sets are immutable; create a new panel to change prompts or locations. */
     queries: v.array(
       v.object({
@@ -3947,6 +3951,7 @@ export default defineSchema({
   })
     .index("by_org_checked", ["orgId", "checkedAt"])
     .index("by_org_panel_checked", ["orgId", "panelId", "checkedAt"])
+    .index("by_panel_question_checked", ["orgId", "panelId", "panelQueryKey", "checkedAt"])
     .index("by_org_query_checked", ["orgId", "query", "checkedAt"]),
 
   /** Owner-reported changes logged beside AI-search samples; timing is not causal evidence. */

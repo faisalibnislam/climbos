@@ -2,7 +2,7 @@
 
 > Read this first if you are a Claude (or any agent) picking this project up, on this Mac or another one. Then read CLAUDE.md / AGENTS.md. Keep this file current: after every change to the project, update "Current state", "Next steps" and "Change log", and commit it.
 
-Last updated: 2026-11-19 · Written on: Faisal's MacBook Pro M5
+Last updated: 2026-11-21 · Written on: Faisal's MacBook Pro M5
 
 ## 1. What this is
 
@@ -17,7 +17,7 @@ ClimbOS is "your AI growth team": a small-business owner states a business goal,
 ## 2. Where it lives
 
 - GitHub: `https://github.com/faisalibnislam/climbos` (remote `origin`). Default branch `main`.
-- Current branch on this Mac: **`codex/trend-evidence-freshness`** at `629bc05e` (2026-11-19), level with its remote. This is the active development branch; per `docs/Claude-Code-Handoff.md` "Continue on `codex/trend-evidence-freshness`".
+- Current branch on this Mac: **`codex/trend-evidence-freshness`**. This is the active development branch; per `docs/Claude-Code-Handoff.md` "Continue on `codex/trend-evidence-freshness`".
 - Path on this Mac: `/Volumes/Corsair/Github External/Airly Studio External/climbos`, also `~/Documents/GitHub/Airly Studio/climbos` (the parent folder is a symlink to the Corsair drive). On a new Mac: `git clone https://github.com/faisalibnislam/climbos.git && git checkout codex/trend-evidence-freshness`.
 - Hosting: Vercel project `climbos` (scope `faisalibnislam`, linked in `.vercel/`). Convex production deployment `kindly-quail-695`, dev deployment `vivid-zebra-520`.
 - Related: `docs/Claude-Code-Handoff.md` (very detailed running log of every batch since 2026-10-25; newest entries at the top), `docs/growth-engine/` (per-feature audits, the 410-requirement reconciliation), root `ClimbOS_Growth_Engine_Master_Spec.md`, `docs/ClimbOS-Complete-Product-Specification.md`. No shared packages with other repos.
@@ -110,11 +110,11 @@ Read `AGENTS.md`, `README.md`, `docs/Claude-Code-Handoff.md` (top entries), `doc
 - Customer-facing content stays brand-neutral; preserve grounded / adjacent / bold strategy options.
 - Each change batch gets an audit doc in `docs/growth-engine/` and a dated entry at the top of `docs/Claude-Code-Handoff.md`, with honest limits.
 
-## 9. Current state (as of 2026-11-19)
+## 9. Current state (as of 2026-11-21)
 
-**Git (uncommitted or unpushed work exists only on this Mac):**
-- Branch `codex/trend-evidence-freshness` at `629bc05e`, pushed, level with `origin/codex/trend-evidence-freshness`. It is 213 commits ahead of `origin/main` and contains local `main` and `growth-engine-v2`.
-- Uncommitted: 1 modified file, `.gitignore` (+25 lines from a 2026-11-11 cleanup: ignore caches, env files, Xcode junk, `.claude/worktrees/`); deliberately kept uncommitted. Untracked: `graphify-out/` (generated knowledge graph, not project work).
+The Visibility page now supports opt-in repeat checklists and independently sampled citation comparisons. See the [execution record](docs/growth-engine/remaining-work-execution-2026-11-19.md) for coverage and limits. The handoff and ignore rules were committed in `8ebe0d93`.
+
+**Earlier branch inventory (19 November):**
 - Unpushed: local `main` is 3 commits ahead of `origin/main` (merge of "AI-led onboarding, focused plans and local quality evaluation"); `growth-engine-v2` is 2 ahead of its remote. Both are already contained in the pushed `codex/trend-evidence-freshness`.
 - Local-only branch: `claude/strange-germain-c51138` (a 2026-10-26 merge of PR #5, already in main).
 - Stashes: none. Worktrees: none besides the main checkout (`.claude/worktrees/` exists but is empty of registered worktrees).
@@ -124,7 +124,7 @@ Read `AGENTS.md`, `README.md`, `docs/Claude-Code-Handoff.md` (top entries), `doc
 
 **What works:** production (older main) at climbos.app; locally, the branch passes focused test suites per batch (each audit in `docs/growth-engine/` lists its exact tests). Full-suite status today is unverified.
 
-**Half-done / honest limits (from `docs/growth-engine/requirements-scope-2026-11-18.md`):** saved Livoform plan quality still fails acceptance checks; 2 of 4 synthetic industry cases pass (science, creator; healthcare and retail below the bar); live lifecycle telemetry and unattended sending are not built; real provider flows need credentials and platform approvals; schema changes on the branch are additive and undeployed; tester access and founder time unknown.
+**Half-done / honest limits (from `docs/growth-engine/requirements-scope-2026-11-18.md`):** saved Livoform plan quality still fails acceptance checks; 2 of 4 synthetic industry cases pass (science, creator; healthcare and retail below the bar); authenticated event intake and exact approved email delivery exist, while live setup and recurring journeys remain open; real provider flows need credentials and platform approvals; schema changes on the branch are additive and undeployed; tester access and founder time unknown.
 
 ## 10. Next steps / open work
 
@@ -135,7 +135,7 @@ Read `AGENTS.md`, `README.md`, `docs/Claude-Code-Handoff.md` (top entries), `doc
 5. From `docs/ProductRoadmap.md` (older, 2026-10-18): asset library (#13), Google Business Profile API for reviews, auto top-up via Polar.
 6. Resolve the provider-direction contradiction: update `AGENTS.md` / `docs/Architecture.md` ("OpenAI-first") to match the Anthropic routing actually in use (guess: docs are stale; confirm with the owner).
 7. Consider automating Convex deploys (`CONVEX_DEPLOY_KEY` in Vercel) so web and functions cannot drift.
-8. Housekeeping (ask first): commit or drop the `.gitignore` change, delete stale local branches and `.env.local.bak-*` files.
+8. Verify manual repeat checks with a real owner panel. Automatic provider collection requires authorized access.
 
 ## 11. Gotchas
 
@@ -151,5 +151,7 @@ Read `AGENTS.md`, `README.md`, `docs/Claude-Code-Handoff.md` (top entries), `doc
 - The repo lives on the external Corsair drive (`~/Documents/GitHub/Airly Studio` is a symlink). Large ignored folders (`bench/cache`, reference books) will not come with a clone.
 
 ## 12. Change log
+
+- 2026-11-21 — Added manual AI-search check schedules, missed-check reporting and protected the comparison baseline on busy panels.
 
 - 2026-11-19 — Handoff created.

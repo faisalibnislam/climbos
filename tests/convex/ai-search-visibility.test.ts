@@ -3,6 +3,53 @@ import { api } from "../../convex/_generated/api";
 import { setup, asNewUser } from "./helpers";
 
 describe("AI search visibility observations", () => {
+  it("reconciles repeated manual checks at exact boundaries, including missed and failed attempts", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "panel-owner@example.com");
+    const viewer = await asNewUser(t, "viewer@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Sample" });
+    const other = await viewer.client.mutation(api.orgs.createWorkspace, { businessName: "Other" });
+    await t.run(ctx => ctx.db.insert("memberships", { orgId, userId: viewer.userId, role: "viewer", status: "active", createdAt: Date.now() }));
+    const panelId = await owner.client.mutation(api.aiSearchVisibility.createPanel, { slug, name: "Buyer questions", queries: [
+      { query: "Who serves my area?", provider: "chatgpt" }, { query: "What are the terms?", provider: "gemini" },
+    ] });
+    const args = { slug, panelId, period: 1 };
+    expect(await owner.client.query(api.aiSearchVisibility.repeatChecklist, args)).toBeNull();
+    await expect(viewer.client.mutation(api.aiSearchVisibility.setRepeatChecks, { slug, panelId, days: 7 })).rejects.toThrow();
+    await expect(viewer.client.query(api.aiSearchVisibility.repeatChecklist, { ...args, slug: other.slug })).rejects.toThrow();
+    await expect(viewer.client.mutation(api.aiSearchVisibility.setRepeatChecks, { slug: other.slug, panelId, days: 7 })).rejects.toThrow();
+    await owner.client.mutation(api.aiSearchVisibility.setRepeatChecks, { slug, panelId, days: 7 });
+    const week = 7 * 86_400_000;
+    const startedAt = Date.now() - week - 60_000;
+    await t.run(ctx => ctx.db.patch(panelId, { repeatChecks: { days: 7, startedAt } }));
+    await owner.client.mutation(api.aiSearchVisibility.setRepeatChecks, { slug, panelId, days: 7 });
+    const sample = { slug, panelId, panelQueryKey: "q1", query: "Who serves my area?", provider: "chatgpt", brandMention: "unknown", sentiment: "unknown", citedUrls: [], competitorMentions: [] } as const;
+    for (const [checkedAt, answerStatus] of [[startedAt + week - 1, "failed"], [startedAt + week, "no_answer"]] as const) {
+      await owner.client.mutation(api.aiSearchVisibility.recordObservation, { ...sample, citedUrls: [], competitorMentions: [], checkedAt, answerStatus });
+    }
+    expect(await viewer.client.query(api.aiSearchVisibility.repeatChecklist, args)).toMatchObject({
+      from: startedAt + week, hasPrevious: true, rows: [{ current: "no_answer", previous: "failed" }, { current: null, previous: null }],
+    });
+    await owner.client.mutation(api.aiSearchVisibility.setRepeatChecks, { slug, panelId, days: null });
+    expect(await viewer.client.query(api.aiSearchVisibility.repeatChecklist, args)).toBeNull();
+    expect((await viewer.client.query(api.aiSearchVisibility.report, { slug, panelId })).observationCount).toBe(2);
+  });
+
+  it("preserves the baseline when more than a thousand recent checks fill the current window", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "busy-panel@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Busy" });
+    const now = Date.now();
+    await t.run(async ctx => {
+      const row = { orgId, provider: "chatgpt", query: "Where?", checkedAt: now - 1000, answerStatus: "failed", brandMention: "unknown", sentiment: "unknown", evidenceBasis: "owner_observed", enteredBy: owner.userId, enteredAt: now } as const;
+      for (let i = 0; i < 1002; i++) {
+        await ctx.db.insert("aiSearchObservations", { ...row, citedUrls: [], competitorMentions: [], checkedAt: i === 0 ? now - 40 * 86_400_000 : row.checkedAt });
+      }
+    });
+    const report = await owner.client.query(api.aiSearchVisibility.report, { slug, days: 30, compareToPreviousWindow: true });
+    expect(report.comparison).toMatchObject({ baselineObservationCount: 1, currentObservationCount: 500, truncated: true });
+  });
+
   it("imports bounded Google AI report rows only for the exact connected property", async () => {
     const t = setup();
     const owner = await asNewUser(t, "google-ai-report-owner@example.com");

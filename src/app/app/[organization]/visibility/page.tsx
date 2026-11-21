@@ -11,7 +11,7 @@ import { relativeTime } from "@/components/app/money";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { Button, Callout, Card, CardContent, Checkbox, DatePicker, EmptyState, Field, Input, Select, Textarea, toast } from "@/components/ui";
 import { AnswerAccuracyCard } from "@/components/app/visibility/AnswerAccuracy";
-import { useWorkspaceMember } from "@/components/app/content/shared";
+import { useNow, useWorkspaceMember } from "@/components/app/content/shared";
 import { can } from "@shared/policy";
 import { searchConsolePropertyMatchesWebsite } from "@shared/integrations/searchConsole";
 import { planAiSearchQueries } from "@shared/aiSearch/queryPlanner";
@@ -116,6 +116,40 @@ export default function SearchReadinessPage() {
       <AiAnswerObservations slug={slug} canEdit={canEdit} website={data.website} />
     </div>
   );
+}
+
+function RepeatCheckSchedule({ slug, panelId, schedule, canEdit }: {
+  slug: string;
+  panelId: Id<"aiSearchPanels">;
+  schedule: { days: 7 | 30; startedAt: number } | null;
+  canEdit: boolean;
+}) {
+  const now = useNow();
+  const period = schedule && now !== null ? Math.max(0, Math.floor((now - schedule.startedAt) / (schedule.days * 86_400_000))) : null;
+  const checklist = useQuery(api.aiSearchVisibility.repeatChecklist, period === null ? "skip" : { slug, panelId, period });
+  const update = useMutation(api.aiSearchVisibility.setRepeatChecks);
+  const [saving, setSaving] = useState(false);
+  async function change(value: string) {
+    setSaving(true);
+    try {
+      await update({ slug, panelId, days: value === "7" ? 7 : value === "30" ? 30 : null });
+    } catch (error) {
+      toast({ tone: "danger", title: "Couldn’t update repeat checks", description: errorMessage(error) });
+    } finally { setSaving(false); }
+  }
+  const describe = (status: "answered" | "no_answer" | "failed" | null, missing: string) =>
+    status === "answered" ? "Answer recorded" : status === "no_answer" ? "No answer returned" : status === "failed" ? "Attempt failed" : missing;
+  return <div className="grid gap-2">
+    <Field label="Repeat manual checks"><Select value={String(schedule?.days ?? "off")} disabled={!canEdit || saving} onValueChange={value => void change(value)} options={[{ value: "off", label: "Off" }, { value: "7", label: "Every 7 days" }, { value: "30", label: "Every 30 days" }]} /></Field>
+    {canEdit && <p className="text-xs text-ink-3">Changing the interval starts a new checklist. Your recorded answers stay in the report.</p>}
+    {checklist && <details className="rounded-lg border border-line p-3">
+      <summary className="cursor-pointer text-sm font-medium">{checklist.rows.filter(row => row.current === null).length} checks due by {new Date(checklist.until).toLocaleString()}{checklist.hasPrevious && ` · ${checklist.rows.filter(row => row.previous === null).length} missed last period`}</summary>
+      <ul className="mt-2 grid gap-2">{checklist.rows.map(row => <li key={row.key} className="text-sm">
+        <span>{row.query} · {row.provider.replaceAll("_", " ")}{row.location ? ` · ${row.location}` : ""}</span>
+        <p className="text-xs text-ink-3">{describe(row.current, "Awaiting check")}{checklist.hasPrevious && ` · Last period: ${describe(row.previous, "Missed")}`}</p>
+      </li>)}</ul>
+    </details>}
+  </div>;
 }
 
 function AiAnswerObservations({ slug, canEdit, website }: { slug: string; canEdit: boolean; website: string | null }) {
@@ -269,9 +303,10 @@ function AiAnswerObservations({ slug, canEdit, website }: { slug: string; canEdi
       <Card><CardContent className="flex flex-col gap-4">
         <div><h3 className="text-sm font-semibold text-ink">Track the same questions over time</h3><p className="mt-1 text-sm text-ink-3">Save questions, then check each tool yourself. ClimbOS doesn’t search these tools for you.</p></div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Saved question panel"><Select value={panelId} onValueChange={(value) => { setPanelId(value === "all" ? "all" : value as Id<"aiSearchPanels">); setPanelQueryKey("choose"); }} options={[{ value: "all", label: "All observations" }, ...(panels ?? []).map((item) => ({ value: item.id, label: `${item.name} · ${item.queryCount} checks` }))]} disabled={!canEdit || panels === undefined} /></Field>
+          <Field label="Saved question panel"><Select value={panelId} onValueChange={(value) => { setPanelId(value === "all" ? "all" : value as Id<"aiSearchPanels">); setPanelQueryKey("choose"); }} options={[{ value: "all", label: "All observations" }, ...(panels ?? []).map((item) => ({ value: item.id, label: `${item.name} · ${item.queryCount} checks` }))]} disabled={panels === undefined} /></Field>
           {panelId !== "all" ? <Field label="Question in this panel"><Select value={panelQueryKey} onValueChange={(value) => { setPanelQueryKey(value); const selected = report?.panel?.queries?.find((item) => item.key === value); if (selected) { setProvider(selected.provider); setQuery(selected.query); setLocation(selected.location ?? ""); } }} options={[{ value: "choose", label: "Choose a saved question" }, ...(report?.panel?.queries ?? []).map((item) => ({ value: item.key, label: `${item.provider.replaceAll("_", " ")} · ${item.query}${item.location ? ` · ${item.location}` : ""}` }))]} disabled={!canEdit || !report?.panel} /></Field> : <p className="self-end text-xs text-ink-3">Create a panel below to repeat the same questions.</p>}
         </div>
+        {report?.panel?.status === "active" && <RepeatCheckSchedule key={report.panel.id} slug={slug} panelId={report.panel.id} schedule={report.panel.repeatChecks} canEdit={canEdit} />}
         {canEdit ? <details className="rounded-xl border border-line p-3">
           <summary className="cursor-pointer text-sm font-medium text-ink">Create a question panel</summary>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -348,7 +383,7 @@ function AiAnswerObservations({ slug, canEdit, website }: { slug: string; canEdi
       {report === undefined ? <p className="text-sm text-ink-3">Loading recorded observations…</p> : report.observationCount === 0 ? <EmptyState icon={<Search />} title={panelId !== "all" ? "No checks in this panel yet" : "No AI-search observations yet"} body={panelId !== "all" ? "Pick a saved question, check it in that tool, and log the answer." : "Log a few answers to the same questions to get a baseline."} /> : <>
         <AnswerAccuracyCard accuracy={report.accuracy} />
         <Card><CardContent className="flex flex-col gap-3"><div><h3 className="text-sm font-semibold text-ink">Recorded sample summary · last {report.windowDays} days</h3><p className="mt-1 text-sm text-ink-3">{report.observationCount} observation{report.observationCount === 1 ? "" : "s"}{report.truncated ? " shown (older ones hidden)" : ""}. Your samples, not a platform-wide rate.</p></div><dl className="grid gap-3 text-sm sm:grid-cols-3"><div><dt className="text-xs text-ink-3">Answered checks</dt><dd className="text-ink-2">{report.panelSummary.answered} of {report.observationCount}</dd></div><div><dt className="text-xs text-ink-3">Business mentioned</dt><dd className="text-ink-2">{knownMentionAnswers.length ? `${businessMentions} of ${knownMentionAnswers.length} answers with a known mention result` : "No labeled answers yet"}</dd></div><div><dt className="text-xs text-ink-3">Cited own-site answers</dt><dd className="text-ink-2">{report.panelSummary.observedFirstPartyCitationRate ? percent(report.panelSummary.observedFirstPartyCitationRate) : "No website recorded"}</dd></div></dl></CardContent></Card>
-        {report.comparison ? <Card><CardContent className="flex flex-col gap-3"><div><h3 className="text-sm font-semibold text-ink">Observed period comparison</h3><p className="mt-1 text-sm text-ink-3">Prior {report.windowDays}-day sample: {report.comparison.baselineObservationCount}; current sample: {report.comparison.currentObservationCount}. Shows change, not its cause.</p></div>{report.comparison.queryChanges.length ? <ul className="flex flex-col gap-2">{report.comparison.queryChanges.slice(0, 10).map((change) => <li key={`${change.provider}:${change.query}:${change.location ?? ""}`} className="rounded-lg bg-surface-2 p-3"><p className="text-sm font-medium text-ink">{change.query}</p><p className="mt-1 text-xs text-ink-3">{change.provider.replaceAll("_", " ")}{change.location ? ` · ${change.location}` : ""}</p><dl className="mt-2 grid gap-2 text-xs sm:grid-cols-3"><div><dt className="text-ink-3">Prior mention rate</dt><dd className="text-ink-2">{percentValue(change.baseline?.brandMentions.rate)}</dd></div><div><dt className="text-ink-3">Current mention rate</dt><dd className="text-ink-2">{percentValue(change.current?.brandMentions.rate)}</dd></div><div><dt className="text-ink-3">Observed change</dt><dd className="text-ink-2">{pointChange(change.brandMentionRateChange)}</dd></div></dl></li>)}</ul> : <p className="text-sm text-ink-3">No question has labeled answers in both periods yet.</p>}{report.comparison.truncated ? <p className="text-xs text-ink-3">Latest samples only.</p> : null}</CardContent></Card> : null}
+        {report.comparison ? <Card><CardContent className="flex flex-col gap-3"><div><h3 className="text-sm font-semibold text-ink">Observed period comparison</h3><p className="mt-1 text-sm text-ink-3">Prior {report.windowDays}-day sample: {report.comparison.baselineObservationCount}; current sample: {report.comparison.currentObservationCount}. Shows change, not its cause.</p></div>{report.comparison.queryChanges.length ? <ul className="flex flex-col gap-2">{report.comparison.queryChanges.slice(0, 10).map((change) => <li key={`${change.provider}:${change.query}:${change.location ?? ""}`} className="rounded-lg bg-surface-2 p-3"><p className="text-sm font-medium text-ink">{change.query}</p><p className="mt-1 text-xs text-ink-3">{change.provider.replaceAll("_", " ")}{change.location ? ` · ${change.location}` : ""}</p><dl className="mt-2 grid gap-2 text-xs sm:grid-cols-3"><div><dt className="text-ink-3">Prior mention rate</dt><dd className="text-ink-2">{percentValue(change.baseline?.brandMentions.rate)}</dd></div><div><dt className="text-ink-3">Current mention rate</dt><dd className="text-ink-2">{percentValue(change.current?.brandMentions.rate)}</dd></div><div><dt className="text-ink-3">Mention rate change</dt><dd className="text-ink-2">{pointChange(change.brandMentionRateChange)}</dd></div><div><dt className="text-ink-3">Own-site citation rate change</dt><dd className="text-ink-2">{pointChange(change.firstPartyCitationRateChange)}</dd></div></dl></li>)}</ul> : <p className="text-sm text-ink-3">No question has labeled answers in both periods yet.</p>}{report.comparison.truncated ? <p className="text-xs text-ink-3">Latest samples only.</p> : null}</CardContent></Card> : null}
         <AiVisibilityGapList items={visibilityGaps} searchConsoleStatus={!searchConsole ? "not_connected" : matchedProperty ? "matched" : "property_mismatch"} searchConsoleWindow={matchedProperty && searchConsole ? `${searchConsole.startDate} to ${searchConsole.endDate}` : null} />
         <div className="flex flex-col gap-2">{report.observations.slice(0, 10).map((item) => <Card key={item.id}><CardContent className="flex flex-col gap-2"><div className="flex flex-wrap justify-between gap-2"><span className="text-xs font-medium text-ink">{item.provider.replaceAll("_", " ")} · {item.answerStatus.replaceAll("_", " ")}</span><span className="text-xs text-ink-3">{relativeTime(item.checkedAt)}</span></div><p className="text-sm text-ink">{item.query}</p><p className="text-xs text-ink-3">Business mentioned: {item.brandMention}{item.citedUrls.length ? ` · Cited pages: ${item.citedUrls.length}` : " · No citation recorded"}</p><div className="flex flex-wrap gap-x-3 gap-y-1">{item.citedUrls.map((url) => <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="break-all text-xs text-ink-3 underline underline-offset-2">{url}</a>)}</div></CardContent></Card>)}</div>
       </>}

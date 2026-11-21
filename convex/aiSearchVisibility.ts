@@ -153,6 +153,49 @@ export const listPanels = query({
   },
 });
 
+/** The schedule is a checklist for the owner. Changing it starts a new series of windows. */
+export const setRepeatChecks = mutation({
+  args: { slug: v.string(), panelId: v.id("aiSearchPanels"), days: v.union(v.null(), v.literal(7), v.literal(30)) },
+  handler: async (ctx, { slug, panelId, days }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const panel = await ctx.db.get(panelId);
+    if (!panel || panel.orgId !== org._id) throw appError("NOT_FOUND", "Question panel not found.");
+    if (panel.status !== "active") throw appError("INVALID", "Choose an active question panel.");
+    if ((panel.repeatChecks?.days ?? null) === days) return;
+    await ctx.db.patch(panelId, { repeatChecks: days ? { days, startedAt: Date.now() } : undefined });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "ai_search.repeat_checks_changed", subjectType: "business", subjectId: String(panelId), summary: days ? `Repeat manual checks every ${days} days.` : "Stopped repeat checks." });
+  },
+});
+
+export const repeatChecklist = query({
+  args: { slug: v.string(), panelId: v.id("aiSearchPanels"), period: v.number() },
+  handler: async (ctx, { slug, panelId, period }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const panel = await ctx.db.get(panelId);
+    if (!panel || panel.orgId !== org._id) throw appError("NOT_FOUND", "Question panel not found.");
+    if (!panel.repeatChecks || panel.status !== "active") return null;
+    const { days, startedAt } = panel.repeatChecks;
+    const interval = days * 86_400_000;
+    const now = Date.now();
+    if (!Number.isSafeInteger(period) || period < 0) throw appError("INVALID", "Invalid check period.");
+    const index = Math.min(period, Math.max(0, Math.floor((now - startedAt) / interval)));
+    const from = startedAt + index * interval;
+    const until = from + interval;
+    const rows = await Promise.all(panel.queries.map(async question => {
+      const latest = (start: number, end: number) => ctx.db.query("aiSearchObservations")
+        .withIndex("by_panel_question_checked", q => q.eq("orgId", org._id).eq("panelId", panelId)
+          .eq("panelQueryKey", question.key).gte("checkedAt", start).lt("checkedAt", end))
+        .order("desc").first();
+      const [current, previous] = await Promise.all([
+        latest(from, Math.min(now + 1, until)),
+        index > 0 ? latest(from - interval, from) : null,
+      ]);
+      return { ...question, current: current?.answerStatus ?? null, previous: previous?.answerStatus ?? null };
+    }));
+    return { from, until, hasPrevious: index > 0, rows };
+  },
+});
+
 /** Record one owner-observed answer. ClimbOS does not claim direct AI-search provider access. */
 export const recordObservation = mutation({
   args: {
@@ -314,20 +357,18 @@ export const report = query({
         .withIndex("by_org_changed", (q) => q.eq("orgId", org._id).gte("changedAt", comparisonSince).lt("changedAt", now + 1))
         .order("desc")
         .take(100);
-    const fetched = panelId
-      ? await ctx.db.query("aiSearchObservations")
-        .withIndex("by_org_panel_checked", (q) => q.eq("orgId", org._id).eq("panelId", panelId).gte("checkedAt", comparisonSince).lt("checkedAt", now + 1))
-        .order("desc")
-        .take(MAX_OBSERVATIONS * (compareToPreviousWindow ? 2 : 1) + 1)
-      : await ctx.db.query("aiSearchObservations")
-        .withIndex("by_org_checked", (q) => q.eq("orgId", org._id).gte("checkedAt", comparisonSince).lt("checkedAt", now + 1))
-        .order("desc")
-        .take(MAX_OBSERVATIONS * (compareToPreviousWindow ? 2 : 1) + 1);
-    const currentFetched = fetched.filter((observation) => observation.checkedAt >= currentSince);
-    const baselineFetched = fetched.filter((observation) => observation.checkedAt < currentSince);
+    // Each window needs its own limit. High activity today must not hide the prior period.
+    const readWindow = (from: number, until: number) => (panelId
+      ? ctx.db.query("aiSearchObservations").withIndex("by_org_panel_checked", q => q.eq("orgId", org._id).eq("panelId", panelId).gte("checkedAt", from).lt("checkedAt", until))
+      : ctx.db.query("aiSearchObservations").withIndex("by_org_checked", q => q.eq("orgId", org._id).gte("checkedAt", from).lt("checkedAt", until)))
+      .order("desc").take(MAX_OBSERVATIONS + 1);
+    const [currentFetched, baselineFetched] = await Promise.all([
+      readWindow(currentSince, now + 1),
+      compareToPreviousWindow ? readWindow(comparisonSince, currentSince) : [],
+    ]);
     const currentTruncated = currentFetched.length > MAX_OBSERVATIONS;
     const baselineTruncated = baselineFetched.length > MAX_OBSERVATIONS;
-    const truncated = currentTruncated || baselineTruncated || fetched.length > MAX_OBSERVATIONS * (compareToPreviousWindow ? 2 : 1);
+    const truncated = currentTruncated || baselineTruncated;
     const observations = currentFetched.slice(0, MAX_OBSERVATIONS);
     const baselineObservations = compareToPreviousWindow ? baselineFetched.slice(0, MAX_OBSERVATIONS) : [];
     const summary = summarizeAiSearchVisibility(observations as AiSearchObservation[], business?.website);
@@ -362,7 +403,7 @@ export const report = query({
       windowDays,
       observationCount: observations.length,
       truncated,
-      panel: panel ? { id: panel._id, name: panel.name, status: panel.status, queryCount: panel.queries.length, queries: panelQueries } : null,
+      panel: panel ? { id: panel._id, name: panel.name, status: panel.status, repeatChecks: panel.repeatChecks ?? null, queryCount: panel.queries.length, queries: panelQueries } : null,
       summary,
       panelSummary,
       accuracy,
