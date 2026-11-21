@@ -1,6 +1,7 @@
 import { recordedEmailReadiness } from "./lib/emailReadiness";
 import { activeBusinessFacts } from "./lib/businessFacts";
 import { planningEmailAudience } from "./lib/marketingAudience";
+import type { PageReadEvidence } from "../shared/ai/types";
 import { focusedResearchNotes } from "./lib/focusedResearch";
 import { customerVoice } from "./lib/customerVoice";
 import { customerVoiceBrief } from "../shared/reviews/voiceThemes";
@@ -318,16 +319,22 @@ export const jobContext = internalQuery({
         }
       }
     } catch { /* Older jobs have no conversational intake snapshot. */ }
-    let focusedResearch: { notes: string; sources: { url: string; title?: string }[]; retrievedAt?: number } | null = null;
+    let focusedResearch: { pageReads?: PageReadEvidence[]; notes: string; sources: { url: string; title?: string }[]; retrievedAt?: number } | null = null;
     if (run.kind === "strategy" && (run.input.includes('"planStyle":"focused"') || run.input.includes('"planStyle":"starter"'))) {
       const starter = run.input.includes('"planStyle":"starter"');
       const cached = await ctx.db.query("researchCache").withIndex("by_org_created", (q) => q.eq("orgId", org._id)).order("desc").take(4);
       const fresh = cached.filter((row) => row.expiresAt > Date.now() && row.businessWebsite === business?.website && Boolean(row.businessWebsite) && ["business_insights", "growth_plays", "growth_strategy", ...(starter ? ["business_profile"] : [])].includes(row.agentId)).slice(0, 2);
       const pages = business ? (await ctx.db.query("factSources").withIndex("by_business", (q) => q.eq("businessId", business._id)).order("desc").take(20)).filter((page) => page.kind === "website" && page.status === "ok" && page.expiresAt > Date.now() && page.url && sameWebsiteHost(page.url, business.website)) : [];
       const sources = [...new Map([...pages.map((page) => ({ url: page.url!, title: page.title })), ...fresh.flatMap((row) => row.sources)].map((source) => [source.url, source])).values()].slice(0, 50);
-      if (sources.length && (starter || fresh.length)) focusedResearch = { notes: focusedResearchNotes(pages, fresh), sources, retrievedAt: fresh[0]?.retrievedAt ?? pages[0]?.fetchedAt };
+      if (sources.length && (starter || fresh.length)) {
+        const reads = pages.flatMap(page => page.url && page.excerpt ? [{ url: page.url, text: page.excerpt, retrievedAt: page.fetchedAt }] : []);
+        focusedResearch = {
+          notes: focusedResearchNotes(pages, fresh), sources, retrievedAt: fresh[0]?.retrievedAt ?? pages[0]?.fetchedAt,
+          pageReads: boundedPageReads([...reads, ...fresh.flatMap(row => row.pageReads ?? [])], sources, Date.now()),
+        };
+      }
     }
-    if (intakeBrief && intakeSources.length) focusedResearch = { notes: `${focusedResearch?.notes ?? ""}\n\nDISCOVERY WEBSITE READS (public-source claims; private owner answers are separately labeled in the business brief):\n${intakeSources.map(source => `${source.url}\n${source.excerpt ?? ""}`).join("\n\n")}`.slice(0, 30000), sources: [...new Map([...(focusedResearch?.sources ?? []), ...intakeSources.map(({ url, title }) => ({ url, title }))].map(s => [s.url, s])).values()], retrievedAt: focusedResearch?.retrievedAt ?? run.createdAt };
+    if (intakeBrief && intakeSources.length) focusedResearch = { ...focusedResearch, notes: `${focusedResearch?.notes ?? ""}\n\nDISCOVERY WEBSITE READS (public-source claims; private owner answers are separately labeled in the business brief):\n${intakeSources.map(source => `${source.url}\n${source.excerpt ?? ""}`).join("\n\n")}`.slice(0, 30000), sources: [...new Map([...(focusedResearch?.sources ?? []), ...intakeSources.map(({ url, title }) => ({ url, title }))].map(s => [s.url, s])).values()], retrievedAt: focusedResearch?.retrievedAt ?? run.createdAt };
     let preparedStepWork = "";
     try {
       const captured = JSON.parse(JSON.parse(run.input).preparationSnapshot ?? "null");

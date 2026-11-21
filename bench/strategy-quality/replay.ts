@@ -32,7 +32,14 @@ export function replayFocusedStrategy(record: unknown) {
     const savedReviewValidation = critique.success
       ? { status: "rechecked" as const, assessment: assess(critique.data, issues, spec.rubric, output.data, input as AgentInput), limitation: "Uses the retained critic's judgments, not a new independent assessment." }
       : { status: "uncheckable" as const, reason: "Saved review is missing fields required by the current review contract." };
-    return { ...context, status: issues.some(i => i.severity === "error") ? "lint_failed" as const : "contract_passed" as const, issues, savedReviewValidation };
+    if (issues.some(issue => issue.severity === "error")) return { ...context, status: "lint_failed" as const, issues, savedReviewValidation };
+    if (savedReviewValidation.status === "rechecked" && !savedReviewValidation.assessment.ship) {
+      return { ...context, status: "review_failed" as const, issues, savedReviewValidation };
+    }
+    if (savedReviewValidation.status === "uncheckable" && z.object({ ship: z.literal(false) }).safeParse(result.assessment).success) {
+      return { ...context, status: "historical_review_failed" as const, issues, savedReviewValidation };
+    }
+    return { ...context, status: "contract_passed" as const, issues, savedReviewValidation };
   } catch (error) {
     return { ...context, status: "uncheckable" as const, reason: `Saved context cannot be evaluated: ${error instanceof Error ? error.message : "invalid context"}` };
   }

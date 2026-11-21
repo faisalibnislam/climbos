@@ -112,7 +112,7 @@ Read `AGENTS.md`, `README.md`, `docs/Claude-Code-Handoff.md` (top entries), `doc
 
 ## 9. Current state (as of 2026-11-21)
 
-The Visibility page now supports opt-in repeat checklists and independently sampled citation comparisons. See the [execution record](docs/growth-engine/remaining-work-execution-2026-11-19.md) for coverage and limits. The handoff and ignore rules were committed in `8ebe0d93`.
+Focused strategy review checks subscription eligibility quotes against the cited page read or labeled business fact. Offline replay preserves historical review failures. The Visibility page now supports opt-in repeat checklists and independently sampled citation comparisons. See the [execution record](docs/growth-engine/remaining-work-execution-2026-11-19.md) for coverage and limits. The handoff and ignore rules were committed in `8ebe0d93`.
 
 **Earlier branch inventory (19 November):**
 - Unpushed: local `main` is 3 commits ahead of `origin/main` (merge of "AI-led onboarding, focused plans and local quality evaluation"); `growth-engine-v2` is 2 ahead of its remote. Both are already contained in the pushed `codex/trend-evidence-freshness`.
@@ -129,7 +129,7 @@ The Visibility page now supports opt-in repeat checklists and independently samp
 ## 10. Next steps / open work
 
 1. Get the owner's decision on shipping: merge `codex/trend-evidence-freshness` into main (deploy Convex first with `npx convex deploy -y`, then push main) or keep developing on the branch. Do not do this without explicit approval.
-2. Continue the requirement gaps listed as partial/unverified in `docs/growth-engine/requirements-reconciliation-2026-11-18.md` and `requirements-scope-2026-11-18.md` (strategy quality for Livoform, healthcare and retail cases; lifecycle telemetry; email/semantic consistency).
+2. Continue the requirement gaps listed as partial/unverified in `docs/growth-engine/requirements-reconciliation-2026-11-18.md` and `requirements-scope-2026-11-18.md` (independent strategy acceptance for Livoform, healthcare and retail cases after page-bound plan review; lifecycle telemetry; email/semantic consistency).
 3. Paid evaluation is paused at $99.063401 of the $100 cap; any further paid testing needs a new owner budget.
 4. Creative research library: 27 of 100 precedent records lack an outcome source; fill only with verifiable sources.
 5. From `docs/ProductRoadmap.md` (older, 2026-10-18): asset library (#13), Google Business Profile API for reviews, auto top-up via Polar.
@@ -151,6 +151,8 @@ The Visibility page now supports opt-in repeat checklists and independently samp
 - The repo lives on the external Corsair drive (`~/Documents/GitHub/Airly Studio` is a symlink). Large ignored folders (`bench/cache`, reference books) will not come with a clone.
 
 ## 12. Change log
+
+- 2026-11-21 — Bound plan eligibility reviews to actual page excerpts and corrected offline replay verdicts.
 
 - 2026-11-21 — Added manual AI-search check schedules, missed-check reporting and protected the comparison baseline on busy panels.
 

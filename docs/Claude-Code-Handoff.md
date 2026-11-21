@@ -1,5 +1,8 @@
 # ClimbOS development handoff for Claude Code
 
+**21 November — focused strategy evidence.** Plan eligibility reviews now check the quoted text against the cited page read. A cached summary alone leaves the entitlement unknown. Replaying the 84 historical evaluations found eight previously failed reviews among the records that passed output lint. No new paid evaluation was performed. [Verification](growth-engine/remaining-work-execution-2026-11-19.md).
+
+
 **21 November — repeat AI-search checks.** In Visibility, select a saved question panel and choose a 7- or 30-day interval. Owners can inspect due checks, missed checks and failed attempts. Viewers can inspect panels. Each reporting period gets its own sample limit and the comparison shows the observed change in own-site citation rate. Checks require owner-entered observations. [Verification](growth-engine/remaining-work-execution-2026-11-19.md).
 
 

@@ -798,16 +798,16 @@ it("blocks an invented price whose digits occur inside a real price despite pass
 });
 
 
-it.each(["unsupported", "supported", "unbound"])("enforces source-bound product-plan reasoning through persistence and approval: %s", async mode => {
-  const { t, owner, slug, orgId } = await workspace(); state.planEligibilityMode = mode;
-  await t.mutation(internal.engine.putResearchCache, { orgId, businessWebsite: "https://business.example/", cacheKey: "b".repeat(64), agentId: "business_insights", modelKey: "claude-haiku-5.5", notes: "Synthetic published eligibility: Core has no built-in AI. Pro and Business support AI drafting from a brief.", sources: [{ url: "https://business.example/plans" }], expiresAt: Date.now() + 86400000 });
+it.each(["unsupported", "supported", "unbound", "summary_only"])("enforces source-bound product-plan reasoning through persistence and approval: %s", async mode => {
+  const { t, owner, slug, orgId } = await workspace(); state.planEligibilityMode = mode === "summary_only" ? "supported" : mode;
+  await t.mutation(internal.engine.putResearchCache, { orgId, businessWebsite: "https://business.example/", cacheKey: "b".repeat(64), agentId: "business_insights", modelKey: "claude-haiku-5.5", notes: "Synthetic published eligibility: Core has no built-in AI. Pro and Business support AI drafting from a brief.", sources: [{ url: "https://business.example/plans" }], pageReads: mode === "summary_only" ? [] : [{ url: "https://business.example/plans", retrievedAt: Date.now(), text: "Synthetic published eligibility: Core has no built-in AI. Pro and Business support AI drafting from a brief." }], expiresAt: Date.now() + 86400000 });
   await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
   await t.finishAllScheduledFunctions(() => undefined);
   const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
   expect(plan.expert?.quality?.agents[0].average).toBe(5);
   expect(plan.expert?.quality?.state).toBe(mode === "supported" ? "passed" : "failed");
   if (mode !== "supported") {
-    expect(plan.expert?.quality?.fixes).toContainEqual(expect.objectContaining({ rule: mode === "unbound" ? "review_scores" : "invented_fact" }));
+    expect(plan.expert?.quality?.fixes).toContainEqual(expect.objectContaining({ rule: mode === "unsupported" ? "invented_fact" : "review_scores" }));
     await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
     await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: plan._id, playId: "focused" })).rejects.toThrow();
   }

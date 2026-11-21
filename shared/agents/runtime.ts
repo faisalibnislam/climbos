@@ -410,7 +410,7 @@ export async function runResearch<T>(spec: AgentSpec<T>, input: AgentInput, deps
     };
     const result = await deps.turn(req);
     if (!result.ok) failure(result);
-      const value = { notes: reportDropped(`${spec.id} research`, fitText(String(result.output), RESEARCH_NOTES_CHARS, "research notes")), sources: result.sources.slice(0, 50).map((s) => ({ url: s.url, title: s.title, ...(s.productPitchPolicy ? { productPitchPolicy: s.productPitchPolicy } : {}), ...(s.pageReportedDates?.length ? { pageReportedDates: s.pageReportedDates } : {}) })), retrievedAt: Date.now(), ...(spec.id === "business_insights" ? { pageReads: boundedPageReads(result.pageReads, result.sources, Date.now()) } : {}) };
+      const value = { notes: reportDropped(`${spec.id} research`, fitText(String(result.output), RESEARCH_NOTES_CHARS, "research notes")), sources: result.sources.slice(0, 50).map((s) => ({ url: s.url, title: s.title, ...(s.productPitchPolicy ? { productPitchPolicy: s.productPitchPolicy } : {}), ...(s.pageReportedDates?.length ? { pageReportedDates: s.pageReportedDates } : {}) })), retrievedAt: Date.now(), ...(spec.id === "business_insights" || spec.rubric.id === FOCUSED_REVIEW_ID ? { pageReads: boundedPageReads(result.pageReads, result.sources, Date.now()) } : {}) };
       if (cacheKey && deps.researchCache && value.sources.length > 0) {
         const ttl = Math.max(1_000, Math.min(r.cacheTtlMs ?? 0, 24 * 60 * 60_000));
         try {

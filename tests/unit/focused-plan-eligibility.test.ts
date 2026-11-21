@@ -9,7 +9,7 @@ const url = "https://livoform.com/help/ai-credits";
 const aiQuote = "Core has no Livoform AI allowance or use for credits.";
 const briefQuote = "Pro/Business can build forms from a brief, uploaded document or existing form.";
 const input: AgentInput = { task: "Check a proposed workflow", brief: "Account access and founder time are unknown", facts: [],
-  precomputedResearch: { notes: `${url}\n${aiQuote}\n${briefQuote}`, sources: [{ url }], retrievedAt: Date.parse("2026-11-18T00:00:00Z") } };
+  precomputedResearch: { notes: `${url}\n${aiQuote}\n${briefQuote}`, sources: [{ url }], pageReads: [{ url, text: `${aiQuote}\n${briefQuote}`, retrievedAt: Date.parse("2026-11-17T00:00:00Z") }], retrievedAt: Date.parse("2026-11-18T00:00:00Z") } };
 const rubric: Rubric = { id: "focused-growth-strategy", title: "Eligibility regression", gates: [{ id: "G1", text: "Truth" }], criteria: [{ id: "F2", name: "Economics", anchors: { 1: "Weak", 3: "Partial", 5: "Ready" } }], shipRule: { minEach: 4, minAverage: 4 } };
 const output = { task: "If Core or Pro access exists, check AI drafting from a brief." };
 const check = (): PlanCheck => ({ path: "task", quote: output.task, claimedPlans: ["Core", "Pro"], availabilityClaim: "asserted_available",
@@ -24,6 +24,16 @@ describe("source-bound product-plan reasoning", () => {
     const result = assess(review(check()), [], rubric, output, input);
     expect(result.ship).toBe(false);
     expect(result.lint).toContainEqual(expect.objectContaining({ rule: "invented_fact", path: "task", message: expect.stringContaining("Core") }));
+  });
+  it("rejects an actual quote attributed to a different listed page, or only to an AI summary", () => {
+    const draft = { task: "If Pro access exists, check AI drafting from a brief." };
+    const other = "https://example.com/plans";
+    const row = { ...check(), quote: draft.task, claimedPlans: ["Pro"] };
+    const research = { ...input.precomputedResearch!, sources: [{ url }, { url: other }] };
+    row.requirements[0].evidenceRef = other;
+    expect(assess(review(row), [], rubric, draft, { ...input, precomputedResearch: research }).ship).toBe(false);
+    row.requirements[0].evidenceRef = url;
+    expect(assess(review(row), [], rubric, draft, { ...input, precomputedResearch: { ...research, pageReads: [] } }).ship).toBe(false);
   });
   it("allows the source-supported Pro branch without asserting account access or tested behavior", () => {
     const draft = { task: "If Pro access exists, check AI drafting from a brief." }, row = { ...check(), quote: draft.task, claimedPlans: ["Pro"] };

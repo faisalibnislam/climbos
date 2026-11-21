@@ -17,3 +17,11 @@ Do not mark a broad area complete solely from a green test suite. Preserve genui
 ### 21 November verification
 
 `pnpm exec vitest run tests/convex/ai-search-visibility.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts` passed 23 tests in three files. Covered boundary timestamps, previously missed questions, failed attempts, new and disabled schedules, idempotent settings, independent period limits and workspace permissions. Both TypeScript projects and ESLint on the changed code passed. No provider collection or live workspace verification.
+
+### Strategy evidence and offline replay, 21 November
+
+Reproduced a false strategy approval when a product-plan quotation occurred in combined notes but was attributed to a different listed URL. The production reviewer now requires the quote in both visible research and a retained read of that exact page, or in the referenced business fact with its recorded evidence class. The focused runtime and saved research path carry bounded page reads. Missing reads leave eligibility unknown. This checks attribution; interpreting the source still requires review.
+
+The offline checker previously reported an output contract pass for a saved failed review. It now distinguishes failures from a currently checkable retained review and failures preserved from older reviews. Of 84 existing records, 38 lacked enough information for replay, 22 failed the current schema, 16 failed output lint, and eight passed output lint but retained failed historical reviews. Replay returned its expected nonzero verification status. These are historical records, including earlier contract versions. The latest saved Livoform agency case still fails, and the engine's fresh generation quality remains unknown.
+
+196 local regressions passed across ten suites: offline strategy replay, focused plan eligibility, section revisions, research notes, evidence review, originality review, research cache, persisted focused plans, plan approval and tenant permissions. Type checks passed. The runtime model, paid cap and action permissions were unchanged.

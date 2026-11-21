@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { replayFocusedStrategy } from "../../bench/strategy-quality/replay";
+import { focusedOriginalityFixture } from "../fixtures/focusedOriginality";
 import { focusedPlanFixture } from "../fixtures/focusedPlan";
 import { campaignTimingFixture, timingContextFixture } from "../fixtures/campaignTiming";
 
@@ -26,6 +27,22 @@ describe("saved strategy contract replay", () => {
     expect(report).toMatchObject({ historicalAssessment: { average: 4, ship: true }, editorialReview: "not_assessed", modelCalls: 0, externalActions: 0, savedReviewValidation: { status: "uncheckable" } });
     expect(record).toEqual(original);
     expect(network).not.toHaveBeenCalled();
+  });
+  it("does not label a retained failed assessment as a pass when the old review cannot be rechecked", () => {
+    const record = saved();
+    record.result.assessment.ship = false;
+    expect(replayFocusedStrategy(record)).toMatchObject({ status: "historical_review_failed", savedReviewValidation: { status: "uncheckable" } });
+  });
+  it("propagates a rejected rechecked review even when the saved output passes lint", () => {
+    const record = saved();
+    const critique = { originalityAudit: focusedOriginalityFixture, strengths: [], fixes: [], gates: [], scores: [],
+      escalation: { reason: "none", evidence: "" }, evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map(category => ({
+        category, basis: "Synthetic review", claims: [], planChecks: [], measurementChecks: [],
+      })),
+    };
+    expect(replayFocusedStrategy({ ...record, result: { ...record.result, assessment: { ship: true, critique } } })).toMatchObject({
+      status: "review_failed", savedReviewValidation: { status: "rechecked", assessment: { ship: false } }, modelCalls: 0,
+    });
   });
   it("refuses to reconstruct missing historical clocks or inputs", () => {
     const record = saved();

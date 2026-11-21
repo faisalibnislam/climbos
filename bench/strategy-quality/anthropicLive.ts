@@ -1,3 +1,4 @@
+import { boundedPageReads } from "../../shared/agents/provenance";
 import { lookup } from "node:dns/promises";
 /** Owner-authorized real-business evaluation. Production agents; no fake LLM or external writes. */
 import { existsSync, mkdirSync, readFileSync, writeFileSync, openSync, closeSync, unlinkSync, readdirSync, renameSync } from "node:fs";
@@ -238,6 +239,11 @@ try {
     if (!Array.isArray(pack) || pack.length < 1 || pack.length > 12 || pack.some((source: {url?: string;text?: string}) => !source.url?.startsWith("https://") || typeof source.text !== "string" || source.text.length > 12000) || !pack.some((source: {url: string}) => new URL(source.url).hostname === new URL(c.website).hostname)) throw new Error("Invalid curated public evidence.");
     sources = pack;
     input = {...input,availableSourceUrls:sources.map(source=>source.url),precomputedResearch:{notes:researchNotes(sources,c.website),sources:sources.map(({url,title,productPitchPolicy}: {url:string;title?:string;productPitchPolicy?:{status:"refused";evidence:string}})=>({url,title,...(productPitchPolicy?{productPitchPolicy}:{})}))}};
+  }
+  // Preserve old comparisons exactly. Only captured HTTP responses can back a page quote.
+  if (!evidenceFrom && input.precomputedResearch) {
+    const captured = evidence(id).map(page => ({ url: page.url, text: page.text, retrievedAt: Date.parse(page.accessedAt) }));
+    input.precomputedResearch.pageReads = boundedPageReads(captured, input.precomputedResearch.sources, Date.now());
   }
   writeFileSync(resolve(out, `${id}-${variant}-evidence.json`), JSON.stringify({ ...c, sources, limitations: input.brief }, null, 2));
   if (values["reference-plan"]) {
