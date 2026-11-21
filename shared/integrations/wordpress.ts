@@ -21,6 +21,11 @@ export function normalizeWordPressSiteUrl(raw: string): string | null {
   return `${url.origin}${path}`;
 }
 
+/** Older articles can have only an internal name. Always show the exact draft title before confirmation. */
+export function wordpressPageTitle(headline: string | null | undefined, internalName: string) {
+  return headline?.trim() || internalName;
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/&/gu, "&amp;").replace(/</gu, "&lt;").replace(/>/gu, "&gt;").replace(/"/gu, "&quot;").replace(/'/gu, "&#39;");
 }

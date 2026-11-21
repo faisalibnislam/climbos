@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+**21 November — WordPress fixtures.** The blog article’s Publishing section supports source-copy capture, proposal review, preview and recovery inside ClimbOS. Separate private-draft handoff checks exact content and destination, with at most one worker per attempt. The owner authorized local WordPress fixtures only. [Checks, commands and limitations](growth-engine/remaining-work-execution-2026-11-19.md#wordpress-page-copy-and-draft-verification-21-november).
+
 **21 November — local conversation capture.** The existing transcript form can capture microphone audio for local playback/download and separately prepare text with an available on-device recognizer. The owner reviews and explicitly saves the transcript. Desktop/mobile checks used generated audio and simulated recognition. [Coverage and device limits](growth-engine/remaining-work-execution-2026-11-19.md).
 
 

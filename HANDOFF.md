@@ -112,6 +112,8 @@ Read `AGENTS.md`, `README.md`, `docs/Claude-Code-Handoff.md` (top entries), `doc
 
 ## 9. Current state (as of 2026-11-21)
 
+Blog articles support a private WordPress page-copy rehearsal. The owner can save original copy, edit a proposal, preview at 390 and 1280 pixels, approve it for the rehearsal, and recover the original. The separate private-draft connector now binds the exact reviewed title, body version, approval and destination, and checks the raw saved body. Verified using local fixtures only.
+
 All 100 creative cases now cite a source for a reported outcome. In 51 cases the source is the organization or a participant. A disposable Convex recovery drill verified a restored workspace, exact transcript text and tenant isolation. Run `python3 scripts/rehearse-local-restore.py` with local ports 3330 and 3331 free. Customer progress supports local microphone recordings and optional device-only transcription. The Customer progress page also surfaces recurring conversation topics from permissioned transcripts, with source links. Focused strategy review checks subscription eligibility quotes against the cited page read or labeled business fact. Offline replay preserves historical review failures. The Visibility page now supports opt-in repeat checklists and independently sampled citation comparisons. See the [execution record](docs/growth-engine/remaining-work-execution-2026-11-19.md) for coverage and limits. The handoff and ignore rules were committed in `8ebe0d93`.
 
 **Earlier branch inventory (19 November):**
@@ -127,6 +129,8 @@ All 100 creative cases now cite a source for a reported outcome. In 51 cases the
 **Half-done / honest limits (from `docs/growth-engine/requirements-scope-2026-11-18.md`):** saved Livoform plan quality still fails acceptance checks; 2 of 4 synthetic industry cases pass (science, creator; healthcare and retail below the bar); authenticated event intake and exact approved email delivery exist, while live setup and recurring journeys remain open; real provider flows need credentials and platform approvals; schema changes on the branch are additive and undeployed; tester access and founder time unknown.
 
 ## 10. Next steps / open work
+
+Keep WordPress verification on local fixtures per the owner. A real installation’s theme, plugins and revision history, as well as editing or recovering a live customer page, remain outside this check.
 
 1. Get the owner's decision on shipping: merge `codex/trend-evidence-freshness` into main (deploy Convex first with `npx convex deploy -y`, then push main) or keep developing on the branch. Do not do this without explicit approval.
 2. Continue the requirement gaps listed as partial/unverified in `docs/growth-engine/requirements-reconciliation-2026-11-18.md` and `requirements-scope-2026-11-18.md` (independent strategy acceptance for Livoform, healthcare and retail cases after page-bound plan review; lifecycle telemetry; email/semantic consistency).
@@ -151,6 +155,8 @@ All 100 creative cases now cite a source for a reported outcome. In 51 cases the
 - The repo lives on the external Corsair drive (`~/Documents/GitHub/Airly Studio` is a symlink). Large ignored folders (`bench/cache`, reference books) will not come with a clone.
 
 ## 12. Change log
+
+- 2026-11-21 — Added versioned page-copy rehearsal and recovery to the existing article editor. Fixed stale WordPress confirmations, headline selection, duplicate worker attempts and incomplete read-back verification.
 
 - 2026-11-21 — Added consented browser-local audio capture and optional on-device transcription to the existing deal import.
 

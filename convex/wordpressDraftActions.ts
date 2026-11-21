@@ -75,6 +75,7 @@ function postId(value: unknown): string | null {
 export const createDraft = internalAction({
   args: { operationId: v.id("wordpressDraftOperations") },
   handler: async (ctx, { operationId }) => {
+    if (!await ctx.runMutation(internal.wordpressDrafts.claimAttempt, { operationId })) return;
     let context = await ctx.runQuery(internal.wordpressDrafts.draftContext, { operationId });
     if (!context || context.operation.status !== "pending") return;
     if (!context.safe) {
@@ -117,6 +118,8 @@ export const createDraft = internalAction({
     const root = new URL(siteUrl);
     const endpoint = new URL(`${root.pathname.replace(/\/+$/u, "")}/wp-json/wp/v2/posts`, root.origin);
     const headers = { Accept: "application/json", "Content-Type": "application/json", Authorization: authorization(username, password), "User-Agent": "ClimbOS/1.0 WordPress draft connector" };
+    const content = wordpressArticleHtml(context.version.body);
+    const title = context.operation.reviewedTitle;
     let created: Response;
     try {
       created = await wordpressPinnedFetch(endpoint.toString(), {
@@ -124,7 +127,7 @@ export const createDraft = internalAction({
         redirect: "manual",
         headers,
         signal: AbortSignal.timeout(12_000),
-        body: JSON.stringify({ title: context.artifact.title.slice(0, 200), content: wordpressArticleHtml(context.version.body), status: "draft" }),
+        body: JSON.stringify({ title, content, status: "draft" }),
       }, addresses);
     } catch {
       await ctx.runMutation(internal.wordpressDrafts.finishDraft, { operationId, status: "uncertain", summary: "WordPress did not confirm the request outcome. Check the site's Drafts before trying again." });
@@ -146,18 +149,19 @@ export const createDraft = internalAction({
     }
     const readbackUrl = new URL(`${root.pathname.replace(/\/+$/u, "")}/wp-json/wp/v2/posts/${externalPostId}`, root.origin);
     readbackUrl.searchParams.set("context", "edit");
-    readbackUrl.searchParams.set("_fields", "id,status,title");
+    readbackUrl.searchParams.set("_fields", "id,status,title.raw,content.raw");
     try {
       const readback = await wordpressPinnedFetch(readbackUrl.toString(), { method: "GET", redirect: "manual", headers, signal: AbortSignal.timeout(8_000) }, addresses);
       const saved = readback.status === 200 ? await boundedJson(readback) : null;
       const savedTitle = saved?.title && typeof saved.title === "object" && !Array.isArray(saved.title)
         ? (saved.title as Record<string, unknown>).raw
         : typeof saved?.title === "string" ? saved.title : null;
-      if (!saved || postId(saved.id) !== externalPostId || saved.status !== "draft" || savedTitle !== context.artifact.title.slice(0, 200)) {
+      const savedBody = saved?.content && typeof saved.content === "object" ? (saved.content as Record<string, unknown>).raw : null;
+      if (!saved || postId(saved.id) !== externalPostId || saved.status !== "draft" || savedTitle !== title || savedBody !== content) {
         await ctx.runMutation(internal.wordpressDrafts.finishDraft, { operationId, status: "uncertain", externalPostId, summary: "WordPress accepted the request, but read-back could not confirm the saved draft. Check WordPress before trying again." });
         return;
       }
-      await ctx.runMutation(internal.wordpressDrafts.finishDraft, { operationId, status: "verified", externalPostId, summary: "Created a private WordPress draft and confirmed its saved draft status." });
+      await ctx.runMutation(internal.wordpressDrafts.finishDraft, { operationId, status: "verified", externalPostId, summary: "Verified the saved WordPress draft’s title, content and private draft status." });
     } catch {
       await ctx.runMutation(internal.wordpressDrafts.finishDraft, { operationId, status: "uncertain", externalPostId, summary: "WordPress accepted the request, but read-back failed. Check WordPress before trying again." });
     }

@@ -1,3 +1,4 @@
+import { wordpressPageTitle } from "../shared/integrations/wordpress";
 import { namedSocialChannels, isSocialChannel, type SocialChannel } from "../shared/growth/socialChannels";
 import { paginationOptsValidator } from "convex/server";
 import { mergeCalendarItems, type CalendarItem } from "../shared/contentCalendar";
@@ -368,6 +369,8 @@ export const get = query({
       })),
       receipts: receipts.filter(r => r.orgId === org._id).map((r) => ({ id: r._id, provider: r.provider, action: r.action, status: r.status, externalId: r.externalId ?? null, summary: r.summary, createdAt: r.createdAt, resolutionSource: r.resolution?.source ?? (r.summary === "Confirmed by the owner after checking the platform." || r.summary === "Owner checked the platform: it wasn't posted." ? "owner" as const : null), isCurrent: publicationMatchesArtifact(r, a, currentApproval), originalVersion: r.publication?.version ?? null, resolvedAt: r.resolution?.at ?? null, previousSummary: r.resolution?.previousSummary ?? r.providerResult?.summary ?? null })),
       facts,
+      wordpressDraftReview: a.kind === "blog_post" && a.status === "approved" && curVer && a.currentVersionId === versions[0]?._id && a.approvalId && wordpressConnection?.status === "connected" && wordpressConnection.externalAccountId
+        ? { versionId: curVer._id, contentHash: curVer.contentHash, approvalId: a.approvalId, connectionId: wordpressConnection._id, siteUrl: wordpressConnection.externalAccountId, title: wordpressPageTitle(curVer.headline, a.title) } : null,
       wordpressConnection: wordpressConnection?.status === "connected"
         ? { accountLabel: wordpressConnection.accountLabel ?? null, siteUrl: wordpressConnection.externalAccountId ?? null }
         : null,

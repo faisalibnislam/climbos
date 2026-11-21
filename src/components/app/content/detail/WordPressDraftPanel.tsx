@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button, Callout, ConfirmDialog, Spinner, toast } from "@/components/ui";
 import { ErrorCallout } from "../shared";
+import { WordPressPageRehearsal } from "./WordPressPageRehearsal";
 import type { ArtifactView } from "./model";
 
 export function WordPressDraftPanel({ slug, artifact, canCreate }: { slug: string; artifact: ArtifactView; canCreate: boolean }) {
@@ -16,11 +17,13 @@ export function WordPressDraftPanel({ slug, artifact, canCreate }: { slug: strin
   const latest = drafts?.[0];
   const connected = Boolean(artifact.wordpressConnection);
 
+  const reviewed = artifact.wordpressDraftReview;
   async function submit() {
+    if (!reviewed) return;
     setError(null);
     setBusy(true);
     try {
-      const result = await createDraft({ slug, artifactId: artifact.id });
+      const result = await createDraft({ slug, artifactId: artifact.id, reviewed });
       if (result.status === "uncertain") toast({ tone: "info", title: "Check WordPress before retrying", description: result.summary });
       else toast({ tone: "success", title: result.status === "verified" ? "WordPress draft verified" : "WordPress draft request started", description: result.summary });
     } catch (cause) {
@@ -37,6 +40,7 @@ export function WordPressDraftPanel({ slug, artifact, canCreate }: { slug: strin
         <p className="mt-1 text-sm text-ink-2">A private draft of this approved article. Never published by ClimbOS.</p>
       </div>
 
+      <WordPressPageRehearsal slug={slug} artifact={artifact} />
       {!connected ? (
         <Callout tone="info" title="Connect WordPress first">
           <Link className="underline" href={`/app/${slug}/connections`}>Open Connections</Link> to connect it.
@@ -60,15 +64,16 @@ export function WordPressDraftPanel({ slug, artifact, canCreate }: { slug: strin
         </Callout>
       ) : null}
 
-      {connected && canCreate && latest?.status !== "pending" && latest?.status !== "uncertain" ? (
+      {reviewed && canCreate && latest?.status !== "pending" && latest?.status !== "uncertain" ? (
         <ConfirmDialog
+          key={JSON.stringify(reviewed)}
           trigger={<Button variant="primary" disabled={busy} loading={busy} loadingText="Requesting draft…">{latest?.status === "failed" ? "Try again" : "Create WordPress draft"}</Button>}
           title="Create a private WordPress draft?"
-          description={`Sends ${artifact.current?.version ? `v${artifact.current.version}` : "the approved version"} to ${artifact.wordpressConnection?.accountLabel ?? "your site"} as a draft. Not published.`}
+          description={`Sends ${artifact.current?.version ? `v${artifact.current.version}` : "the approved version"} to ${reviewed.siteUrl} as a draft. Not published.`}
           confirmLabel="Create private draft"
           onConfirm={submit}
         >
-          {artifact.current?.headline ? <p className="text-sm text-ink-2">Article: {artifact.current.headline}</p> : null}
+          <p className="text-sm text-ink-2">{reviewed.title}</p>
         </ConfirmDialog>
       ) : null}
       {connected && !canCreate && !latest ? <p className="text-sm text-ink-3">Approve the current version first.</p> : null}
