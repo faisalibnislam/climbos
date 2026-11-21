@@ -1,3 +1,4 @@
+import { focusedPlanFixture } from "../fixtures/focusedPlan";
 import { focusedOriginalityFixture } from "../fixtures/focusedOriginality";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -187,6 +188,17 @@ describe("bounded focused section repairs", () => {
     expect(JSON.stringify(requests[3].messages)).not.toContain("manual capped quote as the control");
     expect(result.output).toEqual({ ...first, ...patch });
     expect(result.assessment?.ship).toBe(true); // synthetic review, not an originality claim
+  });
+  it("allows a bold-only repair while preserving the complete portfolio, evidence and prepared work", () => {
+    const schema = focusedStrategySpec().schema, original = focusedPlanFixture(), before = structuredClone(original);
+    const bold = { ...original.strategyExploration.bold, title: "A client-controlled right to defer one decision" };
+    const sparse = { strategyExploration: { bold } };
+    const merged = mergeFocusedSections(schema, original, sparse);
+    expect(merged).toEqual(schema.parse({ ...original, strategyExploration: { ...original.strategyExploration, bold } }));
+    expect(original).toEqual(before);
+    for (const bad of [{}, { bold: { title: "Fragment" } }, { bold: null }, { inventedMode: bold }, { requestedRange: "balanced" }]) {
+      expect(focusedSectionRevisionSchema(schema).safeParse({ strategyExploration: bad }).success).toBe(false);
+    }
   });
   it("keeps omitted sections, preserves the raw patch and reviews the complete merged draft before accepting it", async () => {
     const patch = { summary: "Audience availability remains unknown." };

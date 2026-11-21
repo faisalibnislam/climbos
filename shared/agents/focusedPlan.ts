@@ -28,12 +28,26 @@ export type PlanStyle = "starter" | "focused" | "detailed";
 /** A repair may omit unchanged sections, never accept unknown keys or skip full-draft validation. */
 export function focusedSectionRevisionSchema<T>(schema: z.ZodType<T>) {
   if (!(schema instanceof z.ZodObject)) throw new Error("Focused section revisions require an object schema.");
-  return z.object(schema.shape).partial().strict().refine(value => Object.keys(value).length > 0, "Return at least one changed section.");
+  const shape = { ...schema.shape };
+  const exploration = shape.strategyExploration;
+  if (exploration instanceof z.ZodObject) {
+    // Each supplied option still uses its complete original schema.
+    shape.strategyExploration = exploration.partial().strict().refine(
+      value => ["grounded", "adjacent", "bold"].some(mode => value[mode] !== undefined),
+      "Include at least one complete changed strategy option.",
+    );
+  }
+  return z.object(shape).partial().strict().refine(value => Object.keys(value).length > 0, "Return at least one changed section.");
 }
 
 export function mergeFocusedSections<T>(schema: z.ZodType<T>, previous: T, patch: unknown): T {
   const checked = focusedSectionRevisionSchema(schema).parse(patch);
-  return schema.parse({ ...previous, ...checked });
+  const changes: Record<string, unknown> = { ...checked };
+  if (schema instanceof z.ZodObject && schema.shape.strategyExploration instanceof z.ZodObject && checked.strategyExploration) {
+    const prior = (previous as { strategyExploration?: object }).strategyExploration;
+    changes.strategyExploration = { ...prior, ...checked.strategyExploration };
+  }
+  return schema.parse({ ...previous, ...changes });
 }
 
 /** These legacy presentation fields are aliases of the focused decision, not additional work. */

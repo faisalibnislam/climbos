@@ -23,3 +23,9 @@ The bold idea proposes an offer an agency could test. Current Livoform support f
 The read-only replay on 47 saved Livoform focused-plan files produced 16 output-check failures, eight retained historical review failures, ten incompatible output schemas and 13 files without sufficient replay context. No file received a new quality pass. The saved agency assessment remains 3.5/5. The excerpts and paired counterfactuals used in regression tests carry controlled reviewer annotations. They do not establish that a fresh model would supply the right annotations.
 
 209 focused strategy, replay, workflow and permission tests passed across ten files. The two TypeScript projects and changed-file lint passed. No new model generation was run.
+
+## Repair one option without rewriting the others
+
+In the saved comparison-v4 revision, grounded and adjacent were identical to the first draft. The repair contract nevertheless required the writer to repeat both. The exploration alone occupied 12,159 serialized characters. Its bold-only replacement took 4,368. Before the fix the smaller patch failed validation. After the fix both patches produced the same fully validated plan from the retained original. These are measured character counts, not measured model cost, latency or quality gains.
+
+During a focused revision, the writer can supply one or more complete changed options. Each option retains its original schema, and every merged plan still goes through full validation and independent review. An empty patch, unknown mode, deletion or a fragment of a bold option is rejected. All other top-level sections retain their existing update rules. A rerun of ten focused strategy and permission suites passed 217 tests.
