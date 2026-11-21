@@ -62,4 +62,22 @@ Verification used local fixtures only:
 - `pnpm exec playwright test e2e/wordpress-page-rehearsal.spec.ts --workers=1` with the isolated local demo environment passed on desktop and mobile. Both sessions used the article editor, checked the preview at 390 and 1280 pixels, reloaded the approval, restored the original, and reopened the previously approved copy. The preview stayed within the selected width and its source links did not navigate. Screenshots are produced with the test results.
 - Both TypeScript projects, scoped ESLint and the patch whitespace check passed.
 
-The browser renders the private copy in a plain template. The connector tests simulate WordPress REST responses. No real WordPress installation, customers, live page change, production theme, plugin, remote revision restoration or business outcome was exercised.
+The browser renders the private copy in a plain template. The connector tests simulate WordPress REST responses. That first test batch used simulated REST responses. The separate core compatibility fixture below covers an actual in-memory installation.
+
+
+### WordPress core compatibility fixture, 21 November
+
+`scripts/rehearse-wordpress.mjs` boots a pinned WordPress 6.8.3 archive with PHP 8.3 and SQLite in memory. The browser sends requests directly to the local request handler and blocks other origins. The fixture uses synthetic copy rendered by the ClimbOS article formatter. It sends that copy to the WordPress REST posts controller, then checks the exact raw title, raw body, ID and draft status. This covers actual WordPress serialization. ClimbOS connector authorization, authentication header construction and destination safeguards have separate tests.
+
+For an existing synthetic page, the fixture captures a native revision before changing it. It renders original, revised and restored content with the bundled Twenty Twenty-Five theme at 390 and 1280 pixels. It checks the heading, body text and viewport width, plus the proposed link destination and focus. WordPress retained the original title and raw body after native restoration. The first run without an explicit baseline did not find a matching revision. No external site or publishing account took part. The app’s rehearsal remains private. Native page update and rollback here are fixture operations, not features exposed on a connected site.
+
+To reproduce from the repository root with Node 24, installed project dependencies and Chromium:
+
+```sh
+fixture_dir=$(mktemp -d)
+npm install --prefix "$fixture_dir" --ignore-scripts --no-audit --no-fund @wp-playground/cli@3.1.65
+curl --fail --location --output "$fixture_dir/wordpress-6.8.3.zip" https://wordpress.org/wordpress-6.8.3.zip
+node --experimental-wasm-jspi --import tsx scripts/rehearse-wordpress.mjs "$fixture_dir"
+```
+
+Only setup downloads public test software. The core archive checksum is checked by the script. The final fixture and its scoped ESLint check passed. Compatibility with other WordPress versions, custom themes, plugins, authentication configurations and hosting remains unverified. [Official WordPress Playground tooling](https://wordpress.github.io/wordpress-playground/developers/local-development/wp-playground-cli/).
