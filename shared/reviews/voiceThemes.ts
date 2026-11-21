@@ -23,6 +23,14 @@ const PATTERNS: Record<VoiceThemeKey, RegExp[]> = {
   service: [/\bsupport\b/i, /\bstaff\b/i, /\bservice\b/i, /\bhelpful\b/i, /\bfriendly\b/i, /\brude\b/i],
 };
 
+/** Count different matching phrase patterns; repetition of one word adds no weight. */
+export function matchingVoiceTopics(text: string) {
+  return (Object.keys(PATTERNS) as VoiceThemeKey[])
+    .map(key => ({ key, hits: PATTERNS[key].filter(pattern => pattern.test(text)).length }))
+    .filter(item => item.hits > 0)
+    .sort((a, b) => b.hits - a.hits);
+}
+
 export interface VoiceThemeSource {
   id: string;
   kind: string;
@@ -61,10 +69,7 @@ export function groupVoiceThemes(sources: VoiceThemeSource[], minimum = 2): Voic
     seen.add(source.id);
     const text = source.text.trim();
     if (!text) continue;
-    const match = (Object.keys(PATTERNS) as VoiceThemeKey[])
-      .map((key) => ({ key, hits: PATTERNS[key].filter((pattern) => pattern.test(text)).length }))
-      .filter((item) => item.hits > 0)
-      .sort((a, b) => b.hits - a.hits)[0];
+    const match = matchingVoiceTopics(text)[0];
     if (!match) continue;
     groups.set(match.key, [...(groups.get(match.key) ?? []), source]);
   }

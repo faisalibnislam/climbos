@@ -108,3 +108,22 @@ it("exports a disclosed bounded set and keeps transcript bodies out of ordinary 
   expect(await f.t.run(ctx => ctx.db.get(f.id))).not.toBeNull();
   expect(await f.t.run(ctx => ctx.db.query("dealTranscripts").collect())).toHaveLength(21);
 });
+
+it("finds recurring topics without counting duplicate imports or exposing the text in the overview", async () => {
+  const f = await fixture();
+  const second = await f.owner.client.mutation(api.crm.create, { slug: f.slug, name: "Second deal" });
+  const other = await asNewUser(f.t, "other-topics@example.com");
+  const separate = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Separate" });
+  const report = () => f.owner.client.query(api.crm.recurringConversationTopics, { slug: f.slug });
+  await f.owner.client.mutation(api.crm.addTranscript, f.input);
+  await f.owner.client.mutation(api.crm.addTranscript, { ...f.input, id: second });
+  expect(await report()).toMatchObject({ topics: [], distinctTranscripts: 1 });
+  await f.owner.client.mutation(api.crm.addTranscript, { ...f.input, id: second, expectedRevision: 1, text: "Seller: Did you need another export? Buyer: No, our export already works." });
+  const result = await report();
+  expect(result.topics).toContainEqual(expect.objectContaining({ key: "product_gap", count: 2 }));
+  expect(JSON.stringify(result)).not.toContain("Buyer:");
+  await expect(other.client.query(api.crm.recurringConversationTopics, { slug: f.slug })).rejects.toThrow();
+  expect(await other.client.query(api.crm.recurringConversationTopics, { slug: separate.slug })).toMatchObject({ topics: [] });
+  await f.owner.client.mutation(api.crm.removeTranscript, { slug: f.slug, id: second, expectedRevision: 2, index: 2 });
+  expect((await report()).topics).toEqual([]);
+});

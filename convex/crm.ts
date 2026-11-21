@@ -1,3 +1,4 @@
+import { matchingVoiceTopics, VOICE_THEME_LABELS, type VoiceThemeKey } from "../shared/reviews/voiceThemes";
 import { initialDealHistory, advanceDealHistory } from "./lib/dealHistory";
 import { TranscriptInputSchema, TRANSCRIPT_LIMIT, TRANSCRIPT_PAGE_SIZE, TRANSCRIPT_LIMITATIONS } from "../shared/growth/dealTranscripts";
 import { DEAL_HISTORY_LIMITATIONS } from "../shared/growth/dealHistory";
@@ -209,6 +210,33 @@ async function dealTranscriptRows(ctx: QueryCtx | MutationCtx, deal: Doc<"deals"
   if (items.length > TRANSCRIPT_LIMIT) throw appError("LIMIT_REACHED", "The complete transcript set needs review before continuing.");
   return { revision: deal.transcriptRevision ?? 0, items: items.sort((a, b) => a.index - b.index) };
 }
+
+/** On-demand retrieval aid. Only counts and source references leave the query. */
+export const recurringConversationTopics = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const limit = 40;
+    const rows = await ctx.db.query("dealTranscripts").withIndex("by_org", q => q.eq("orgId", org._id))
+      .order("desc").take(limit + 1);
+    const seen = new Set<string>();
+    const groups = new Map<VoiceThemeKey, { dealId: Id<"deals">; index: number; title: string }[]>();
+    for (const row of rows.slice(0, limit)) {
+      if (seen.has(row.textHash) || !row.permissionConfirmed) continue;
+      seen.add(row.textHash);
+      for (const { key } of matchingVoiceTopics(row.text)) {
+        const group = groups.get(key) ?? [];
+        group.push({ dealId: row.dealId, index: row.index, title: row.title });
+        groups.set(key, group);
+      }
+    }
+    const topics = Array.from(groups, ([key, sources]) => ({
+      key, label: VOICE_THEME_LABELS[key], count: sources.length,
+      dealCount: new Set(sources.map(item => item.dealId)).size, sources,
+    })).filter(topic => topic.count >= 2).sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+    return { topics, distinctTranscripts: seen.size, limited: rows.length > limit, limit };
+  },
+});
 
 /** Pasted/imported text stays separate from notes, qualification and verified source data. */
 export const transcripts = query({

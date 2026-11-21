@@ -1,5 +1,8 @@
 # ClimbOS development handoff for Claude Code
 
+**21 November — recurring conversation topics.** Customer progress groups repeating topics on demand and links to deal transcripts. Counts describe distinct imported texts. Desktop and mobile owner workflows passed against the loopback fixture. [Verification and limitations](growth-engine/remaining-work-execution-2026-11-19.md).
+
+
 **21 November — focused strategy evidence.** Plan eligibility reviews now check the quoted text against the cited page read. A cached summary alone leaves the entitlement unknown. Replaying the 84 historical evaluations found eight previously failed reviews among the records that passed output lint. No new paid evaluation was performed. [Verification](growth-engine/remaining-work-execution-2026-11-19.md).
 
 

@@ -137,13 +137,14 @@ function RepeatCheckSchedule({ slug, panelId, schedule, canEdit }: {
       toast({ tone: "danger", title: "Couldn’t update repeat checks", description: errorMessage(error) });
     } finally { setSaving(false); }
   }
+  const dueCount = checklist?.rows.filter(row => row.current === null).length ?? 0;
   const describe = (status: "answered" | "no_answer" | "failed" | null, missing: string) =>
     status === "answered" ? "Answer recorded" : status === "no_answer" ? "No answer returned" : status === "failed" ? "Attempt failed" : missing;
   return <div className="grid gap-2">
     <Field label="Repeat manual checks"><Select value={String(schedule?.days ?? "off")} disabled={!canEdit || saving} onValueChange={value => void change(value)} options={[{ value: "off", label: "Off" }, { value: "7", label: "Every 7 days" }, { value: "30", label: "Every 30 days" }]} /></Field>
     {canEdit && <p className="text-xs text-ink-3">Changing the interval starts a new checklist. Your recorded answers stay in the report.</p>}
     {checklist && <details className="rounded-lg border border-line p-3">
-      <summary className="cursor-pointer text-sm font-medium">{checklist.rows.filter(row => row.current === null).length} checks due by {new Date(checklist.until).toLocaleString()}{checklist.hasPrevious && ` · ${checklist.rows.filter(row => row.previous === null).length} missed last period`}</summary>
+      <summary className="cursor-pointer text-sm font-medium">{dueCount} {dueCount === 1 ? "check" : "checks"} due by {new Date(checklist.until).toLocaleString()}{checklist.hasPrevious && ` · ${checklist.rows.filter(row => row.previous === null).length} missed last period`}</summary>
       <ul className="mt-2 grid gap-2">{checklist.rows.map(row => <li key={row.key} className="text-sm">
         <span>{row.query} · {row.provider.replaceAll("_", " ")}{row.location ? ` · ${row.location}` : ""}</span>
         <p className="text-xs text-ink-3">{describe(row.current, "Awaiting check")}{checklist.hasPrevious && ` · Last period: ${describe(row.previous, "Missed")}`}</p>

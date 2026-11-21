@@ -43,6 +43,8 @@ export default function PipelinePage() {
   const { organization: slug } = useParams<{ organization: string }>();
   const data = useQuery(api.crm.list, { slug });
   const update = useMutation(api.crm.update);
+  const [showTopics, setShowTopics] = useState(false);
+  const topics = useQuery(api.crm.recurringConversationTopics, showTopics ? { slug } : "skip");
   const [openId, setOpenId] = useState<Id<"deals"> | null>(null);
   const open = data?.deals.find((d) => d.id === openId) ?? null;
   return (
@@ -63,6 +65,21 @@ export default function PipelinePage() {
       ) : null}
       {data?.deals.length ? <p className="text-sm text-ink-2">Values are owner-reported, not confirmed payments or a sales forecast. Currencies stay separate; missing or unconfirmed amounts are excluded from recorded subtotals.{data.hasMore ? " Showing the newest 500 records only; older records and values are omitted." : ""}</p> : null}
       {data?.deals.length ? <p className="text-xs text-ink-2">{data.timezone ? `Next-step dates use ${data.timezone}; overdue means the calendar day has passed.` : "Set a valid workspace timezone to assess overdue next steps."} Stage-age labels are review prompts based on elapsed days, not proof that a buyer has lost interest. Timing reflects the latest data check in this view.</p> : null}
+      {data?.deals.length ? <details className="rounded-lg border border-line p-3" open={showTopics} onToggle={event => setShowTopics(event.currentTarget.open)}>
+        <summary className="cursor-pointer text-sm font-medium">Recurring conversation topics</summary>
+        {topics ? <div className="mt-2 space-y-2 text-sm">
+          <p className="text-ink-2">Checked {topics.distinctTranscripts} distinct imported transcripts{topics.limited ? ` from the latest ${topics.limit} imports` : ""}. Exact duplicate text counts once under its latest import. English phrase matches can come from any speaker, including a denial. Read the conversations before drawing conclusions.</p>
+          {topics.topics.length ? topics.topics.map(topic => <details key={topic.key}>
+            <summary className="cursor-pointer">{topic.label} · {topic.count} transcripts across {topic.dealCount} {topic.dealCount === 1 ? "deal" : "deals"}</summary>
+            <ul className="ml-4">{topic.sources.map(source => {
+              const deal = data.deals.find(item => item.id === source.dealId);
+              return <li key={`${source.dealId}-${source.index}`}>{deal
+                ? <Button size="sm" variant="ghost" onClick={() => setOpenId(source.dealId)}>{deal.name} · {source.title}</Button>
+                : <span>{source.title} · Deal outside the visible list</span>}</li>;
+            })}</ul>
+          </details>) : <p>No topic appears in two distinct transcripts in this sample.</p>}
+        </div> : <p className="mt-2 text-sm">Loading conversation topics…</p>}
+      </details> : null}
       {data === undefined ? (
         <LoadingBlock label="Loading customer progress…" lines={4} />
       ) : data.deals.length === 0 ? (
