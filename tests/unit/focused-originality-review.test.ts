@@ -18,6 +18,35 @@ function review(): CritiqueResult {
 }
 
 describe("the protected bold mechanism has an inspectable originality assessment", () => {
+  it("keeps a distinctive idea but rejects the saved agency draft's one-sided decision even with a repaired control", () => {
+    const plan = focusedPlanFixture(), critique = review(), bold = plan.strategyExploration.bold;
+    // Method is a counterfactual repair. Metric and continueIf are verbatim from agencies-v1.
+    Object.assign(bold.reversibleTest, {
+      method: "Compare two capped proposals for the same scope. Change only whether the client can exchange a scope decision for a commitment. Observe both roles.",
+      metric: "Owners who name a real project and a ceiling they would commit to",
+      continueIf: "Owners commit to a ceiling on a real project.",
+    });
+    Object.assign(critique.originalityAudit!, {
+      testQuote: bold.reversibleTest.method, metricQuote: bold.reversibleTest.metric, continueIfQuote: bold.reversibleTest.continueIf,
+      decisionVerdict: "same_result_can_pass", testOfDifference: "Owners can name the same ceiling in both conditions. The decision ignores the client and any difference.",
+    });
+    expect(assess(critique, [], rubric, plan).ship).toBe(false);
+    expect(JSON.parse(focusedRevisionOriginality(critique, rubric, plan))).toMatchObject({ mechanismVerdict: "material_difference", decisionVerdict: "same_result_can_pass" });
+    Object.assign(bold.reversibleTest, {
+      metric: "Which decision each client withholds or supplies in each version, and whether the agency changes its commitment.",
+      continueIf: "A client decision and an agency commitment change together only under the exchange. If both versions do the same job, revisit the mechanism.",
+    });
+    Object.assign(critique.originalityAudit!, { metricQuote: bold.reversibleTest.metric, continueIfQuote: bold.reversibleTest.continueIf,
+      decisionVerdict: "distinguishes_difference", testOfDifference: "The paired decision exposes ties and can reveal where either side declines. No demand or paid use inferred." });
+    expect(assess(critique, [], rubric, plan).ship).toBe(true); // controlled reviewer judgment, no generation
+    for (const field of ["metric", "continueIf"] as const) {
+      const changed = structuredClone(plan);
+      changed.strategyExploration.bold.reversibleTest[field] = "Changed after the review.";
+      expect(assess(critique, [], rubric, changed).ship).toBe(false);
+      expect(focusedRevisionOriginality(critique, rubric, changed)).toBe("");
+    }
+  });
+
   it("rejects a review that substitutes a better comparison for the actual proposed test", () => {
     const critique = review(), plan = focusedPlanFixture();
     Object.assign(critique.originalityAudit!, { testQuote: "A different test from another idea or a suggested repair, not this draft.", comparisonVerdict: "isolates_difference" });

@@ -111,7 +111,7 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
     const reviewingFirstDraft = lastUser.includes("fake-v1");
     const pass = mode === "ship" || !reviewingFirstDraft;
     const reviewedWork = system.includes("FOCUSED ORIGINALITY AUDIT:")
-      ? JSON.parse(lastUser.split("THE WORK TO REVIEW (JSON):\n").at(-1)!.split("\n\n")[0]) as { strategyExploration?: { bold?: { businessMechanism?: string; reversibleTest?: { method?: string } } } }
+      ? JSON.parse(lastUser.split("THE WORK TO REVIEW (JSON):\n").at(-1)!.split("\n\n")[0]) as { strategyExploration?: { bold?: { businessMechanism?: string; reversibleTest?: { method?: string; metric?: string; continueIf?: string } } } }
       : null;
     output = {
       gates: gates.map((id) => ({ id, pass: pass, note: pass ? "ok" : "fails" })),
@@ -126,6 +126,9 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         consequentialDifference: "Synthetic changed exchange; not evidence of real originality.",
         mechanismVerdict: "material_difference",
         testQuote: reviewedWork?.strategyExploration?.bold?.reversibleTest?.method ?? "No proposed test supplied for this synthetic review.",
+        metricQuote: reviewedWork?.strategyExploration?.bold?.reversibleTest?.metric ?? "No metric supplied.",
+        continueIfQuote: reviewedWork?.strategyExploration?.bold?.reversibleTest?.continueIf ?? "No decision supplied.",
+        decisionVerdict: "distinguishes_difference",
         comparisonVerdict: "isolates_difference",
         testOfDifference: "Synthetic comparison only; no real experiment has run.",
       } } : {}),

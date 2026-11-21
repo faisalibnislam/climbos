@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FocusedOriginalityAuditSchema, MECHANISM_COMPARISON_GUIDANCE } from "./focusedReview";
+import { MechanismComparisonSchema, MECHANISM_COMPARISON_GUIDANCE } from "./focusedReview";
 
 /** A bounded preparation step in the same strategy run, never facts or action authority. */
 // Includes adaptive reasoning plus all three or four complete candidate records.
@@ -32,7 +32,7 @@ export const CreativePreparationSchema = z.object({
 
 /** Advisory comparison before expansion, never a ranking or an originality gate. */
 export const CreativeFeedbackSchema = z.object({
-  directions: z.array(FocusedOriginalityAuditSchema.extend({
+  directions: z.array(MechanismComparisonSchema.extend({
     creativeMethod: CreativeMethodSchema,
     candidateTitle: z.string().trim().min(3).max(120),
   })).min(3).max(4),

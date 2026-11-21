@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+**21 November — Livoform strategy quality.** A plausible control can still yield an uninformative decision. The strategy reviewer now checks the exact metric and continue rule as well as the mechanism and method. [Saved example, options, checks and limits](growth-engine/livoform-offline-strategy-2026-11-21.md).
+
 **21 November — WordPress core compatibility.** A repeatable disposable installation covers the actual REST responses and default-theme rendering, including restoring an explicitly captured native page revision. It has no production credentials or listening socket. [Run the fixture](growth-engine/remaining-work-execution-2026-11-19.md#wordpress-core-compatibility-fixture-21-november).
 
 **21 November — WordPress fixtures.** The blog article’s Publishing section supports source-copy capture, proposal review, preview and recovery inside ClimbOS. Separate private-draft handoff checks exact content and destination, with at most one worker per attempt. The owner authorized local WordPress fixtures only. [Checks, commands and limitations](growth-engine/remaining-work-execution-2026-11-19.md#wordpress-page-copy-and-draft-verification-21-november).

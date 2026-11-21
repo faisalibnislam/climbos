@@ -66,7 +66,7 @@ function priorFocusedFindings(output: unknown, critique: CritiqueResult, input: 
   const audit = FocusedOriginalityAuditSchema.safeParse(critique.originalityAudit);
   return {
     earlierBoldProposal: { title: short(bold?.title, 120), mechanism: short(bold?.businessMechanism, 500) },
-    originalityFinding: audit.success && focusedOriginalityMatches(audit.data, output) ? { verdict: audit.data.mechanismVerdict, closestAlternative: short(audit.data.closestFamiliarAlternative, 400), difference: short(audit.data.consequentialDifference, 500), testVerdict: audit.data.comparisonVerdict, proposedTest: audit.data.testQuote, test: short(audit.data.testOfDifference, 400) } : null,
+    originalityFinding: audit.success && focusedOriginalityMatches(audit.data, output) ? { verdict: audit.data.mechanismVerdict, closestAlternative: short(audit.data.closestFamiliarAlternative, 400), difference: short(audit.data.consequentialDifference, 500), testVerdict: audit.data.comparisonVerdict, proposedTest: audit.data.testQuote, metric: audit.data.metricQuote, continueIf: audit.data.continueIfQuote, decisionVerdict: audit.data.decisionVerdict, test: short(audit.data.testOfDifference, 400) } : null,
     evidenceFindings: focusedHistoricalEvidenceFindings(critique, output, input),
   };
 }

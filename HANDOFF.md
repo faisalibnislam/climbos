@@ -112,6 +112,8 @@ Read `AGENTS.md`, `README.md`, `docs/Claude-Code-Handoff.md` (top entries), `doc
 
 ## 9. Current state (as of 2026-11-21)
 
+Focused originality review now binds the decision to the exact bold metric and continue rule. See the [Livoform offline strategy review](docs/growth-engine/livoform-offline-strategy-2026-11-21.md) for the saved failure, paired tests and editorial options.
+
 A second WordPress fixture exercises actual WordPress 6.8.3 with its bundled Twenty Twenty-Five theme. It verifies raw draft content, six rendered page states and native revision recovery after capturing an explicit baseline. The fixture runs in memory and adds no app dependency.
 
 Blog articles support a private WordPress page-copy rehearsal. The owner can save original copy, edit a proposal, preview at 390 and 1280 pixels, approve it for the rehearsal, and recover the original. The separate private-draft connector now binds the exact reviewed title, body version, approval and destination, and checks the raw saved body. Verified using local fixtures only.
@@ -131,6 +133,8 @@ All 100 creative cases now cite a source for a reported outcome. In 51 cases the
 **Half-done / honest limits (from `docs/growth-engine/requirements-scope-2026-11-18.md`):** saved Livoform plan quality still fails acceptance checks; 2 of 4 synthetic industry cases pass (science, creator; healthcare and retail below the bar); authenticated event intake and exact approved email delivery exist, while live setup and recurring journeys remain open; real provider flows need credentials and platform approvals; schema changes on the branch are additive and undeployed; tester access and founder time unknown.
 
 ## 10. Next steps / open work
+
+Fresh Livoform originality and reviewer calibration remain unverified under the paid-call pause. Compare future recommendations with the paired-control examples when evaluation resumes.
 
 Keep WordPress verification on local fixtures per the owner. The disposable installation covers one core version and stock theme. Customer themes, plugins, hosting permissions and live change recovery remain unverified.
 
@@ -157,6 +161,8 @@ Keep WordPress verification on local fixtures per the owner. The disposable inst
 - The repo lives on the external Corsair drive (`~/Documents/GitHub/Airly Studio` is a symlink). Large ignored folders (`bench/cache`, reference books) will not come with a clone.
 
 ## 12. Change log
+
+- 2026-11-21 — Required a bold test’s measure and continuation rule to support the claimed comparison. Replayed 47 Livoform focused-plan files offline.
 
 - 2026-11-21 — Verified WordPress core private draft read-back and explicit baseline revision recovery with desktop and mobile renders of the default theme.
 
