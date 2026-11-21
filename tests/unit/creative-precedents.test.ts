@@ -765,6 +765,14 @@ describe("precedent evidence tiers and confidence", () => {
     }
   });
 
+  it("keeps participant and company outcome reports distinct from independent corroboration", () => {
+    for (const id of ["CP-004", "CP-059", ...Array.from({ length: 25 }, (_, n) => `CP-${String(n + 76).padStart(3, "0")}`)]) {
+      const record = ALL_PRECEDENTS.find(item => item.id === id)!;
+      expect(outcomeEvidenceTier(record)).toBe("self_reported");
+      expect(record.sources.some(source => source.claimRole === "outcome" && source.accessedAt === "2026-11-21")).toBe(true);
+    }
+    expect(ALL_PRECEDENTS.find(item => item.id === "CP-087")?.outcome).toContain("down from 125,954");
+  });
   it("ranks a low-confidence record below a medium-confidence one unless it is clearly more relevant", () => {
     const results = retrieve("Improve truthful booking-listing photos and reduce up-front production cost for a small hospitality host", 3);
     for (let i = 1; i < results.length; i++) {

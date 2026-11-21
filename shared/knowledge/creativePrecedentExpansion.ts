@@ -30,15 +30,147 @@ const cases: Case[] = [
   { n: 100, organization: "Arduino", title: "Arduino connects accessible tools with a community of projects", sector: "Electronics and education", geography: "Italy-origin international ecosystem", model: "Hardware, software and learning resources", audience: "makers, educators and professional developers", family: "open ecosystem", convention: "Advanced electronics should remain a specialist-only activity.", action: "Arduino describes an open-source platform, community-contributed knowledge and project-based education kits.", mechanism: "Accessible starting tools and visible examples can help a beginner finish a meaningful project and later progress to harder work.", condition: "Documentation, hardware and examples work together and licenses are respected.", risk: "A broad community does not establish demand for one commercial product; support and hardware costs still matter.", adaptation: "Publish one small, properly licensed starter project that produces a useful result with the existing product.", test: "Ask consenting adult beginners to complete the starter project; record task success, support time and voluntary next steps before expanding the library.", url: "https://www.arduino.cc/en/about", date: "2025-10-15 page revision" },
 ];
 
-export const CREATIVE_PRECEDENT_EXPANSION: readonly CreativePrecedent[] = cases.map((c) => ({
-  id: `CP-${String(c.n).padStart(3, "0")}`, title: c.title, organization: c.organization, sector: c.sector, geography: c.geography,
-  approximateScale: "Established organization or program; no commercial scale or performance inferred from this action record.", businessModel: c.model, period: c.period ?? "Primary page reviewed 2026-11-09; launch date not established here.",
-  families: [c.family], transferProfile: { audiences: [c.audience], goals: [c.family, "useful participation", "test a customer mechanism"], constraints: [c.condition], scale: ["bounded pilot", "small business adaptation"], geographies: [c.geography], businessModels: [c.model] },
-  convention: c.convention, choice: c.action, mechanism: c.mechanism, distinctiveness: c.title,
-  outcome: "The cited source supports the described action. Incremental sales, profit, retention and causal growth impact are not established by this record.",
-  evidenceClass: "Primary description of an action; transfer mechanism and small-business adaptation are editorial hypotheses, not demonstrated outcomes.",
-  causalLimit: "This action record does not isolate a commercial effect or show that copying the mechanism will work for another business. No lift, customer volume or return is transferable.",
-  conditions: [c.condition, "The owner's actual audience, economics, capacity and permissions must be checked before a pilot."], transferRisk: c.risk, smallBusinessAdaptation: c.adaptation, reversibleTest: c.test,
-  editorialStatus: "verified_primary", researchConfidence: "low", accessedAt: "2026-11-09",
-  sources: [{ title: c.title, url: c.url, publisher: c.publisher ?? c.organization, publicationDate: c.date ?? "Not established on the reviewed page", accessedAt: "2026-11-09", sourceRole: c.sourceRole ?? "company_primary", claimRole: "action", supports: c.action }],
-}));
+/** Publisher-reported observations, kept separate from the original mechanism source. */
+const outcomes: Partial<Record<number, CreativePrecedent["sources"][number]>> = {
+  76: {
+    publisher: "Apple", title: "2019 proxy statement", publicationDate: "2019",
+    url: "https://www.sec.gov/Archives/edgar/data/320193/000119312519004664/d667873ddef14a1.pdf", accessedAt: "2026-11-21", sourceRole: "company_primary", claimRole: "outcome",
+    supports: "In its 2018 highlights Apple reported delivering over 18,000 sessions per week. Attendance, repeat visits and purchases attributable to the classes were not reported here.",
+  },
+  77: {
+    publisher: "Xbox", title: "Accessibility updates and Craig Hospital’s adaptive gaming program", publicationDate: "2023-10-17",
+    url: "https://news.xbox.com/en-us/2023/10/17/xbox-new-accessibility-updates/", accessedAt: "2026-11-21", sourceRole: "company_primary", claimRole: "outcome",
+    supports: "Xbox reports that players at its hospital partner used the controller to customize gameplay. This is an example of use in one setting, with no estimate of typical adoption.",
+  },
+  78: {
+    publisher: "GitHub", title: "The GitHub Student Developer Pack is back", publicationDate: "2019-08-20, updated 2021-06-22",
+    url: "https://github.blog/developer-skills/career-growth/the-github-student-developer-pack-is-back/", accessedAt: "2026-11-21", sourceRole: "company_primary", claimRole: "outcome",
+    supports: "GitHub reported that the pack had provided tools and training to over 1.5 million students. The report does not establish redemption by tool or conversion to paid plans.",
+  },
+  79: {
+    publisher: "Stripe", title: "Atlas startups in 2025: Year in review", publicationDate: "2025-12-18",
+    url: "https://stripe.com/blog/stripe-atlas-startups-in-2025-year-in-review", accessedAt: "2026-11-21", sourceRole: "company_primary", claimRole: "outcome",
+    supports: "Stripe analyzed 23,000 companies incorporated through Atlas in its 2025 report. Incorporation volume does not isolate incremental payments customers or their profit.",
+  },
+  80: {
+    publisher: "NVIDIA", title: "Fiscal year 2025 sustainability report", publicationDate: "FY2025 report",
+    url: "https://images.nvidia.com/aem-dam/Solutions/documents/NVIDIA-Sustainability-Report-Fiscal-Year-2025.pdf", accessedAt: "2026-11-21", sourceRole: "company_primary", claimRole: "outcome",
+    supports: "NVIDIA reported supporting over 22,000 startups through Inception. Participation does not establish how many bought hardware or would have done so anyway.",
+  },
+  81: {
+    publisher: "DoWhatWorks, interview with the Ahrefs CMO", title: "How vibe coding helps Ahrefs optimize for GEO", publicationDate: "2026-02-19",
+    url: "https://dowhatworks.substack.com/p/how-vibe-coding-helps-ahrefs-optimize", accessedAt: "2026-11-21", sourceRole: "company_primary", claimRole: "outcome",
+    supports: "In a published interview the Ahrefs CMO attributed over 76 million visits and nearly 20,000 signups to free AI writing tools. This applies to that group of tools. Paid conversion, attribution method and incremental revenue were not established.",
+  },
+  82: {
+    publisher: "Salesforce", title: "20 years of the Trailblazer community", publicationDate: "2026-09-15",
+    url: "https://www.salesforce.com/news/stories/trailblazers-twentieth-anniversary/", accessedAt: "2026-11-21", sourceRole: "company_primary", claimRole: "outcome",
+    supports: "Salesforce reported more than 151 million Trailhead badges earned across the community. Badges count learning activities, with multiple badges possible per person.",
+  },
+  83: {
+    publisher: "Fairphone", title: "2024 impact report highlights", publicationDate: "2025-04-22",
+    url: "https://www.fairphone.com/wp-content/uploads/2025/05/European-Electronics-Manufacturer-Fairphone-Cuts-CO2-Emissions-in-Half-Since-2022-Sets-Global-Standard-for-Sustainable-Electronics.pdf", accessedAt: "2026-11-21", sourceRole: "company_primary", claimRole: "outcome",
+    supports: "Fairphone reported that customers completed 31% of its in-warranty repairs themselves in 2024. The denominator is repairs under warranty, rather than all devices sold.",
+  },
+  84: {
+    publisher: "Kiva", title: "2024 annual impact report", publicationDate: "2024 reporting year",
+    url: "https://www.kiva.org/impact/annual-report-2024", accessedAt: "2026-11-21", sourceRole: "organization_primary", claimRole: "outcome",
+    supports: "Kiva reported 202,875 loans funded through its site during 2024. That count cannot distinguish repeat lending from first-time participation.",
+  },
+  85: {
+    publisher: "Back Market", title: "2025 business growth release", publicationDate: "2025-09-15",
+    url: "https://www.backmarket.com/en-us/c/press-release/2025-business-growth", accessedAt: "2026-11-21", sourceRole: "company_primary", claimRole: "outcome",
+    supports: "Back Market reported a cumulative 17 million customers across 17 markets. The release does not isolate the effect of grading or guarantees on purchase decisions.",
+  },
+  86: {
+    publisher: "Tesco", title: "Meal redistribution through the Tesco and Olio partnership", publicationDate: "2023-02-09",
+    url: "https://www.tescoplc.com/30-million-meals-rescued-through-tesco-s-partnership-with-waste-busting-app-olio/", accessedAt: "2026-11-21", sourceRole: "company_primary", claimRole: "outcome",
+    supports: "Tesco, a participating retailer, reported more than 30 million meal equivalents rescued through the partnership. This is redistribution volume and does not measure unique recipients or profit.",
+  },
+  87: {
+    publisher: "Rent the Runway", title: "Fiscal 2024 annual report", publicationDate: "Fiscal year ended 2025-01-31",
+    url: "https://www.sec.gov/Archives/edgar/data/1468327/000114036125020178/ny20043016x3_ars.pdf", accessedAt: "2026-11-21", sourceRole: "company_primary", claimRole: "outcome",
+    supports: "The company reported 119,778 active subscribers at January 31, 2025, down from 125,954 a year earlier. The rental model coexisted with declining year-end subscribers over this period.",
+  },
+  88: {
+    publisher: "Kickstarter", title: "Celebrating 15 years of Kickstarter", publicationDate: "2024-04-29",
+    url: "https://updates.kickstarter.com/celebrating-15-years-of-kickstarter/", accessedAt: "2026-11-21", sourceRole: "company_primary", claimRole: "outcome",
+    supports: "Kickstarter reported over 257,000 successfully funded projects in its first 15 years. Reaching a funding goal does not establish delivery or a profitable business.",
+  },
+  89: {
+    publisher: "Scratch Foundation", title: "2024 annual report, Scratch events", publicationDate: "2024 reporting year",
+    url: "https://annualreport.scratchfoundation.org/pdf/Scratch-Report_2024.pdf", accessedAt: "2026-11-21", sourceRole: "organization_primary", claimRole: "outcome",
+    supports: "The foundation reported 5,000 projects shared during Scratch Week in 2024. Project submissions can include multiple works from a person and do not establish learning gains.",
+  },
+  90: {
+    publisher: "GitLab", title: "The GitLab handbook by numbers", publicationDate: "2019-04-24",
+    url: "https://about.gitlab.com/blog/the-gitlab-handbook-by-numbers/", accessedAt: "2026-11-21", sourceRole: "company_primary", claimRole: "outcome",
+    supports: "GitLab reported several hundred thousand handbook page views in 2018. Views can include employees and repeat visits, and cannot establish hiring or sales impact.",
+  },
+  91: {
+    publisher: "Atlassian", title: "Three steps to taming technical debt with Jira", publicationDate: "2015-04-01",
+    url: "https://www.atlassian.com/blog/jira/3-steps-taming-technical-debt", accessedAt: "2026-11-21", sourceRole: "company_primary", claimRole: "outcome",
+    supports: "Atlassian reported shipping a Jira dashboard gadget modernization begun through ShipIt and further development time. This is one shipped project without a comparison group.",
+  },
+  92: {
+    publisher: "The Linux Foundation", title: "Open sourcing the hardware of the first Call for Code winner", publicationDate: "2020-03-10",
+    url: "https://www.linuxfoundation.org/press/press-release/the-linux-foundation-open-sources-hardware-of-disaster-relief-project-that-won-first-call-for-code-global-challenge-led-by-ibm", accessedAt: "2026-11-21", sourceRole: "organization_primary", claimRole: "outcome",
+    supports: "The participating foundation documented a 2019 Puerto Rico field pilot by winning team Project OWL and IBM, followed by two additional pilots. A pilot does not establish long-term deployment.",
+  },
+  93: {
+    publisher: "Mozilla Common Voice", title: "Common Voice scripted speech v27 and spontaneous speech v5 release", publicationDate: "2026-09-18",
+    url: "https://discourse.mozilla.org/t/common-voice-scripted-speech-v27-0-and-spontaneous-speech-v5-0-released/149490", accessedAt: "2026-11-21", sourceRole: "organization_primary", claimRole: "outcome",
+    supports: "The project reported that its v27 scripted release contained datasets for 295 languages. Coverage does not establish equal representation or downstream recognition accuracy.",
+  },
+  94: {
+    publisher: "UC Berkeley", title: "Reporting on results from SETI@home", publicationDate: "2026-01-12",
+    url: "https://news.berkeley.edu/2026/01/12/for-21-years-enthusiasts-used-their-home-computers-to-search-for-et-uc-berkeley-scientists-are-homing-in-on-100-signals-they-found/", accessedAt: "2026-11-21", sourceRole: "organization_primary", claimRole: "outcome",
+    supports: "Berkeley reported that millions of participants contributed computing time between 1999 and 2020. Participation and screening output do not prove a discovery.",
+  },
+  95: {
+    publisher: "Foldit research team", title: "Predicting protein structures with a multiplayer online game", publicationDate: "2010-08-05",
+    url: "https://pubmed.ncbi.nlm.nih.gov/20686574/", accessedAt: "2026-11-21", sourceRole: "organization_primary", claimRole: "outcome",
+    supports: "The research team published a peer-reviewed evaluation of player contributions. This is a documented research output, with no evidence of a transferable commercial return.",
+  },
+  96: {
+    publisher: "Galaxy Zoo", title: "Galaxy Zoo released classification datasets", publicationDate: "Publication date not established",
+    url: "https://static.zooniverse.org/data.galaxyzoo.org/", accessedAt: "2026-11-21", sourceRole: "organization_primary", claimRole: "outcome",
+    supports: "One published Galaxy Zoo table contains classifications for 19,765 galaxies in a specified Stripe 82 sample. The concrete output is a labeled dataset.",
+  },
+  97: {
+    publisher: "Mayo Clinic", title: "Care Network 15-year milestone", publicationDate: "2026-09-15",
+    url: "https://newsnetwork.mayoclinic.org/discussion/mayo-clinic-care-network-marks-15-year-milestone-as-a-global-community-of-member-organizations-to-advance-healthcare/", accessedAt: "2026-11-21", sourceRole: "organization_primary", claimRole: "outcome",
+    supports: "Mayo Clinic reported 63,545 electronic consultations from network members at its 15-year milestone. Consultation volume alone cannot establish patient outcomes.",
+  },
+  98: {
+    publisher: "Project ECHO", title: "2025 impact report", publicationDate: "2025 reporting year",
+    url: "https://projectecho.unm.edu/impact-report/2025-impact-report/", accessedAt: "2026-11-21", sourceRole: "organization_primary", claimRole: "outcome",
+    supports: "Project ECHO reports that its autism community established partnerships with over 50 US hospitals and centers and 30 international locations. This is network participation, with clinical impact unmeasured here.",
+  },
+  99: {
+    publisher: "Decathlon", title: "Decathlon Group 2025 performance", publicationDate: "2025 reporting year",
+    url: "https://www.decathlon-united.media/pressfiles/2025results", accessedAt: "2026-11-21", sourceRole: "company_primary", claimRole: "outcome",
+    supports: "Decathlon reported sales of 1.6 million second-hand products during 2025. This is unit volume and provides no margin or estimate of displaced new-item sales.",
+  },
+  100: {
+    publisher: "Arduino", title: "Project Hub highlights from the May competition", publicationDate: "2023-08-04",
+    url: "https://blog.arduino.cc/2023/08/04/project-hub-highlights-theres-something-for-everyone/", accessedAt: "2026-11-21", sourceRole: "company_primary", claimRole: "outcome",
+    supports: "Arduino highlighted three completed community projects selected in the May competition. The selected examples show participation and cannot quantify hardware sales or typical project completion.",
+  },
+};
+
+export const CREATIVE_PRECEDENT_EXPANSION: readonly CreativePrecedent[] = cases.map((c): CreativePrecedent => {
+  const observation = outcomes[c.n];
+  return {
+    id: `CP-${String(c.n).padStart(3, "0")}`, title: c.title, organization: c.organization, sector: c.sector, geography: c.geography,
+    approximateScale: "Established organization or program; no commercial scale or performance inferred from this action record.", businessModel: c.model, period: c.period ?? "Primary page reviewed 2026-11-09; launch date not established here.",
+    families: [c.family], transferProfile: { audiences: [c.audience], goals: [c.family, "useful participation", "test a customer mechanism"], constraints: [c.condition], scale: ["bounded pilot", "small business adaptation"], geographies: [c.geography], businessModels: [c.model] },
+    convention: c.convention, choice: c.action, mechanism: c.mechanism, distinctiveness: c.title,
+    outcome: observation?.supports ?? "The cited source supports the described action. Incremental sales, profit, retention and causal growth impact are not established by this record.",
+    evidenceClass: observation ? "Program or participant report. Transfer to another business remains an editorial hypothesis." : "Primary description of an action; transfer mechanism and small-business adaptation are editorial hypotheses, not demonstrated outcomes.",
+    causalLimit: "This action record does not isolate a commercial effect or show that copying the mechanism will work for another business. No lift, customer volume or return is transferable.",
+    conditions: [c.condition, "The owner's actual audience, economics, capacity and permissions must be checked before a pilot."], transferRisk: c.risk, smallBusinessAdaptation: c.adaptation, reversibleTest: c.test,
+    editorialStatus: "verified_primary", researchConfidence: "low", accessedAt: observation?.accessedAt ?? "2026-11-09",
+    sources: [{ title: c.title, url: c.url, publisher: c.publisher ?? c.organization, publicationDate: c.date ?? "Not established on the reviewed page", accessedAt: "2026-11-09", sourceRole: c.sourceRole ?? "company_primary", claimRole: "action", supports: c.action }, ...(observation ? [observation] : [])],
+  };
+});
