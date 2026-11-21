@@ -24,9 +24,9 @@ const activities = {
   repeated_customer_job: "If observed, record the same customer's completion of a second actual job separately.",
   unknown: "The activity to observe is not yet established.",
 } as const;
-function assessment(activity: FocusedMeasurementCheck["activity"], claimedOutcome: FocusedMeasurementCheck["claimedOutcome"], actorMatchesTarget: boolean | null = true) {
+function assessment(activity: FocusedMeasurementCheck["activity"], claimedOutcome: FocusedMeasurementCheck["claimedOutcome"], actorMatchesTarget: boolean | null = true, paymentScope?: FocusedMeasurementCheck["paymentScope"]) {
   const output = { claim: `Count the proposed observation as ${claimedOutcome}.`, observation: activities[activity] };
-  const row = { ...check(), claimPath: "claim", claimQuote: output.claim, observationPath: "observation", observationQuote: output.observation, activity, claimedOutcome, actorMatchesTarget,
+  const row = { ...check(), claimPath: "claim", claimQuote: output.claim, observationPath: "observation", observationQuote: output.observation, activity, claimedOutcome, actorMatchesTarget, paymentScope,
     basis: "Synthetic event and actor classification for this definition only; no test has run." };
   return assess(review(row), [], rubric, output);
 }
@@ -62,9 +62,26 @@ describe("focused measurement scope", () => {
     expect(assessment("unknown", "unknown", null).ship).toBe(true);
   });
   it("keeps a successful payment and successful use independent", () => {
-    expect(assessment("confirmed_payment", "payment", null).ship).toBe(true);
+    expect(assessment("confirmed_payment", "payment", null, "matches_claim").ship).toBe(true);
     expect(assessment("confirmed_payment", "product_use").ship).toBe(false);
     expect(assessment("customer_job_completed", "payment").ship).toBe(false);
+  });
+  it.each([false, null])("keeps a seller's stated preference from proving the client's intent (%s)", match => {
+    expect(assessment("stated_preference", "stated_intent", match).ship).toBe(false);
+    expect(assessment("stated_preference", "stated_intent", true).ship).toBe(true);
+  });
+  it("distinguishes an agency's deposit from a customer paying for the software", () => {
+    // Counterfactual based on the saved agency sample. No charge was observed.
+    const output = { primaryMetric: "Agencies that purchase the software subscription.",
+      observation: "If a client pays a deposit to the agency, log the confirmed deposit in the agency account." };
+    for (const paymentScope of ["different_transaction", "unverified", undefined] as const) {
+      const row = { ...check(), claimPath: "primaryMetric", claimQuote: output.primaryMetric, observationPath: "observation", observationQuote: output.observation,
+        activity: "confirmed_payment" as const, claimedOutcome: "payment" as const, paymentScope, actorMatchesTarget: null,
+        basis: "A deposit for agency services does not verify an agency paying the software provider." };
+      const result = assess(review(row), [], rubric, output);
+      expect(result.ship).toBe(false);
+      expect(result.lint).toContainEqual(expect.objectContaining({ rule: "focused_learning", path: "primaryMetric" }));
+    }
   });
   it("requires new reviews to declare their measurement applicability", () => {
     const old = review();

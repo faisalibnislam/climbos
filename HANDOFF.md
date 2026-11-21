@@ -112,6 +112,8 @@ Read `AGENTS.md`, `README.md`, `docs/Claude-Code-Handoff.md` (top entries), `doc
 
 ## 9. Current state (as of 2026-11-21)
 
+Focused measurement review now checks whose intent is being counted and whether a confirmed payment supports the specific payer, recipient and offer in the recommendation.
+
 Focused revisions can replace one complete strategy option while preserving the others. Offline replay reproduced the complete comparison-v4 result using just its changed bold option.
 
 Focused originality review now binds the decision to the exact bold metric and continue rule. See the [Livoform offline strategy review](docs/growth-engine/livoform-offline-strategy-2026-11-21.md) for the saved failure, paired tests and editorial options.
@@ -135,6 +137,8 @@ All 100 creative cases now cite a source for a reported outcome. In 51 cases the
 **Half-done / honest limits (from `docs/growth-engine/requirements-scope-2026-11-18.md`):** saved Livoform plan quality still fails acceptance checks; 2 of 4 synthetic industry cases pass (science, creator; healthcare and retail below the bar); authenticated event intake and exact approved email delivery exist, while live setup and recurring journeys remain open; real provider flows need credentials and platform approvals; schema changes on the branch are additive and undeployed; tester access and founder time unknown.
 
 ## 10. Next steps / open work
+
+Keep agency-client deposits separate from Livoform subscription evidence in future reviews. Real payer decisions and actual growth results remain unknown.
 
 For later authorized generation, inspect whether the writer uses option-level repairs and preserves earlier strengths. The saved replay verifies reconstruction only.
 
@@ -165,6 +169,8 @@ Keep WordPress verification on local fixtures per the owner. The disposable inst
 - The repo lives on the external Corsair drive (`~/Documents/GitHub/Airly Studio` is a symlink). Large ignored folders (`bench/cache`, reference books) will not come with a clone.
 
 ## 12. Change log
+
+- 2026-11-21 — Closed payment attribution and participant-intent gaps with saved-case counterfactuals.
 
 - 2026-11-21 — Enabled focused revisions of individual grounded, adjacent and bold options with full-plan validation.
 

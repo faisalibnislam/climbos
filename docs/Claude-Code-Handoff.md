@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+**21 November — payment and intent attribution.** Focused review checks the transaction behind a payment claim and the participant behind a stated preference. [Livoform example and verification](growth-engine/livoform-offline-strategy-2026-11-21.md#attribute-intent-and-payment-to-the-right-transaction).
+
 **21 November — targeted creative revision.** A focused repair may submit just the complete options it changes. The saved comparison-v4 bold-only change reconstructs the same complete plan. [Replay and limits](growth-engine/livoform-offline-strategy-2026-11-21.md#repair-one-option-without-rewriting-the-others).
 
 **21 November — Livoform strategy quality.** A plausible control can still yield an uninformative decision. The strategy reviewer now checks the exact metric and continue rule as well as the mechanism and method. [Saved example, options, checks and limits](growth-engine/livoform-offline-strategy-2026-11-21.md).

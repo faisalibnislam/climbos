@@ -29,3 +29,17 @@ The read-only replay on 47 saved Livoform focused-plan files produced 16 output-
 In the saved comparison-v4 revision, grounded and adjacent were identical to the first draft. The repair contract nevertheless required the writer to repeat both. The exploration alone occupied 12,159 serialized characters. Its bold-only replacement took 4,368. Before the fix the smaller patch failed validation. After the fix both patches produced the same fully validated plan from the retained original. These are measured character counts, not measured model cost, latency or quality gains.
 
 During a focused revision, the writer can supply one or more complete changed options. Each option retains its original schema, and every merged plan still goes through full validation and independent review. An empty patch, unknown mode, deletion or a fragment of a bold option is rejected. All other top-level sections retain their existing update rules. A rerun of ten focused strategy and permission suites passed 217 tests.
+
+## Attribute intent and payment to the right transaction
+
+The agency sample describes a fictional deposit going to the agency’s Stripe account. A client paying for agency work and an agency paying Livoform for software would be different transactions. Similarly, an agency offering a ceiling and a client accepting it involve different decisions. These saved examples motivated counterfactual tests. The saved assessment did not claim a real charge occurred.
+
+Previously, the review could accept a classified confirmed payment for a subscription claim without establishing the recipient or offer. It could also accept stated intent when the same review explicitly said the person expressing it was the wrong participant. The focused review now requires the payment observation to support the claimed transaction, and requires a matching participant for attributed intent. A different or unresolved transaction leaves that payment claim unverified. A demonstration can still inform comprehension, and confirmed revenue can be recorded independently of product activation. The reviewer interprets the source; code checks consistency with that interpretation.
+
+201 tests passed across nine focused review, replay, workflow and permission suites. This batch uses synthetic counterfactuals and existing records only.
+
+Final combined regression run: 275 tests passed across 13 files. Reproduction command for zsh or bash:
+
+```sh
+pnpm exec vitest run tests/unit/{focused-plan-eligibility,focused-measurement-review,focused-originality-review,focused-evidence-review,focused-evidence-repair,focused-section-revisions,focused-length-repair,creative-preparation,focused-plan,offline-strategy-replay}.test.ts tests/convex/{focused-plan,tenancy,safety}.test.ts
+```
